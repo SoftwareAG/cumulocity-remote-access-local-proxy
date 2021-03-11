@@ -28,6 +28,7 @@ jobs:
         python -m pip install --upgrade pip
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         sudo apt-get install python3-stdeb python-all
+        python -m pip install stdeb
     - name: Build Deb
       id: build_deb
       run: |

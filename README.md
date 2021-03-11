@@ -3,6 +3,8 @@ This is a proxy implementation for the Cloud Remote Access feature of Cumulocity
 
 Main purpose of this proxy is to bridge all TCP packets via WebSocket. The local proxy is designed to run on clients where the native client software is installed.
 
+![architecture](img/Remote_access_architecture.png)
+
 The proxy is written in Python3.
 
 # Installation

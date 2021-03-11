@@ -18,19 +18,20 @@ The Local Proxy depends on the following components which either needs to be ins
 * [setuptools](https://pypi.org/project/setuptools/)
 
 ### PIP
-To install via pip them navigate to the project folder and execute:
+To install the dependencies via pip, navigate to the project folder and execute:
 ```console
 pip install -r requirements.txt
-```
-or
-```
-pip3 install -r requirements.txt
 ```
 
 ### Package Manager
 Just install the dependencies via apt
-```
+```console
 sudo apt install python-requests python-websocket python-setuptools
+```
+## Installation from pypi via pip
+
+```console
+pip install c8ylp
 ```
 
 ## Installation from Source Code

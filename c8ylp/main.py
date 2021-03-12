@@ -114,9 +114,9 @@ def start():
             verbose_log()
         elif option_key in ['--help']:
             help()
-    upsert_pid_file(device, host, config_name, user)
     validate_parameter(host, device, extype, config_name,
                        tenant, user, password)
+    upsert_pid_file(device, host, config_name, user)
     client = CumulocityClient(host, tenant, user, password, tfacode)
     session = client.retrieve_token()
     mor = client.read_mo(device, extype)

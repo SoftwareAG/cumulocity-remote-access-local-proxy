@@ -51,6 +51,9 @@ class CumulocityClient:
         elif response.status_code == 401:
             self.logger.error(f'User {self.user} is not authorized to access Tenant {self.tenant} or TFA-Code is invalid.')
             sys.exit(1)
+        else:
+            self.logger.error(f'Server Error received for User {self.user} and Tenant {self.tenant}. Status Code: {response.status_code}')
+            sys.exit(1)
         return self.session
 
     def read_ext_Id(self, device, extype):

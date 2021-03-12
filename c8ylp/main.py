@@ -267,7 +267,8 @@ def _help_message() -> str:
                ' --port                 OPTIONAL, the TCP Port which should be opened. Default: 2222\n'
                ' -k, --kill             OPTIONAL, kills all existing processes of c8ylp\n'
                ' --tcpsize              OPTIONAL, the TCP Package Size. Default: 32768\n'
-               ' --tcptimeout           OPTIONAL, The timeout in sec. after the TCP Server will close the session without any activity. Set to "0" to deactivate. Default: 60 sec.'
+               ' --tcptimeout           OPTIONAL, Timeout in sec. for inactivity. Can be deactivited with "0". Default: 60 sec.\n'
+               '-v, --verbose           OPTIONAL, Print Debug Information into the Logs and Console when set.'
                '\n')
 
 

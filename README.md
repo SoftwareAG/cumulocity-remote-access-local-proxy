@@ -89,10 +89,11 @@ Available Parameter:
 | -t     | --tenant      | C8Y_TENANT           | x        | The tenant Id of Cumulocity
 | -u     | --user        | C8Y_USER             | x        | The username of Cumulocity
 | -p     | --password    | C8Y_PASSWORD         | x        | The password of Cumulocity
+|        | --tfacode     |                      |          | The TFA Code when an user with the Option "TFA enabled" is used
 |        | --port        | C8Y_PORT             |          | The TCP Port which should be opened. Default: 2222
 | -k     | --kill        |                      |          | Kills all existing processes of c8ylp
 |        | --tcpsize     | C8Y_TCPSIZE          |          | The TCP Package Size. Default: 32768
-|        | --tcptimeout  | C8Y_TCPTIMEOUT       |          | The timeout in sec. after the server will close the session. Set to "0" to deactivate. Default: 60 sec.
+|        | --tcptimeout  | C8Y_TCPTIMEOUT       |          | Timeout in sec. for inactivity. Can be deactivited with "0". Default: 60 sec.
 | -v     | --verbose     |                      |          | Print Debug Information into the Logs and Console when set.
 
 You can execute `c8ylp --help` to get help about the parameters and execution.

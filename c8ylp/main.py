@@ -268,7 +268,7 @@ def _help_message() -> str:
                ' -k, --kill             OPTIONAL, kills all existing processes of c8ylp\n'
                ' --tcpsize              OPTIONAL, the TCP Package Size. Default: 32768\n'
                ' --tcptimeout           OPTIONAL, Timeout in sec. for inactivity. Can be deactivited with "0". Default: 60 sec.\n'
-               ' -v, --verbose           OPTIONAL, Print Debug Information into the Logs and Console when set.'
+               ' -v, --verbose          OPTIONAL, Print Debug Information into the Logs and Console when set.'
                '\n')
 
 

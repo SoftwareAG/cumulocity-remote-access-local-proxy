@@ -18,7 +18,7 @@
 from setuptools import setup
 
 setup(name='c8ylp',
-      version='1.0',
+      version='1.1',
       description='Cumulocity Local Client Proxy',
       author='Stefan Witschel',
       license='Apache v2',

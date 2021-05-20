@@ -95,6 +95,7 @@ Available Parameter:
 |        | --tcpsize     | C8Y_TCPSIZE          |          | The TCP Package Size. Default: 32768
 |        | --tcptimeout  | C8Y_TCPTIMEOUT       |          | Timeout in sec. for inactivity. Can be deactivited with "0". Default: 60 sec.
 | -v     | --verbose     |                      |          | Print Debug Information into the Logs and Console when set.
+| -s     | --scriptmode  |                      |          | Stops the TCP Server after first connection. No automatical restart!
 
 You can execute `c8ylp --help` to get help about the parameters and execution.
 

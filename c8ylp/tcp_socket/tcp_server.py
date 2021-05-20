@@ -23,7 +23,7 @@ import threading
 
 class TCPServer:
 
-    def __init__(self, port, web_socket_client, tcp_buffer_size, tcp_timeout, wst):
+    def __init__(self, port, web_socket_client, tcp_buffer_size, tcp_timeout, wst, script_mode):
         self.port = port
         self.sock = None
         self.connection = None
@@ -35,6 +35,7 @@ class TCPServer:
         self._tcp_open_event = threading.Event()
         self.wst = wst
         self.tcp_timeout_counter = None
+        self.script_mode = script_mode
         self.logger = logging.getLogger(__name__)
 
     def start(self):
@@ -87,7 +88,8 @@ class TCPServer:
                     self.logger.error(ex)
                     break
             # Restart the TCP Server
-            self._restart()
+            if not self.script_mode:
+                self._restart()
         except Exception as ex:
             self.logger.error(ex)
 

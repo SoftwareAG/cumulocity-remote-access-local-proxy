@@ -63,9 +63,9 @@ def start():
     # Log to Rotating File
     logger.addHandler(rotate_handler)
     try:
-        opts,args = getopt.getopt(sys.argv[1:], "h:d:c:t:u:p:kv",
+        opts,args = getopt.getopt(sys.argv[1:], "h:d:c:t:u:p:kvs",
                                    ["help", "hostname=", "device=", "extype=", "config=", "tenant=", "username=",
-                                    "password=", "tfacode=", "port=", "kill", "tcpsize=", "tcptimeout=", "verbose"])
+                                    "password=", "tfacode=", "port=", "kill", "tcpsize=", "tcptimeout=", "verbose", "scriptmode"])
     except getopt.GetoptError as e:
         logging.error(e)
         help()
@@ -85,6 +85,7 @@ def start():
     tcp_timeout = int(os.environ.get('C8Y_TCPTIMEOUT')) if os.environ.get('C8Y_TCPTIMEOUT') is not None else 60
     port = int(os.environ.get('C8Y_PORT')) if os.environ.get('C8Y_PORT') is not None else 2222
     tfacode = None
+    script_mode = False
     for option_key, option_value in opts:
         if option_key in ('-h', '--hostname'):
             host = option_value
@@ -112,6 +113,8 @@ def start():
             tcp_timeout = int(option_value)
         elif option_key in ['-v', '--verbose']:
             verbose_log()
+        elif option_key in ['-s', '--scriptmode']:
+            script_mode = True
         elif option_key in ['--help']:
             help()
     validate_parameter(host, device, extype, config_name,
@@ -125,7 +128,7 @@ def start():
     websocket_client = WebsocketClient(
         host, tenant, user, password, config_id, device_id, session)
     wst = websocket_client.connect()
-    tcp_server = TCPServer(port, websocket_client, tcp_size, tcp_timeout, wst)
+    tcp_server = TCPServer(port, websocket_client, tcp_size, tcp_timeout, wst, script_mode)
     # TCP is blocking...
     websocket_client.tcp_server = tcp_server
     try:
@@ -268,7 +271,8 @@ def _help_message() -> str:
                ' -k, --kill             OPTIONAL, kills all existing processes of c8ylp\n'
                ' --tcpsize              OPTIONAL, the TCP Package Size. Default: 32768\n'
                ' --tcptimeout           OPTIONAL, Timeout in sec. for inactivity. Can be deactivited with "0". Default: 60 sec.\n'
-               ' -v, --verbose          OPTIONAL, Print Debug Information into the Logs and Console when set.'
+               ' -v, --verbose          OPTIONAL, Print Debug Information into the Logs and Console when set.\n'
+               ' -s, --scriptmode       OPTIONAL, Stops the TCP Server after first connection. No automatical restart!'
                '\n')
 
 

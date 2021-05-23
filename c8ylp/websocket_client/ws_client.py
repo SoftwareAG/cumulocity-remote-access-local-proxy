@@ -23,7 +23,7 @@ import websocket
 
 class WebsocketClient(threading.Thread):
 
-    def __init__(self, host, tenant, user, password, config_id, device_id, session):
+    def __init__(self, host, tenant, user, password, config_id, device_id, session, token):
         self.host = host
         self.tenant = tenant
         self.user = user
@@ -38,6 +38,7 @@ class WebsocketClient(threading.Thread):
         self.logger = logging.getLogger(__name__)
         self.wst = None
         self.session = session
+        self.token = token
         self.trigger_reconnect = True
 
     def connect(self):
@@ -49,15 +50,21 @@ class WebsocketClient(threading.Thread):
         # encoded_auth_string = b64encode(
         #    bytes(auth_string, 'utf-8')).decode('ascii')
         # headers = f'Authorization: Basic {encoded_auth_string}'
-        headers = {  # 'Authorization': 'Basic ' + encoded_auth_string,
-            'X-XSRF-TOKEN': self.session.cookies.get_dict()['XSRF-TOKEN']
-        }
-        cookies = self.session.cookies.get_dict()
-        cookie_string = "; ".join([str(x) + "=" + str(y)
+        if self.token:
+            headers = {'Content-Type': 'application/json',
+                       'Authorization': 'Bearer ' +self.token}
+            self.web_socket = websocket.WebSocketApp(url, header=headers)
+        else:
+            headers = {'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': self.session.cookies.get_dict()['XSRF-TOKEN']
+                    }
+            cookies = self.session.cookies.get_dict()
+            cookie_string = "; ".join([str(x) + "=" + str(y)
                                    for x, y in cookies.items()])
+            self.web_socket = websocket.WebSocketApp(
+                url, header=headers, cookie=cookie_string)
         # self.logger.debug(f'Cookie String: {cookie_string}')
-        self.web_socket = websocket.WebSocketApp(
-            url, header=headers, cookie=cookie_string)
+        
         # pylint: disable=unnecessary-lambda
         # See https://stackoverflow.com/questions/26980966/using-a-websocket-client-as-a-class-in-python
         self.web_socket.on_message = lambda ws, msg: self._on_ws_message(

@@ -16,6 +16,7 @@
 #
 
 import json
+import os
 import logging
 import sys
 from base64 import b64encode
@@ -32,8 +33,24 @@ class CumulocityClient:
         self.password = password
         self.tfacode = tfacode
         self.session = requests.Session()
+        self.token = os.environ.get('C8Y_TOKEN')
         self.url = f'https://{hostname}'
         self.logger = logging.getLogger(__name__)
+
+    def validate_token(self):
+        is_valid = False
+        current_user_url = self.url + f'/user/currentUser'
+        headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + self.token}
+        response = self.session.get(current_user_url, headers=headers)
+        self.logger.debug(f'Response received: {response}')
+        if response.status_code == 200:
+            is_valid = True
+        else:
+            self.logger.error(f'Error validating Token {response.status_code}. Please provide Tenant User and Password!')
+            del os.environ['C8Y_TOKEN']
+            is_valid = False
+            sys.exit(1)
+        return is_valid
 
     def retrieve_token(self):
         oauth_url = self.url + f'/tenant/oauth?tenant_id={self.tenant}'
@@ -48,6 +65,8 @@ class CumulocityClient:
         response = self.session.post(oauth_url,headers=headers,data=body)
         if response.status_code == 200:
             self.logger.debug(f'Authenticateion successful. Tokens have been updated {self.session.cookies.get_dict()}!')
+            os.environ['C8Y_TOKEN'] = self.session.cookies.get_dict()['authorization']
+            self.logger.debug(f'Token set: {os.environ.get("C8Y_TOKEN")}')
         elif response.status_code == 401:
             self.logger.error(f'User {self.user} is not authorized to access Tenant {self.tenant} or TFA-Code is invalid.')
             sys.exit(1)
@@ -61,10 +80,14 @@ class CumulocityClient:
         #auth_string = f'{self.tenant}/{self.user}:{self.password}'
         #encoded_auth_string = b64encode(
         #    bytes(auth_string, 'utf-8')).decode('ascii')
-        headers = {'Content-Type': 'application/json',
+        if self.token:
+            headers = {'Content-Type': 'application/json',
+                       'Authorization': 'Bearer ' +self.token}
+        else:
+            headers = {'Content-Type': 'application/json',
                     'X-XSRF-TOKEN': self.session.cookies.get_dict()['XSRF-TOKEN']
                    #'Authorization': 'Basic ' + encoded_auth_string
-                  }
+                    }
         self.logger.debug(f'Sending requests to {identiy_url}')
         response = self.session.get(identiy_url, headers=headers)
         self.logger.debug(f'Response received: {response}')
@@ -92,13 +115,17 @@ class CumulocityClient:
             mor_id = ext_id['managedObject']['id']
         if mor_id:
             managed_object_url = self.url + f'/inventory/managedObjects/{mor_id}'
+            if self.token:
+                headers = {'Content-Type': 'application/json',
+                       'Authorization': 'Bearer ' +self.token}
+            else:
+                headers = {'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': self.session.cookies.get_dict()['XSRF-TOKEN']
+                   #'Authorization': 'Basic ' + encoded_auth_string
+                    }
             #auth_string = f'{self.tenant}/{self.user}:{self.password}'
             #encoded_auth_string = b64encode(
             #    bytes(auth_string, 'utf-8')).decode('ascii')
-            headers = {'Content-Type': 'application/json',
-                       'X-XSRF-TOKEN': self.session.cookies.get_dict()['XSRF-TOKEN']
-                       #'Authorization': 'Basic ' + encoded_auth_string
-                      }
             self.logger.debug(f'Sending requests to {managed_object_url}')
             response = self.session.get(managed_object_url, headers=headers)
             self.logger.debug(f'Response received: {response}')

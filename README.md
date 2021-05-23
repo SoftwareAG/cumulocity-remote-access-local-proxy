@@ -96,6 +96,7 @@ Available Parameter:
 |        | --tcptimeout  | C8Y_TCPTIMEOUT       |          | Timeout in sec. for inactivity. Can be deactivited with "0". Default: 60 sec.
 | -v     | --verbose     |                      |          | Print Debug Information into the Logs and Console when set.
 | -s     | --scriptmode  |                      |          | Stops the TCP Server after first connection. No automatical restart!
+|        |               | C8Y_TOKEN            |          | When set and valid no user, password, tenant, tfacode must be provided.
 
 You can execute `c8ylp --help` to get help about the parameters and execution.
 

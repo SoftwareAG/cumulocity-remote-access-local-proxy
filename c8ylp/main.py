@@ -84,6 +84,7 @@ def start():
     tcp_size = int(os.environ.get('C8Y_TCPSIZE')) if os.environ.get('C8Y_TCPSIZE') is not None else 32768
     tcp_timeout = int(os.environ.get('C8Y_TCPTIMEOUT')) if os.environ.get('C8Y_TCPTIMEOUT') is not None else 60
     port = int(os.environ.get('C8Y_PORT')) if os.environ.get('C8Y_PORT') is not None else 2222
+    token = os.environ.get('C8Y_TOKEN')
     tfacode = None
     script_mode = False
     for option_key, option_value in opts:
@@ -118,15 +119,20 @@ def start():
         elif option_key in ['--help']:
             help()
     validate_parameter(host, device, extype, config_name,
-                       tenant, user, password)
+                       tenant, user, password, token)
     upsert_pid_file(device, host, config_name, user)
     client = CumulocityClient(host, tenant, user, password, tfacode)
-    session = client.retrieve_token()
+    session = None
+    if token:
+        client.validate_token()
+    else:
+        session = client.retrieve_token()
+    
     mor = client.read_mo(device, extype)
     config_id = client.get_config_id(mor, config_name)
     device_id = client.get_device_id(mor)
     websocket_client = WebsocketClient(
-        host, tenant, user, password, config_id, device_id, session)
+        host, tenant, user, password, config_id, device_id, session, token)
     wst = websocket_client.connect()
     tcp_server = TCPServer(port, websocket_client, tcp_size, tcp_timeout, wst, script_mode)
     # TCP is blocking...
@@ -211,7 +217,7 @@ def kill_existing_instances():
             clean_pid_file(other_pid)
 
 
-def validate_parameter(host, device, extpye, config_name, tenant, user, password):
+def validate_parameter(host, device, extpye, config_name, tenant, user, password, token):
     if not host:
         logging.error(f'Hostname is missing!')
         print('Mandatory parameter -h, --hostname is missing')
@@ -230,19 +236,19 @@ def validate_parameter(host, device, extpye, config_name, tenant, user, password
         print(_help_message())
         sys.exit(1)
 
-    if not tenant:
+    if not tenant and not token:
         logging.error(f'Tenant is missing!')
         print('Mandatory parameter -t, --tenant is missing')
         print(_help_message())
         sys.exit(1)
 
-    if not user:
+    if not user and not token:
         logging.error(f'User is missing!')
         print('Mandatory parameter -u, --user is missing')
         print(_help_message())
         sys.exit(1)
 
-    if not password:
+    if not password and not token:
         logging.error(f'Password is missing!')
         print('Mandatory parameter -p, --password is missing')
         print(_help_message())

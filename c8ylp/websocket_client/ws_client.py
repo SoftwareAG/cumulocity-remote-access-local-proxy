@@ -71,7 +71,7 @@ class WebsocketClient(threading.Thread):
             ws, msg)
         self.web_socket.on_error = lambda ws, error: self._on_ws_error(
             ws, error)
-        self.web_socket.on_close = lambda ws: self._on_ws_close(ws)
+        self.web_socket.on_close = lambda ws,msg,msg2: self._on_ws_close(ws,msg,msg2)
         self.web_socket.on_open = lambda ws: self._on_ws_open(ws)
         self.wst = threading.Thread(target=self.web_socket.run_forever, kwargs={
             'ping_interval': 10, 'ping_timeout': 7})
@@ -133,8 +133,8 @@ class WebsocketClient(threading.Thread):
         else:
             self.logger.error(f'WebSocket Error received: {error}')
 
-    def _on_ws_close(self, _ws):
-        self.logger.info(f'WebSocket Connection closed!!')
+    def _on_ws_close(self, _ws, close_status, close_reason):
+        self.logger.info(f'WebSocket Connection closed. Status: {close_status}, Reason: {close_reason}')
         self._ws_open = False
         self._ws_open_event.set()
         if self.tcp_server.is_tcp_socket_available():

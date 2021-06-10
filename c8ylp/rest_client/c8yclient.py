@@ -66,7 +66,6 @@ class CumulocityClient:
         if response.status_code == 200:
             self.logger.debug(f'Authenticateion successful. Tokens have been updated {self.session.cookies.get_dict()}!')
             os.environ['C8Y_TOKEN'] = self.session.cookies.get_dict()['authorization']
-            self.logger.debug(f'Token set: {os.environ.get("C8Y_TOKEN")}')
         elif response.status_code == 401:
             self.logger.error(f'User {self.user} is not authorized to access Tenant {self.tenant} or TFA-Code is invalid.')
             sys.exit(1)

@@ -34,7 +34,10 @@ class CumulocityClient:
         self.tfacode = tfacode
         self.session = requests.Session()
         self.token = os.environ.get('C8Y_TOKEN')
-        self.url = f'https://{hostname}'
+        if hostname.startswith('http'):
+            self.url = hostname
+        else:
+            self.url = f'https://{hostname}'
         self.logger = logging.getLogger(__name__)
     
     def validate_remote_access_role(self):
@@ -176,9 +179,11 @@ class CumulocityClient:
                 continue
             if config and remote_access['name'] == config:
                 config_id = remote_access['id']
+                self.logger.info(f'Using Configuration with Name "{config}" and Remote Port {remote_access["port"]}')
                 break
             if not config:
                 config_id = remote_access['id']
+                self.logger.info(f'Using Configuration with Name "{config}" and Remote Port {remote_access["port"]}')
                 break
         if not config_id:
             if config:

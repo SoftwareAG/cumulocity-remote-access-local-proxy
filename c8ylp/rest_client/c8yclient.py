@@ -36,6 +36,31 @@ class CumulocityClient:
         self.token = os.environ.get('C8Y_TOKEN')
         self.url = f'https://{hostname}'
         self.logger = logging.getLogger(__name__)
+    
+    def validate_remote_access_role(self):
+        is_valid = False
+        current_user_url = self.url + f'/user/currentUser'
+        if self.token:
+            headers = {'Content-Type': 'application/json',
+                       'Authorization': 'Bearer ' +self.token}
+        else:
+            headers = {'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': self.session.cookies.get_dict()['XSRF-TOKEN']
+                    }
+        response = self.session.get(current_user_url, headers=headers)
+        self.logger.debug(f'Response received: {response}')
+        if response.status_code == 200:
+            user = json.loads(response.content.decode('utf-8'))
+            effective_roles = user['effectiveRoles']
+            for role in effective_roles:
+                if 'ROLE_REMOTE_ACCESS_ADMIN' == role['id']:
+                    self.logger.debug(f'Remote Access Role assigned to User {self.user}!')
+                    is_valid = True
+                    break
+        else:
+            self.logger.error(f'Error retrieving User Data!')
+            is_valid = False
+        return is_valid
 
     def validate_token(self):
         is_valid = False

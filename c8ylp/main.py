@@ -131,6 +131,10 @@ def start():
     mor = client.read_mo(device, extype)
     config_id = client.get_config_id(mor, config_name)
     device_id = client.get_device_id(mor)
+    is_authorized = client.validate_remote_access_role()
+    if not is_authorized:
+        logging.error(f'User {user} is not authorized to use Cloud Remote Access. Contact your Cumulocity Admin!')
+        sys.exit(1)
     websocket_client = WebsocketClient(
         host, tenant, user, password, config_id, device_id, session, token)
     wst = websocket_client.connect()

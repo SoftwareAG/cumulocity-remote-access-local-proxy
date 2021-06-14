@@ -48,7 +48,7 @@ class WebsocketClient(threading.Thread):
             self.host = self.host.replace('http', 'wss')
         elif self.host.startswith('https'):
             self.host = self.host.replace('https', 'wss')
-        else:
+        elif not self.host.startswith('wss://'):
             self.host = f'wss://{self.host}'
         url = f'{self.host}/service/remoteaccess/client/{self.device_id}/configurations/{self.config_id}'
         self.logger.info(f'Connecting to WebSocket with URL {url} ...')

@@ -44,10 +44,10 @@ class WebsocketClient(threading.Thread):
     def connect(self):
         self._ws_open_event = threading.Event()
         # websocket.enableTrace(True) # Enable this for Debug Purpose only
-        if self.host.startswith('http'):
-            self.host = self.host.replace('http', 'wss')
-        elif self.host.startswith('https'):
+        if self.host.startswith('https'):
             self.host = self.host.replace('https', 'wss')
+        elif self.host.startswith('http'):
+            self.host = self.host.replace('http', 'wss')
         else:
             self.host = f'wss://{self.host}'
         url = f'{self.host}/service/remoteaccess/client/{self.device_id}/configurations/{self.config_id}'

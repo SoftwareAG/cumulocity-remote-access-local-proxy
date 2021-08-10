@@ -65,7 +65,8 @@ def start():
     try:
         opts,args = getopt.getopt(sys.argv[1:], "h:d:c:t:u:p:kvs",
                                    ["help", "hostname=", "device=", "extype=", "config=", "tenant=", "username=",
-                                    "password=", "tfacode=", "port=", "kill", "tcpsize=", "tcptimeout=", "verbose", "scriptmode"])
+                                    "password=", "tfacode=", "port=", "kill", "tcpsize=", "tcptimeout=", "verbose", "scriptmode",
+                                    "ignore-ssl-validate"])
     except getopt.GetoptError as e:
         logging.error(e)
         help()
@@ -87,6 +88,7 @@ def start():
     token = os.environ.get('C8Y_TOKEN')
     tfacode = None
     script_mode = False
+    ignore_ssl_validate = False
     for option_key, option_value in opts:
         if option_key in ('-h', '--hostname'):
             host = option_value
@@ -116,6 +118,8 @@ def start():
             verbose_log()
         elif option_key in ['-s', '--scriptmode']:
             script_mode = True
+        elif option_key in ['--ignore-ssl-validate']:
+            ignore_ssl_validate = True
         elif option_key in ['--help']:
             help()
     validate_parameter(host, device, extype, config_name,
@@ -136,7 +140,7 @@ def start():
         logging.error(f'User {user} is not authorized to use Cloud Remote Access. Contact your Cumulocity Admin!')
         sys.exit(1)
     websocket_client = WebsocketClient(
-        host, tenant, user, password, config_id, device_id, session, token)
+        host, tenant, user, password, config_id, device_id, session, token, ignore_ssl_validate)
     wst = websocket_client.connect()
     tcp_server = TCPServer(port, websocket_client, tcp_size, tcp_timeout, wst, script_mode)
     # TCP is blocking...
@@ -282,7 +286,8 @@ def _help_message() -> str:
                ' --tcpsize              OPTIONAL, the TCP Package Size. Default: 32768\n'
                ' --tcptimeout           OPTIONAL, Timeout in sec. for inactivity. Can be deactivited with "0". Default: 60 sec.\n'
                ' -v, --verbose          OPTIONAL, Print Debug Information into the Logs and Console when set.\n'
-               ' -s, --scriptmode       OPTIONAL, Stops the TCP Server after first connection. No automatical restart!'
+               ' -s, --scriptmode       OPTIONAL, Stops the TCP Server after first connection. No automatical restart!\n'
+               ' --ignore-ssl-validate  OPTIONAL, Ignore Validation for SSL Certificates while connecting to Websocket'
                '\n')
 
 

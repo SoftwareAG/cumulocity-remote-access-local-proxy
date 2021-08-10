@@ -125,7 +125,7 @@ def start():
     validate_parameter(host, device, extype, config_name,
                        tenant, user, password, token)
     upsert_pid_file(device, host, config_name, user)
-    client = CumulocityClient(host, tenant, user, password, tfacode)
+    client = CumulocityClient(host, tenant, user, password, tfacode, ignore_ssl_validate)
     session = None
     if token:
         client.validate_token()

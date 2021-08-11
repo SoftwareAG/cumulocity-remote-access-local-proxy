@@ -34,6 +34,7 @@ from c8ylp.websocket_client.ws_client import WebsocketClient
 
 PIDFILE = '/var/run/c8ylp/c8ylp'
 
+
 def start():
     home = expanduser('~')
     path = pathlib.Path(home + '/.c8ylp')
@@ -63,15 +64,17 @@ def start():
     # Log to Rotating File
     logger.addHandler(rotate_handler)
     try:
-        opts,args = getopt.getopt(sys.argv[1:], "h:d:c:t:u:p:kvs",
+        opts, args = getopt.getopt(sys.argv[1:], "h:d:c:t:u:p:kvs",
                                    ["help", "hostname=", "device=", "extype=", "config=", "tenant=", "username=",
-                                    "password=", "tfacode=", "port=", "kill", "tcpsize=", "tcptimeout=", "verbose", "scriptmode"])
+                                    "password=", "tfacode=", "port=", "kill", "tcpsize=", "tcptimeout=", "verbose",
+                                    "scriptmode",
+                                    "ignore-ssl-validate"])
     except getopt.GetoptError as e:
         logging.error(e)
         help()
 
     logging.debug(f'OPTIONS: {opts}')
-    #if len(opts) == 0:
+    # if len(opts) == 0:
     #    print(help())
     host = os.environ.get('C8Y_HOST')
     device = os.environ.get('C8Y_DEVICE')
@@ -79,7 +82,7 @@ def start():
     extype = os.environ.get('C8Y_EXTYPE') if os.environ.get('C8Y_EXTYPE') is not None else 'c8y_Serial'
     config_name = os.environ.get('C8Y_CONFIG') if os.environ.get('C8Y_CONFIG') is not None else 'Passthrough'
     tenant = os.environ.get('C8Y_TENANT')
-    user = os.environ.get('C8Y_USER') 
+    user = os.environ.get('C8Y_USER')
     password = os.environ.get('C8Y_PASSWORD')
     tcp_size = int(os.environ.get('C8Y_TCPSIZE')) if os.environ.get('C8Y_TCPSIZE') is not None else 32768
     tcp_timeout = int(os.environ.get('C8Y_TCPTIMEOUT')) if os.environ.get('C8Y_TCPTIMEOUT') is not None else 60
@@ -87,6 +90,7 @@ def start():
     token = os.environ.get('C8Y_TOKEN')
     tfacode = None
     script_mode = False
+    ignore_ssl_validate = False
     for option_key, option_value in opts:
         if option_key in ('-h', '--hostname'):
             host = option_value
@@ -116,18 +120,20 @@ def start():
             verbose_log()
         elif option_key in ['-s', '--scriptmode']:
             script_mode = True
+        elif option_key in ['--ignore-ssl-validate']:
+            ignore_ssl_validate = True
         elif option_key in ['--help']:
             help()
     validate_parameter(host, device, extype, config_name,
                        tenant, user, password, token)
     upsert_pid_file(device, host, config_name, user)
-    client = CumulocityClient(host, tenant, user, password, tfacode)
+    client = CumulocityClient(host, tenant, user, password, tfacode, ignore_ssl_validate)
     session = None
     if token:
         client.validate_token()
     else:
         session = client.retrieve_token()
-    
+
     mor = client.read_mo(device, extype)
     config_id = client.get_config_id(mor, config_name)
     device_id = client.get_device_id(mor)
@@ -136,7 +142,7 @@ def start():
         logging.error(f'User {user} is not authorized to use Cloud Remote Access. Contact your Cumulocity Admin!')
         sys.exit(1)
     websocket_client = WebsocketClient(
-        host, tenant, user, password, config_id, device_id, session, token)
+        host, tenant, user, password, config_id, device_id, session, token, ignore_ssl_validate)
     wst = websocket_client.connect()
     tcp_server = TCPServer(port, websocket_client, tcp_size, tcp_timeout, wst, script_mode)
     # TCP is blocking...
@@ -150,11 +156,13 @@ def start():
         tcp_server.stop()
         sys.exit(0)
 
+
 def verbose_log():
     logging.info(f'Verbose logging activated.')
     logging.getLogger().setLevel(logging.DEBUG)
     for handler in logging.getLogger().handlers:
         handler.setLevel(logging.DEBUG)
+
 
 def upsert_pid_file(device, url, config, user):
     try:
@@ -172,7 +180,8 @@ def upsert_pid_file(device, url, config, user):
         file.write(pid_file_text)
         file.write('\n')
     except PermissionError:
-        logging.error(f'Could not write PID-File {PIDFILE}. Please create the folder manually and assign the correct permissions.')
+        logging.error(
+            f'Could not write PID-File {PIDFILE}. Please create the folder manually and assign the correct permissions.')
         sys.exit(1)
 
 
@@ -282,7 +291,8 @@ def _help_message() -> str:
                ' --tcpsize              OPTIONAL, the TCP Package Size. Default: 32768\n'
                ' --tcptimeout           OPTIONAL, Timeout in sec. for inactivity. Can be deactivited with "0". Default: 60 sec.\n'
                ' -v, --verbose          OPTIONAL, Print Debug Information into the Logs and Console when set.\n'
-               ' -s, --scriptmode       OPTIONAL, Stops the TCP Server after first connection. No automatical restart!'
+               ' -s, --scriptmode       OPTIONAL, Stops the TCP Server after first connection. No automatical restart!\n'
+               ' --ignore-ssl-validate  OPTIONAL, Ignore Validation for SSL Certificates while connecting to Websocket'
                '\n')
 
 

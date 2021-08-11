@@ -26,7 +26,8 @@ import requests
 
 class CumulocityClient:
 
-    def __init__(self, hostname: str, tenant: str, user: str, password: str, tfacode: str):
+    def __init__(self, hostname: str, tenant: str, user: str, password: str, tfacode: str,
+                 ignore_ssl_validate: bool = False):
         self.hostname = hostname
         self.tenant = tenant
         self.user = user
@@ -38,8 +39,10 @@ class CumulocityClient:
             self.url = hostname
         else:
             self.url = f'https://{hostname}'
+        if ignore_ssl_validate:
+            self.session.verify = False
         self.logger = logging.getLogger(__name__)
-    
+
     def validate_remote_access_role(self):
         is_valid = False
         current_user_url = self.url + f'/user/currentUser'

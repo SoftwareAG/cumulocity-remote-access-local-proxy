@@ -34,6 +34,7 @@ from c8ylp.websocket_client.ws_client import WebsocketClient
 
 PIDFILE = '/var/run/c8ylp/c8ylp'
 
+
 def start():
     home = expanduser('~')
     path = pathlib.Path(home + '/.c8ylp')
@@ -63,16 +64,17 @@ def start():
     # Log to Rotating File
     logger.addHandler(rotate_handler)
     try:
-        opts,args = getopt.getopt(sys.argv[1:], "h:d:c:t:u:p:kvs",
+        opts, args = getopt.getopt(sys.argv[1:], "h:d:c:t:u:p:kvs",
                                    ["help", "hostname=", "device=", "extype=", "config=", "tenant=", "username=",
-                                    "password=", "tfacode=", "port=", "kill", "tcpsize=", "tcptimeout=", "verbose", "scriptmode",
+                                    "password=", "tfacode=", "port=", "kill", "tcpsize=", "tcptimeout=", "verbose",
+                                    "scriptmode",
                                     "ignore-ssl-validate"])
     except getopt.GetoptError as e:
         logging.error(e)
         help()
 
     logging.debug(f'OPTIONS: {opts}')
-    #if len(opts) == 0:
+    # if len(opts) == 0:
     #    print(help())
     host = os.environ.get('C8Y_HOST')
     device = os.environ.get('C8Y_DEVICE')
@@ -80,7 +82,7 @@ def start():
     extype = os.environ.get('C8Y_EXTYPE') if os.environ.get('C8Y_EXTYPE') is not None else 'c8y_Serial'
     config_name = os.environ.get('C8Y_CONFIG') if os.environ.get('C8Y_CONFIG') is not None else 'Passthrough'
     tenant = os.environ.get('C8Y_TENANT')
-    user = os.environ.get('C8Y_USER') 
+    user = os.environ.get('C8Y_USER')
     password = os.environ.get('C8Y_PASSWORD')
     tcp_size = int(os.environ.get('C8Y_TCPSIZE')) if os.environ.get('C8Y_TCPSIZE') is not None else 32768
     tcp_timeout = int(os.environ.get('C8Y_TCPTIMEOUT')) if os.environ.get('C8Y_TCPTIMEOUT') is not None else 60
@@ -131,7 +133,7 @@ def start():
         client.validate_token()
     else:
         session = client.retrieve_token()
-    
+
     mor = client.read_mo(device, extype)
     config_id = client.get_config_id(mor, config_name)
     device_id = client.get_device_id(mor)
@@ -154,11 +156,13 @@ def start():
         tcp_server.stop()
         sys.exit(0)
 
+
 def verbose_log():
     logging.info(f'Verbose logging activated.')
     logging.getLogger().setLevel(logging.DEBUG)
     for handler in logging.getLogger().handlers:
         handler.setLevel(logging.DEBUG)
+
 
 def upsert_pid_file(device, url, config, user):
     try:
@@ -176,7 +180,8 @@ def upsert_pid_file(device, url, config, user):
         file.write(pid_file_text)
         file.write('\n')
     except PermissionError:
-        logging.error(f'Could not write PID-File {PIDFILE}. Please create the folder manually and assign the correct permissions.')
+        logging.error(
+            f'Could not write PID-File {PIDFILE}. Please create the folder manually and assign the correct permissions.')
         sys.exit(1)
 
 

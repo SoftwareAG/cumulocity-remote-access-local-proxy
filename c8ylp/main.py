@@ -95,7 +95,7 @@ def start():
         if option_key in ('-h', '--hostname'):
             host = option_value
         elif option_key in ('-d', '--device'):
-            device = option_value
+            device = str(option_value).lower()
         elif option_key in '--extype':
             extype = option_value
         elif option_key in ('-c', '--config'):

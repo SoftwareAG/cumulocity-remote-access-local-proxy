@@ -19,11 +19,12 @@ import logging
 import threading
 
 import websocket
+import ssl
 
 
 class WebsocketClient(threading.Thread):
 
-    def __init__(self, host, tenant, user, password, config_id, device_id, session, token):
+    def __init__(self, host, tenant, user, password, config_id, device_id, session, token, ignore_ssl_validate=False):
         self.host = host
         self.tenant = tenant
         self.user = user
@@ -40,6 +41,7 @@ class WebsocketClient(threading.Thread):
         self.session = session
         self.token = token
         self.trigger_reconnect = True
+        self.ignore_ssl_validate = ignore_ssl_validate
 
     def connect(self):
         self._ws_open_event = threading.Event()
@@ -79,8 +81,10 @@ class WebsocketClient(threading.Thread):
             ws, error)
         self.web_socket.on_close = lambda ws,msg,msg2: self._on_ws_close(ws,msg,msg2)
         self.web_socket.on_open = lambda ws: self._on_ws_open(ws)
-        self.wst = threading.Thread(target=self.web_socket.run_forever, kwargs={
-            'ping_interval': 10, 'ping_timeout': 7})
+        web_socket_kwargs = {'ping_interval': 10, 'ping_timeout': 7}
+        if self.ignore_ssl_validate:
+            web_socket_kwargs['sslopt'] = {'cert_reqs': ssl.CERT_NONE}
+        self.wst = threading.Thread(target=self.web_socket.run_forever, kwargs=web_socket_kwargs)
         self.wst.daemon = True
         self.wst.name = f'WSTunnelThread-{self.config_id}'
         self.wst.start()

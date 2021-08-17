@@ -97,6 +97,7 @@ Available Parameter:
 | -v     | --verbose     |                      |          | Print Debug Information into the Logs and Console when set.
 | -s     | --scriptmode  |                      |          | Stops the TCP Server after first connection. No automatical restart!
 |        |               | C8Y_TOKEN            |          | When set and valid no user, password, tenant, tfacode must be provided.
+|        | --ignore-ssl-validate|                |          | Ignore Validation for SSL Certificates while connecting to Websocket.
 
 You can execute `c8ylp --help` to get help about the parameters and execution.
 

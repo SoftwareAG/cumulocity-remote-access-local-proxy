@@ -122,15 +122,18 @@ def start():
                        tenant, user, password, token)
     upsert_pid_file(device, host, config_name, user)
     client = CumulocityClient(host, tenant, user, password, tfacode)
+    tenant_id_valid = client.validate_tenant_id()
+    if tenant_id_valid is not None:
+        logging.warn(f'WARNING: Tenant ID {tenant} does not exist. Try using this Tenant ID {tenant_id_valid} next time!')
     session = None
     if token:
         client.validate_token()
     else:
         session = client.retrieve_token()
-    
     mor = client.read_mo(device, extype)
     config_id = client.get_config_id(mor, config_name)
     device_id = client.get_device_id(mor)
+    
     is_authorized = client.validate_remote_access_role()
     if not is_authorized:
         logging.error(f'User {user} is not authorized to use Cloud Remote Access. Contact your Cumulocity Admin!')

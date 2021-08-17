@@ -40,6 +40,29 @@ class CumulocityClient:
             self.url = f'https://{hostname}'
         self.logger = logging.getLogger(__name__)
     
+    def validate_tenant_id(self):
+        tenant_id = None
+        current_user_url = self.url + f'/tenant/loginOptions'
+        headers = {}
+        response = self.session.get(current_user_url, headers=headers)
+        self.logger.debug(f'Response received: {response}')
+        if response.status_code == 200:
+            login_options_body = json.loads(response.content.decode('utf-8'))
+            login_options = login_options_body['loginOptions']
+            for option in login_options:
+                if 'initRequest' in option:
+                    tenant_id = option['initRequest'].split('=')[1]
+                    if self.tenant != tenant_id:
+                        self.logger.debug(f'Wrong Tenant ID {self.tenant}, Correct Tenant ID: {tenant_id}')
+                        self.tenant = tenant_id
+                    else:
+                        tenant_id = None
+                    break
+        
+        else:
+            self.logger.error(f'Error validating Tenant ID!')
+        return tenant_id
+
     def validate_remote_access_role(self):
         is_valid = False
         current_user_url = self.url + f'/user/currentUser'

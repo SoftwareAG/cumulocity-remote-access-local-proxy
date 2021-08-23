@@ -85,7 +85,7 @@ def start():
     user = os.environ.get('C8Y_USER')
     password = os.environ.get('C8Y_PASSWORD')
     tcp_size = int(os.environ.get('C8Y_TCPSIZE')) if os.environ.get('C8Y_TCPSIZE') is not None else 32768
-    tcp_timeout = int(os.environ.get('C8Y_TCPTIMEOUT')) if os.environ.get('C8Y_TCPTIMEOUT') is not None else 60
+    tcp_timeout = int(os.environ.get('C8Y_TCPTIMEOUT')) if os.environ.get('C8Y_TCPTIMEOUT') is not None else 0
     port = int(os.environ.get('C8Y_PORT')) if os.environ.get('C8Y_PORT') is not None else 2222
     token = os.environ.get('C8Y_TOKEN')
     tfacode = None
@@ -292,7 +292,7 @@ def _help_message() -> str:
                ' --port                 OPTIONAL, the TCP Port which should be opened. Default: 2222\n'
                ' -k, --kill             OPTIONAL, kills all existing processes of c8ylp\n'
                ' --tcpsize              OPTIONAL, the TCP Package Size. Default: 32768\n'
-               ' --tcptimeout           OPTIONAL, Timeout in sec. for inactivity. Can be deactivited with "0". Default: 60 sec.\n'
+               ' --tcptimeout           OPTIONAL, Timeout in sec. for inactivity. Can be activited with values > 0. Default: Deactivated\n'
                ' -v, --verbose          OPTIONAL, Print Debug Information into the Logs and Console when set.\n'
                ' -s, --scriptmode       OPTIONAL, Stops the TCP Server after first connection. No automatical restart!\n'
                ' --ignore-ssl-validate  OPTIONAL, Ignore Validation for SSL Certificates while connecting to Websocket'

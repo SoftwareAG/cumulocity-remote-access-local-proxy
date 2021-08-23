@@ -93,11 +93,11 @@ Available Parameter:
 |        | --port        | C8Y_PORT             |          | The TCP Port which should be opened. Default: 2222
 | -k     | --kill        |                      |          | Kills all existing processes of c8ylp
 |        | --tcpsize     | C8Y_TCPSIZE          |          | The TCP Package Size. Default: 32768
-|        | --tcptimeout  | C8Y_TCPTIMEOUT       |          | Timeout in sec. for inactivity. Can be deactivited with "0". Default: 60 sec.
+|        | --tcptimeout  | C8Y_TCPTIMEOUT       |          | Timeout in sec. for inactivity. Can be activited with values > 0. Default deactivated.
 | -v     | --verbose     |                      |          | Print Debug Information into the Logs and Console when set.
 | -s     | --scriptmode  |                      |          | Stops the TCP Server after first connection. No automatical restart!
 |        |               | C8Y_TOKEN            |          | When set and valid no user, password, tenant, tfacode must be provided.
-|        | --ignore-ssl-validate|                |          | Ignore Validation for SSL Certificates while connecting to Websocket.
+|        | --ignore-ssl-validate|               |          | Ignore Validation for SSL Certificates while connecting to Websocket.
 
 You can execute `c8ylp --help` to get help about the parameters and execution.
 

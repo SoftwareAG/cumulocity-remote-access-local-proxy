@@ -56,9 +56,9 @@ sudo apt install /path/to/package/c8ylp.deb
 
 Test if it is installed successfully by entering `c8ylp` in the terminal.
 
-## Required Permissions
+## Required Permissions in PID-Mode only
 
-The Local Proxy will try to create a PID file in <strong>/var/run/c8ylp</strong> folder. Before starting the local proxy you must make sure that the user who executes it has write permissions for that folder. For example for the user "proxyuser" part of group "proxyuser" use the following commands before initially starting the Proxy:
+When using the `--use-pid` parameter the Local Proxy will try to create a PID file in <strong>/var/run/c8ylp</strong> folder. Before starting the Local Proxy with that parameter you must make sure that the user who executes it has write permissions for that folder. For example for the user "proxyuser" part of group "proxyuser" use the following commands before initially starting the Proxy:
 
 ```
 sudo mkdir /var/run/c8ylp
@@ -91,13 +91,14 @@ Available Parameter:
 | -p     | --password    | C8Y_PASSWORD         | x        | The password of Cumulocity
 |        | --tfacode     |                      |          | The TFA Code when an user with the Option "TFA enabled" is used
 |        | --port        | C8Y_PORT             |          | The TCP Port which should be opened. Default: 2222
-| -k     | --kill        |                      |          | Kills all existing processes of c8ylp
+| -k     | --kill        |                      |          | Kills all existing processes of c8ylp. Only availavle when 'use-pid' parameter is set.
 |        | --tcpsize     | C8Y_TCPSIZE          |          | The TCP Package Size. Default: 32768
 |        | --tcptimeout  | C8Y_TCPTIMEOUT       |          | Timeout in sec. for inactivity. Can be activited with values > 0. Default deactivated.
 | -v     | --verbose     |                      |          | Print Debug Information into the Logs and Console when set.
 | -s     | --scriptmode  |                      |          | Stops the TCP Server after first connection. No automatical restart!
 |        |               | C8Y_TOKEN            |          | When set and valid no user, password, tenant, tfacode must be provided.
-|        | --ignore-ssl-validate|               |          | Ignore Validation for SSL Certificates while connecting to Websocket.
+|        | --ignore-ssl-validate |              |          | Ignore Validation for SSL Certificates while connecting to Websocket.
+|        | --use-pid     |                      |          | Will create a PID-File in /var/run/c8ylp to store all Processes currently running.
 
 You can execute `c8ylp --help` to get help about the parameters and execution.
 

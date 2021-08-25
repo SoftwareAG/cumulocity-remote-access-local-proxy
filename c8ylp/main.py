@@ -68,7 +68,7 @@ def start():
                                    ["help", "hostname=", "device=", "extype=", "config=", "tenant=", "username=",
                                     "password=", "tfacode=", "port=", "kill", "tcpsize=", "tcptimeout=", "verbose",
                                     "scriptmode",
-                                    "ignore-ssl-validate"])
+                                    "ignore-ssl-validate", "use-pid"])
     except getopt.GetoptError as e:
         logging.error(e)
         help()
@@ -91,6 +91,8 @@ def start():
     tfacode = None
     script_mode = False
     ignore_ssl_validate = False
+    use_pid = False
+    kill_instances = False
     for option_key, option_value in opts:
         if option_key in ('-h', '--hostname'):
             host = option_value
@@ -111,7 +113,7 @@ def start():
         elif option_key in ['--port']:
             port = int(option_value)
         elif option_key in ['-k', '--kill']:
-            kill_existing_instances()
+            kill_instances = True
         elif option_key in ['--tcpsize']:
             tcp_size = int(option_value)
         elif option_key in ['--tcptimeout']:
@@ -122,11 +124,19 @@ def start():
             script_mode = True
         elif option_key in ['--ignore-ssl-validate']:
             ignore_ssl_validate = True
+        elif option_key in ['--use-pid']:
+            use_pid = True
         elif option_key in ['--help']:
             help()
     validate_parameter(host, device, extype, config_name,
                        tenant, user, password, token)
-    upsert_pid_file(device, host, config_name, user)
+    if use_pid:
+        upsert_pid_file(device, host, config_name, user)
+    if kill_instances:
+        if use_pid:
+            kill_existing_instances()
+        else:
+            logging.warn(f'WARNING: Killing existing instances is only support when "--use-pid" is used.')
     client = CumulocityClient(host, tenant, user, password, tfacode, ignore_ssl_validate)
     tenant_id_valid = client.validate_tenant_id()
     if tenant_id_valid is not None:
@@ -155,7 +165,8 @@ def start():
     except Exception as ex:
         logging.error(f'Error on TCP-Server {ex}')
     finally:
-        clean_pid_file(None)
+        if use_pid:
+            clean_pid_file(None)
         tcp_server.stop()
         sys.exit(0)
 
@@ -224,9 +235,11 @@ def clean_pid_file(pid):
 def kill_existing_instances():
     if os.path.exists(PIDFILE):
         file = open(PIDFILE)
+        pid = int(os.getpid())
+        #logging.info(f'Current PID {pid}')
         for line in file:
             other_pid = get_pid_from_line(line)
-            if pid_is_active(other_pid):
+            if pid != other_pid and pid_is_active(other_pid):
                 logging.info(
                     f'Killing other running Process with PID {other_pid}')
                 os.kill(get_pid_from_line(line), 9)
@@ -296,6 +309,7 @@ def _help_message() -> str:
                ' -v, --verbose          OPTIONAL, Print Debug Information into the Logs and Console when set.\n'
                ' -s, --scriptmode       OPTIONAL, Stops the TCP Server after first connection. No automatical restart!\n'
                ' --ignore-ssl-validate  OPTIONAL, Ignore Validation for SSL Certificates while connecting to Websocket'
+               ' --use-pid              OPTIONAL, Will create a PID-File in /var/run/c8ylp to store all Processes currently running.'
                '\n')
 
 

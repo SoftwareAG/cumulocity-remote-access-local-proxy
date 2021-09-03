@@ -34,8 +34,14 @@ from c8ylp.websocket_client.ws_client import WebsocketClient
 
 PIDFILE = '/var/run/c8ylp/c8ylp'
 
+class ExitCommand(Exception):
+    pass
+
+def signal_handler(signal, frame):
+    raise ExitCommand()
 
 def start():
+    signal.signal(signal.SIGUSR1, signal_handler)
     home = expanduser('~')
     path = pathlib.Path(home + '/.c8ylp')
     loglevel = logging.INFO
@@ -68,7 +74,7 @@ def start():
                                    ["help", "hostname=", "device=", "extype=", "config=", "tenant=", "username=",
                                     "password=", "tfacode=", "port=", "kill", "tcpsize=", "tcptimeout=", "verbose",
                                     "scriptmode",
-                                    "ignore-ssl-validate", "use-pid"])
+                                    "ignore-ssl-validate", "use-pid", "reconnects="])
     except getopt.GetoptError as e:
         logging.error(e)
         help()
@@ -93,6 +99,7 @@ def start():
     ignore_ssl_validate = False
     use_pid = False
     kill_instances = False
+    reconnects = 5
     for option_key, option_value in opts:
         if option_key in ('-h', '--hostname'):
             host = option_value
@@ -126,6 +133,8 @@ def start():
             ignore_ssl_validate = True
         elif option_key in ['--use-pid']:
             use_pid = True
+        elif option_key in ['--reconnects']:
+            reconnects = int(option_value)
         elif option_key in ['--help']:
             help()
     validate_parameter(host, device, extype, config_name,
@@ -155,7 +164,7 @@ def start():
         logging.error(f'User {user} is not authorized to use Cloud Remote Access. Contact your Cumulocity Admin!')
         sys.exit(1)
     websocket_client = WebsocketClient(
-        host, tenant, user, password, config_id, device_id, session, token, ignore_ssl_validate)
+        host, tenant, user, password, config_id, device_id, session, token, ignore_ssl_validate, reconnects)
     wst = websocket_client.connect()
     tcp_server = TCPServer(port, websocket_client, tcp_size, tcp_timeout, wst, script_mode)
     # TCP is blocking...
@@ -309,7 +318,8 @@ def _help_message() -> str:
                ' -v, --verbose          OPTIONAL, Print Debug Information into the Logs and Console when set.\n'
                ' -s, --scriptmode       OPTIONAL, Stops the TCP Server after first connection. No automatical restart!\n'
                ' --ignore-ssl-validate  OPTIONAL, Ignore Validation for SSL Certificates while connecting to Websocket'
-               ' --use-pid              OPTIONAL, Will create a PID-File in /var/run/c8ylp to store all Processes currently running.'
+               ' --use-pid              OPTIONAL, Will create a PID-File in /var/run/c8ylp to store all Processes currently running.\n'
+               ' --reconnects           OPTIONAL, The number of reconnects to the Cloud Remote Service. 0 for infinite reconnects. Default: 5'
                '\n')
 
 

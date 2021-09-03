@@ -99,6 +99,7 @@ Available Parameter:
 |        |               | C8Y_TOKEN            |          | When set and valid no user, password, tenant, tfacode must be provided.
 |        | --ignore-ssl-validate |              |          | Ignore Validation for SSL Certificates while connecting to Websocket.
 |        | --use-pid     |                      |          | Will create a PID-File in /var/run/c8ylp to store all Processes currently running.
+|        | --reconnects  |                      |          | The number of reconnects to the Cloud Remote Service. 0 for infinite reconnects. Default: 5
 
 You can execute `c8ylp --help` to get help about the parameters and execution.
 

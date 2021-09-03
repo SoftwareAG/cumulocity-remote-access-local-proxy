@@ -20,11 +20,13 @@ import threading
 
 import websocket
 import ssl
+import os
+import signal
 
 
 class WebsocketClient(threading.Thread):
 
-    def __init__(self, host, tenant, user, password, config_id, device_id, session, token, ignore_ssl_validate=False):
+    def __init__(self, host, tenant, user, password, config_id, device_id, session, token, ignore_ssl_validate=False, reconnects=5):
         self.host = host
         self.tenant = tenant
         self.user = user
@@ -41,7 +43,9 @@ class WebsocketClient(threading.Thread):
         self.session = session
         self.token = token
         self.trigger_reconnect = True
+        self.reconnect_counter = 0
         self.ignore_ssl_validate = ignore_ssl_validate
+        self.max_reconnects = reconnects
 
     def connect(self):
         self._ws_open_event = threading.Event()
@@ -91,6 +95,7 @@ class WebsocketClient(threading.Thread):
         return self.wst
 
     def reconnect(self):
+        self.reconnect_counter += 1
         self.logger.info(f'Reconnecting to WebSocket...')
         if self.web_socket:
             self.web_socket.keep_running = False
@@ -151,8 +156,11 @@ class WebsocketClient(threading.Thread):
             self.tcp_server.connection.send(b'FIN')
             self.tcp_server.stop_connection()
         # else:
-        if self.trigger_reconnect:
+        if self.trigger_reconnect and self.reconnect_counter < self.max_reconnects:
+            self.logger.info(f'Reconnect with counter {self.reconnect_counter}')
             self.reconnect()
+        else:
+            os.kill(os.getpid(), signal.SIGUSR1)
 
     def _on_ws_open(self, _ws):
         self.logger.info(f'WebSocket Connection opened!')

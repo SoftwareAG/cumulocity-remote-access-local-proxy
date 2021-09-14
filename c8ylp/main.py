@@ -24,7 +24,6 @@ import os
 import pathlib
 import sys
 import signal
-import threading
 from logging.handlers import RotatingFileHandler
 from os.path import expanduser
 
@@ -39,6 +38,54 @@ class ExitCommand(Exception):
 
 def signal_handler(signal, frame):
     raise ExitCommand()
+
+def prepare_c8y_proxy(host, device, extype, config_name, tenant, user, password,
+                      token, port, tfacode, use_pid, kill_instances, ignore_ssl_validate, reconnects,
+                      tcp_size, tcp_timeout, script_mode, event=None):
+    validate_parameter(host, device, extype, config_name,
+                       tenant, user, password, token)
+    if use_pid:
+        upsert_pid_file(device, host, config_name, user)
+    if kill_instances:
+        if use_pid:
+            kill_existing_instances()
+        else:
+            logging.warning(f'WARNING: Killing existing instances is only support when "--use-pid" is used.')
+    client = CumulocityClient(host, tenant, user, password, tfacode, ignore_ssl_validate)
+    tenant_id_valid = client.validate_tenant_id()
+    if tenant_id_valid is not None:
+        logging.warning(f'WARNING: Tenant ID {tenant} does not exist. Try using this Tenant ID {tenant_id_valid} next time!')
+    session = None
+    if token:
+        client.validate_token()
+    else:
+        session = client.retrieve_token()
+    mor = client.read_mo(device, extype)
+    config_id = client.get_config_id(mor, config_name)
+    device_id = client.get_device_id(mor)
+
+    is_authorized = client.validate_remote_access_role()
+    if not is_authorized:
+        logging.error(f'User {user} is not authorized to use Cloud Remote Access. Contact your Cumulocity Admin!')
+        sys.exit(1)
+    websocket_client = WebsocketClient(
+        host, tenant, user, password, config_id, device_id, session, token, ignore_ssl_validate, reconnects)
+    wst = websocket_client.connect()
+    tcp_server = TCPServer(port, websocket_client, tcp_size, tcp_timeout, wst, script_mode, event)
+    websocket_client.tcp_server = tcp_server
+    return tcp_server
+
+
+def start_c8y_proxy(tcp_server, use_pid):
+    try:
+        tcp_server.start()
+    except Exception as ex:
+        logging.error(f'Error on TCP-Server {ex}')
+    finally:
+        if use_pid:
+            clean_pid_file(None)
+        tcp_server.stop()
+
 
 def start():
     signal.signal(signal.SIGUSR1, signal_handler)
@@ -69,6 +116,7 @@ def start():
     rotate_handler.setLevel(loglevel)
     # Log to Rotating File
     logger.addHandler(rotate_handler)
+    opts = None
     try:
         opts, args = getopt.getopt(sys.argv[1:], "h:d:c:t:u:p:kvs",
                                    ["help", "hostname=", "device=", "extype=", "config=", "tenant=", "username=",
@@ -137,47 +185,12 @@ def start():
             reconnects = int(option_value)
         elif option_key in ['--help']:
             help()
-    validate_parameter(host, device, extype, config_name,
-                       tenant, user, password, token)
-    if use_pid:
-        upsert_pid_file(device, host, config_name, user)
-    if kill_instances:
-        if use_pid:
-            kill_existing_instances()
-        else:
-            logging.warn(f'WARNING: Killing existing instances is only support when "--use-pid" is used.')
-    client = CumulocityClient(host, tenant, user, password, tfacode, ignore_ssl_validate)
-    tenant_id_valid = client.validate_tenant_id()
-    if tenant_id_valid is not None:
-        logging.warn(f'WARNING: Tenant ID {tenant} does not exist. Try using this Tenant ID {tenant_id_valid} next time!')
-    session = None
-    if token:
-        client.validate_token()
-    else:
-        session = client.retrieve_token()
-    mor = client.read_mo(device, extype)
-    config_id = client.get_config_id(mor, config_name)
-    device_id = client.get_device_id(mor)
-    
-    is_authorized = client.validate_remote_access_role()
-    if not is_authorized:
-        logging.error(f'User {user} is not authorized to use Cloud Remote Access. Contact your Cumulocity Admin!')
-        sys.exit(1)
-    websocket_client = WebsocketClient(
-        host, tenant, user, password, config_id, device_id, session, token, ignore_ssl_validate, reconnects)
-    wst = websocket_client.connect()
-    tcp_server = TCPServer(port, websocket_client, tcp_size, tcp_timeout, wst, script_mode)
-    # TCP is blocking...
-    websocket_client.tcp_server = tcp_server
-    try:
-        tcp_server.start()
-    except Exception as ex:
-        logging.error(f'Error on TCP-Server {ex}')
-    finally:
-        if use_pid:
-            clean_pid_file(None)
-        tcp_server.stop()
-        sys.exit(0)
+
+    s = prepare_c8y_proxy(host, device, extype, config_name, tenant, user, password,
+                          token, port, tfacode, use_pid, kill_instances, ignore_ssl_validate, reconnects,
+                          tcp_size, tcp_timeout, script_mode)
+    start_c8y_proxy(s, use_pid)
+    sys.exit(0)
 
 
 def verbose_log():
@@ -325,3 +338,4 @@ def _help_message() -> str:
 
 if __name__ == '__main__':
     start()
+

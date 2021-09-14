@@ -17,13 +17,12 @@
 
 import logging
 import socket
-import sys
 import threading
 
 
 class TCPServer:
 
-    def __init__(self, port, web_socket_client, tcp_buffer_size, tcp_timeout, wst, script_mode):
+    def __init__(self, port, web_socket_client, tcp_buffer_size, tcp_timeout, wst, script_mode, event=None):
         self.port = port
         self.sock = None
         self.connection = None
@@ -36,6 +35,7 @@ class TCPServer:
         self.wst = wst
         self.tcp_timeout_counter = None
         self.script_mode = script_mode
+        self.event = event
         self.logger = logging.getLogger(__name__)
 
     def start(self):
@@ -51,6 +51,8 @@ class TCPServer:
             self._tcp_open_event = threading.Event()
             self.sock.listen(1)
             self.logger.info(f'Waiting for incoming connections...')
+            if self.event:
+                self.event.set()
             self.connection, client_address = self.sock.accept()
             #if self.tcp_timeout > 0:
             self.connection.settimeout(1)

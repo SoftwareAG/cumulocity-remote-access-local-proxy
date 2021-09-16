@@ -74,8 +74,8 @@ class CumulocityClient:
                        'Authorization': 'Bearer ' +self.token}
         else:
             headers = {'Content-Type': 'application/json',
-                    'X-XSRF-TOKEN': self.session.cookies.get_dict()['XSRF-TOKEN']
-                    }
+                        'X-XSRF-TOKEN': self.session.cookies.get_dict()['XSRF-TOKEN']
+                       }
         response = self.session.get(current_user_url, headers=headers)
         self.logger.debug(f'Response received: {response}')
         if response.status_code == 200:
@@ -118,7 +118,7 @@ class CumulocityClient:
         self.logger.debug(f'Sending requests to {oauth_url}')
         response = self.session.post(oauth_url,headers=headers,data=body)
         if response.status_code == 200:
-            self.logger.debug(f'Authenticateion successful. Tokens have been updated {self.session.cookies.get_dict()}!')
+            self.logger.debug(f'Authentication successful. Tokens have been updated {self.session.cookies.get_dict()}!')
             os.environ['C8Y_TOKEN'] = self.session.cookies.get_dict()['authorization']
         elif response.status_code == 401:
             self.logger.error(f'User {self.user} is not authorized to access Tenant {self.tenant} or TFA-Code is invalid.')
@@ -184,16 +184,16 @@ class CumulocityClient:
             self.logger.debug(f'Response received: {response}')
             if response.status_code == 200:
                 mor = json.loads(response.content.decode('utf-8'))
-                return mor
+
             elif response.status_code == 401:
                 self.logger.error(f'User {self.user} is not authorized to read Device Data of Device {device}')
-                sys.exit(1)
+
             elif response.status_code == 404:
                 self.logger.error(f'Device {device} not found!')
-                sys.exit(1)
+
             else:
                 self.logger.error(f'Error on retrieving device. Status Code {response.status_code}')
-                sys.exit(1)
+
             return mor
 
     def get_config_id(self, mor, config):
@@ -223,3 +223,53 @@ class CumulocityClient:
 
     def get_device_id(self, mor):
         return mor['id']
+
+    def get_firmware_info(self, device, extype):
+        #identiy_url = self.url + f'/identity/externalIds/{extype}/{device}'
+        identiy_url = self.url + f'/devicemanagement/device/{device}'
+        #auth_string = f'{self.tenant}/{self.user}:{self.password}'
+        #encoded_auth_string = b64encode(
+        #    bytes(auth_string, 'utf-8')).decode('ascii')
+        if self.token:
+            headers = {'Content-Type': 'application/json',
+                       'Authorization': 'Bearer ' +self.token}
+        else:
+            headers = {'Content-Type': 'application/json',
+                       'X-XSRF-TOKEN': self.session.cookies.get_dict()['XSRF-TOKEN']
+                       #'Authorization': 'Basic ' + encoded_auth_string
+                       }
+        self.logger.debug(f'Sending requests to {identiy_url}')
+        response = self.session.get(identiy_url, headers=headers)
+        self.logger.debug(f'Response received: {response}')
+        ext_id = None
+        if response.status_code == 200:
+            ext_id = json.loads(response.content.decode('utf-8'))
+        elif response.status_code == 401:
+            self.logger.error(f'User {self.user} is not authorized to read Device Data of Device {device}')
+
+        elif response.status_code == 404:
+            self.logger.error(f'Device {device} not found!')
+
+        else:
+            self.logger.error(f'Error on retrieving device. Status Code {response.status_code}')
+
+        return ext_id
+
+
+
+
+if __name__ == '__main__':
+    my_device_address = '2102351HNDDMK2000759'.lower()
+    _tenant = 't2700'
+    device = f'cb1-{my_device_address}'.strip()
+    _config_name = 'Passthrough'
+    _host = 'main.dm-zz-q.ioee10-cloud.com'
+    rest_user_name = 'service_schindler-jenkins'
+    rest_user_password = '2txFLPmgE5xwWRovG7nW7e4Y94XhwOB3'
+
+    client = CumulocityClient(hostname=_host, tenant=_tenant, user=rest_user_name, password=rest_user_password)
+    session = client.retrieve_token()
+    client.get_firmware_info(device, 'c8y_Serial')
+
+
+

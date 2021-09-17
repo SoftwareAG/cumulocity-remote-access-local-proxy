@@ -31,6 +31,8 @@ class C8YQueries:
     """
     Class to determine all necessary queries to Cumulocity
     """
+    GET_TENANT_OPTIONS = 'tenant/loginOptions'
+    POST_OAUTH = 'tenant/oauth?tenant_id={}'
     SELECT_DEVICE_BY_ID = 'inventory/managedObjects/{}'
     GET_DEVICE_ID_BY_SN = 'inventory/managedObjects?q=$filter=(c8y_Hardware.serialNumber+eq+{})'
     GET_FIRMWARE_BY_DEVICE_TYPE = 'inventory/managedObjects?query=$filter=(c8y_Filter.type+eq+{})+and+(type+eq+c8y_Firmware)&pageSize=100&withTotalPages=true'
@@ -40,4 +42,3 @@ class C8YQueries:
     POST_OPERATION = 'devicecontrol/operations'
     GET_DEVICE_ID_BY_ESN = 'identity/externalIds/{}/{}'
     GET_DEVICE_INFO_BY_DEV_ID = 'inventory/managedObjects/{}'
-    GET_OPERATIONS_BY_DEV_ID = 'devicecontrol/operations'

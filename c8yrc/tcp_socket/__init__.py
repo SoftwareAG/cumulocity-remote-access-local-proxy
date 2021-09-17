@@ -15,4 +15,4 @@
 #  limitations under the License.
 #
 
-from c8ylp.websocket_client.ws_client import WebsocketClient
+from c8yrc.tcp_socket.tcp_server import TCPServer

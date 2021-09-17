@@ -2,9 +2,9 @@ import json
 import logging
 import time
 import requests
-from c8ylp.rest_client.c8y_enterprise import Cube, SoftwareImage, CubeOperation
-from c8ylp.rest_client.c8y_exception import C8yException
-from c8ylp.rest_client.rest_constants import UPDATE_FIRMWARE_OPERATION_HEADER, C8YQueries
+from c8yrc.rest_client.c8y_enterprise import Cube, SoftwareImage, CubeOperation
+from c8yrc.rest_client.c8y_exception import C8yException
+from c8yrc.rest_client.rest_constants import UPDATE_FIRMWARE_OPERATION_HEADER, C8YQueries
 
 
 class C8yRestClient(object):
@@ -134,7 +134,7 @@ class C8yRestClient(object):
     def get_cube_connection_status(self) -> str:
         """
         Method to get Cumulocity device connection status
- 
+
         :return:            Cumulocity device connection status
         """
         # c8y devices get --id {device_id} --select "id,c8y_Connection.status"

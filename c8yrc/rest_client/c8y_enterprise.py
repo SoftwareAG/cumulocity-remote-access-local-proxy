@@ -1,6 +1,6 @@
 import json
 from json import JSONDecodeError
-from c8ylp.rest_client.c8y_exception import C8yException
+from c8yrc.rest_client.c8y_exception import C8yException
 
 
 class Cube(object):

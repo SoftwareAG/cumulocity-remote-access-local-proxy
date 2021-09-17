@@ -17,18 +17,18 @@
 
 from setuptools import setup
 
-setup(name='c8ylp',
-      version='1.4.2',
-      description='Cumulocity Local Client Proxy',
-      author='Stefan Witschel',
+setup(name='c8yrc',
+      version='0.0.1',
+      description='Cumulocity Rest Client',
+
       license='Apache v2',
-      packages=['c8ylp',
-                'c8ylp.tcp_socket',
-                'c8ylp.websocket_client',
-                'c8ylp.rest_client'],
+      packages=['c8yrc',
+                'c8yrc.tcp_socket',
+                'c8yrc.websocket_client',
+                'c8yrc.rest_client'],
       entry_points={
         'console_scripts': [
-              'c8ylp=c8ylp.main:start'
+              'c8yrc=c8yrc.main:start'
             ],
       },
       install_requires = [

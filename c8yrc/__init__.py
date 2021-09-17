@@ -1,0 +1,1 @@
+from c8yrc.main import start

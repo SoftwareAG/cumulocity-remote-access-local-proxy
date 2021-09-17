@@ -15,4 +15,4 @@
 #  limitations under the License.
 #
 
-from c8ylp.tcp_socket.tcp_server import TCPServer
+from c8yrc.rest_client.c8yclient import CumulocityClient

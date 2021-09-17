@@ -27,17 +27,20 @@ import signal
 from logging.handlers import RotatingFileHandler
 from os.path import expanduser
 
-from c8ylp.rest_client.c8yclient import CumulocityClient
-from c8ylp.tcp_socket.tcp_server import TCPServer
-from c8ylp.websocket_client.ws_client import WebsocketClient
+from c8yrc.rest_client.c8yclient import CumulocityClient
+from c8yrc.tcp_socket.tcp_server import TCPServer
+from c8yrc.websocket_client.ws_client import WebsocketClient
 
-PIDFILE = '/var/run/c8ylp/c8ylp'
+PIDFILE = '/var/run/c8yrc/c8yrc'
+
 
 class ExitCommand(Exception):
     pass
 
+
 def signal_handler(signal, frame):
     raise ExitCommand()
+
 
 def prepare_c8y_proxy(host, device, extype, config_name, tenant, user, password,
                       token, port, tfacode, use_pid, kill_instances, ignore_ssl_validate, reconnects,
@@ -90,7 +93,7 @@ def start_c8y_proxy(tcp_server, use_pid):
 def start():
     signal.signal(signal.SIGUSR1, signal_handler)
     home = expanduser('~')
-    path = pathlib.Path(home + '/.c8ylp')
+    path = pathlib.Path(home + '/.c8yrc')
     loglevel = logging.INFO
     path.mkdir(parents=True, exist_ok=True)
     logger = logging.getLogger()
@@ -312,7 +315,7 @@ def help():
 
 
 def _help_message() -> str:
-    return str('Usage: c8ylp [params]\n'
+    return str('Usage: c8yrc [params]\n'
                '\n'
                'Parameter:\n'
                ' --help                 show this help message and exit\n'
@@ -325,13 +328,13 @@ def _help_message() -> str:
                ' -p, --password         REQUIRED, the password of Cumulocity\n'
                ' --tfacode              OPTIONAL, the TFA Code when an user with the Option "TFA enabled" is used\n'
                ' --port                 OPTIONAL, the TCP Port which should be opened. Default: 2222\n'
-               ' -k, --kill             OPTIONAL, kills all existing processes of c8ylp\n'
+               ' -k, --kill             OPTIONAL, kills all existing processes of c8yrc\n'
                ' --tcpsize              OPTIONAL, the TCP Package Size. Default: 32768\n'
                ' --tcptimeout           OPTIONAL, Timeout in sec. for inactivity. Can be activited with values > 0. Default: Deactivated\n'
                ' -v, --verbose          OPTIONAL, Print Debug Information into the Logs and Console when set.\n'
                ' -s, --scriptmode       OPTIONAL, Stops the TCP Server after first connection. No automatical restart!\n'
                ' --ignore-ssl-validate  OPTIONAL, Ignore Validation for SSL Certificates while connecting to Websocket'
-               ' --use-pid              OPTIONAL, Will create a PID-File in /var/run/c8ylp to store all Processes currently running.\n'
+               ' --use-pid              OPTIONAL, Will create a PID-File in /var/run/c8yrc to store all Processes currently running.\n'
                ' --reconnects           OPTIONAL, The number of reconnects to the Cloud Remote Service. 0 for infinite reconnects. Default: 5'
                '\n')
 

@@ -15,4 +15,4 @@
 #  limitations under the License.
 #
 
-from c8ylp.rest_client.c8yclient import CumulocityClient
+from c8yrc.websocket_client.ws_client import WebsocketClient

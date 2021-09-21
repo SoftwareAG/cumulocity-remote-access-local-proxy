@@ -19,7 +19,7 @@ import json
 import os
 import logging
 import sys
-from base64 import b64encode
+
 
 import requests
 

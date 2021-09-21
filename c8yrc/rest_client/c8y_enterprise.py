@@ -57,6 +57,13 @@ class CubeImage(object):
         index = len(self.software_list) // 2
         return self.software_list[index]
 
+    def get_by_date(self, date):
+        sw = [
+            sw for sw in self.software_list if date in sw.version
+        ]
+        return sw[0]
+
+
 
 class CubeOperation(object):
 

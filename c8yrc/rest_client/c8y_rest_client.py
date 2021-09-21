@@ -1,23 +1,30 @@
 import json
 import logging
+import sys
 import time
 import requests
-from c8yrc.rest_client.c8y_enterprise import Cube, SoftwareImage, CubeOperation
+from c8yrc.rest_client.c8y_enterprise import Cube, SoftwareImage, CubeOperation, CubeImage
 from c8yrc.rest_client.c8y_exception import C8yException
-from c8yrc.rest_client.rest_constants import UPDATE_FIRMWARE_OPERATION_HEADER, C8YQueries
+from c8yrc.rest_client.rest_constants import UPDATE_FIRMWARE_OPERATION_HEADER, C8YQueries, C8YOperationStatus
 
 
 class C8yRestClient(object):
     """
     A class to interface with Schindler Cumulocity Device Management Platform
     """
-    def __init__(self, url, c8y_serial_number, user, password, tenant, session_verify=False, tfacode=None):
+    def __init__(self, c8y_serial_number, user, password, url=None, tenant=None, session_verify=False, tfacode=None):
 
-        self.url = url
+        if url is None:
+            self.url = 'https://main.dm-zz-q.ioee10-cloud.com/'
+        else:
+            self.url = url
         self.session = requests.Session()
         self.session.verify = session_verify
         self.device_id = None
-        self.tenant = tenant
+        if tenant is None:
+            self.tenant = 't2700'
+        else:
+            self.tenant = tenant
         self.headers = None
         self.cy8_device = None
         self.ext_type = 'c8y_Serial'
@@ -188,12 +195,19 @@ class C8yRestClient(object):
         """
         time_start = time.time()
         while time.time() < time_start + time_to_wait:
-            if expected_state == self.get_operation_state(operation_id):
+            elapsed_time = time.time() - time_start
+            current_state = self.get_operation_state(operation_id)
+            if current_state == expected_state:
+                logging.info(f"Operation ('{operation_id}') change to {expected_state}' after '{elapsed_time}' seconds")
                 return True
+            if current_state == C8YOperationStatus.FAILED:
+                logging.error(f"Operation ('{operation_id}') FAILED' after '{elapsed_time}' seconds")
+                return False
+            logging.debug(f'{current_state} for operation {operation_id} waiting more {period} seconds')
             time.sleep(period)
-        else:
-            logging.warning(f"Operation ('{operation_id}') is not changed to '{expected_state}' in '{time_to_wait}' seconds")
-            return False
+
+        logging.warning(f"Operation ('{operation_id}') is not changed to '{expected_state}' in '{time_to_wait}' seconds")
+        return False
 
     def get_operation_state(self, operation_id: int) -> str:
         """
@@ -208,7 +222,6 @@ class C8yRestClient(object):
     def get_remote_configuration_from_cumulocity(self) -> dict:
         """
         Method to get a remote configuration
-
         :return: Cube remote configuration from Cumulocity
         """
         # c8y devices get --id 20228252 --select "schindler_RemoteConfiguration"

@@ -95,11 +95,11 @@ Available Parameter:
 |        | --tcpsize     | C8Y_TCPSIZE          |          | The TCP Package Size. Default: 32768
 |        | --tcptimeout  | C8Y_TCPTIMEOUT       |          | Timeout in sec. for inactivity. Can be activited with values > 0. Default deactivated.
 | -v     | --verbose     |                      |          | Print Debug Information into the Logs and Console when set.
-| -s     | --scriptmode  |                      |          | Stops the TCP Server after first connection. No automatical restart!
+| -s     | --scriptmode  |                      |          | Stops the TCP Server after first connection. No automatical restart! No WebSocket Reconnects!
 |        |               | C8Y_TOKEN            |          | When set and valid no user, password, tenant, tfacode must be provided.
 |        | --ignore-ssl-validate |              |          | Ignore Validation for SSL Certificates while connecting to Websocket.
 |        | --use-pid     |                      |          | Will create a PID-File in /var/run/c8ylp to store all Processes currently running.
-|        | --reconnects  |                      |          | The number of reconnects to the Cloud Remote Service. 0 for infinite reconnects. Default: 5
+|        | --reconnects  |                      |          | The number of reconnects to the Cloud Remote Service. 0 for infinite reconnects, -1 for deactivation. Default: 5
 
 You can execute `c8ylp --help` to get help about the parameters and execution.
 

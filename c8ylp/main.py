@@ -139,6 +139,8 @@ def start():
             reconnects = int(option_value)
         elif option_key in ['--help']:
             help()
+    if script_mode:
+        reconnects = -1
     validate_parameter(host, device, extype, config_name,
                        tenant, user, password, token)
     if use_pid:
@@ -147,7 +149,7 @@ def start():
         if use_pid:
             kill_existing_instances()
         else:
-            logging.warn(f'WARNING: Killing existing instances is only support when "--use-pid" is used.')
+            logging.warn(f'WARNING: Killing existing instances is only supported when "--use-pid" is used.')
     client = CumulocityClient(host, tenant, user, password, tfacode, ignore_ssl_validate)
     tenant_id_valid = client.validate_tenant_id()
     if tenant_id_valid is not None:

@@ -42,7 +42,7 @@ class WebsocketClient(threading.Thread):
         self.wst = None
         self.session = session
         self.token = token
-        self.trigger_reconnect = True
+        self.trigger_reconnect = True if reconnects >= 0 else False
         self.reconnect_counter = 0
         self.ignore_ssl_validate = ignore_ssl_validate
         self.max_reconnects = reconnects
@@ -156,7 +156,7 @@ class WebsocketClient(threading.Thread):
             self.tcp_server.connection.send(b'FIN')
             self.tcp_server.stop_connection()
         # else:
-        if self.trigger_reconnect and self.reconnect_counter < self.max_reconnects:
+        if self.trigger_reconnect and (self.max_reconnects == 0 or self.reconnect_counter < self.max_reconnects):
             self.logger.info(f'Reconnect with counter {self.reconnect_counter}')
             self.reconnect()
         else:

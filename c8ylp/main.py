@@ -27,6 +27,7 @@ import signal
 import threading
 from logging.handlers import RotatingFileHandler
 from os.path import expanduser
+import platform
 
 from c8ylp.rest_client.c8yclient import CumulocityClient
 from c8ylp.tcp_socket.tcp_server import TCPServer
@@ -41,7 +42,8 @@ def signal_handler(signal, frame):
     raise ExitCommand()
 
 def start():
-    signal.signal(signal.SIGUSR1, signal_handler)
+    if platform.system() == 'Linux':
+        signal.signal(signal.SIGUSR1, signal_handler)
     home = expanduser('~')
     path = pathlib.Path(home + '/.c8ylp')
     loglevel = logging.INFO

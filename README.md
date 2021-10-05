@@ -77,6 +77,9 @@ Alternatively you can run the agent as "root" user so the folder and file will b
 In a terminal session execute:
 ```
 c8ylp [params]
+
+# or launching directly via python
+python3 -m c8ylp.main
 ```
 Available Parameter:
 

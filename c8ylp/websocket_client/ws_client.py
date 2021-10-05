@@ -160,7 +160,10 @@ class WebsocketClient(threading.Thread):
             self.logger.info(f'Reconnect with counter {self.reconnect_counter}')
             self.reconnect()
         else:
-            os.kill(os.getpid(), signal.SIGUSR1)
+            if platform.system() in ('Linux', 'Darwin'):
+                os.kill(os.getpid(), signal.SIGUSR1)
+            else:
+                os.kill(os.getpid(), signal.SIGINT)
 
     def _on_ws_open(self, _ws):
         self.logger.info(f'WebSocket Connection opened!')

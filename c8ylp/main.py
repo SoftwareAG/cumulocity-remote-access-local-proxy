@@ -42,8 +42,10 @@ def signal_handler(signal, frame):
     raise ExitCommand()
 
 def start():
-    if platform.system() == 'Linux':
+    if platform.system() in ('Linux', 'Darwin'):
         signal.signal(signal.SIGUSR1, signal_handler)
+    else:
+        signal.signal(signal.SIGINT, signal_handler)
     home = expanduser('~')
     path = pathlib.Path(home + '/.c8ylp')
     loglevel = logging.INFO

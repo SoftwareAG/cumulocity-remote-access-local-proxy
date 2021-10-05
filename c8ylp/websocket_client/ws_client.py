@@ -17,11 +17,13 @@
 
 import logging
 import threading
+import platform
 
 import websocket
 import ssl
 import os
 import signal
+import certifi
 
 
 class WebsocketClient(threading.Thread):
@@ -86,8 +88,16 @@ class WebsocketClient(threading.Thread):
         self.web_socket.on_close = lambda ws,msg,msg2: self._on_ws_close(ws,msg,msg2)
         self.web_socket.on_open = lambda ws: self._on_ws_open(ws)
         web_socket_kwargs = {'ping_interval': 10, 'ping_timeout': 7}
+
+        # Load ca certificates
+        sslopt_ca_certs = {'ca_certs': certifi.where()}
+
         if self.ignore_ssl_validate:
-            web_socket_kwargs['sslopt'] = {'cert_reqs': ssl.CERT_NONE}
+            sslopt_ca_certs['cert_reqs'] = ssl.CERT_NONE
+        web_socket_kwargs['sslopt'] = sslopt_ca_certs
+
+        self.logging.debug(f'websocket options: {web_socket_kwargs}')
+
         self.wst = threading.Thread(target=self.web_socket.run_forever, kwargs=web_socket_kwargs)
         self.wst.daemon = True
         self.wst.name = f'WSTunnelThread-{self.config_id}'
@@ -160,7 +170,10 @@ class WebsocketClient(threading.Thread):
             self.logger.info(f'Reconnect with counter {self.reconnect_counter}')
             self.reconnect()
         else:
-            os.kill(os.getpid(), signal.SIGUSR1)
+            if platform.system() in ('Linux', 'Darwin'):
+                os.kill(os.getpid(), signal.SIGUSR1)
+            else:
+                os.kill(os.getpid(), signal.SIGINT)
 
     def _on_ws_open(self, _ws):
         self.logger.info(f'WebSocket Connection opened!')

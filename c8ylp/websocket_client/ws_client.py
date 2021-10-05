@@ -96,7 +96,7 @@ class WebsocketClient(threading.Thread):
             sslopt_ca_certs['cert_reqs'] = ssl.CERT_NONE
         web_socket_kwargs['sslopt'] = sslopt_ca_certs
 
-        self.logging.debug(f'websocket options: {web_socket_kwargs}')
+        self.logger.debug(f'websocket options: {web_socket_kwargs}')
 
         self.wst = threading.Thread(target=self.web_socket.run_forever, kwargs=web_socket_kwargs)
         self.wst.daemon = True

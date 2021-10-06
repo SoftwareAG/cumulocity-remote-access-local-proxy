@@ -41,5 +41,6 @@ setup(name='c8ylp',
       install_requires = [
         'requests>=2.26.0',
         'websocket_client>=1.2.1'
+        'certifi>=2020.12.5'
       ],
       zip_safe=False)

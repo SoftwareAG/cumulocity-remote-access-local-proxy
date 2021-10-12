@@ -152,9 +152,13 @@ class WebsocketClient(threading.Thread):
                 self._ws_open = False
                 self._ws_open_event.set()
                 self.stop()
+                return
+
         if isinstance(error, websocket.WebSocketTimeoutException):
             self.logger.info(
                 f'Device {self.device_id} seems to be offline. No connection possible.')
+            # Stop websocket
+            self.stop()
         else:
             self.logger.error(f'WebSocket Error received: {error}')
 

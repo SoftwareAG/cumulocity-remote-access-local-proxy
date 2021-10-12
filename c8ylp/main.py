@@ -89,14 +89,14 @@ def start():
     host = os.environ.get('C8Y_HOST')
     device = os.environ.get('C8Y_DEVICE')
 
-    extype = os.environ.get('C8Y_EXTYPE') if os.environ.get('C8Y_EXTYPE') is not None else 'c8y_Serial'
-    config_name = os.environ.get('C8Y_CONFIG') if os.environ.get('C8Y_CONFIG') is not None else 'Passthrough'
+    extype = os.environ.get('C8Y_EXTYPE') if os.environ.get('C8Y_EXTYPE') else 'c8y_Serial'
+    config_name = os.environ.get('C8Y_CONFIG') if os.environ.get('C8Y_CONFIG') else 'Passthrough'
     tenant = os.environ.get('C8Y_TENANT')
     user = os.environ.get('C8Y_USER')
     password = os.environ.get('C8Y_PASSWORD')
-    tcp_size = int(os.environ.get('C8Y_TCPSIZE')) if os.environ.get('C8Y_TCPSIZE') is not None else 32768
-    tcp_timeout = int(os.environ.get('C8Y_TCPTIMEOUT')) if os.environ.get('C8Y_TCPTIMEOUT') is not None else 0
-    port = int(os.environ.get('C8Y_PORT')) if os.environ.get('C8Y_PORT') is not None else 2222
+    tcp_size = int(os.environ.get('C8Y_TCPSIZE')) if os.environ.get('C8Y_TCPSIZE', '').isnumeric() else 32768
+    tcp_timeout = int(os.environ.get('C8Y_TCPTIMEOUT')) if os.environ.get('C8Y_TCPTIMEOUT', '').isnumeric() else 0
+    port = int(os.environ.get('C8Y_PORT')) if os.environ.get('C8Y_PORT', '').isnumeric() else 2222
     token = os.environ.get('C8Y_TOKEN')
     tfacode = None
     script_mode = False

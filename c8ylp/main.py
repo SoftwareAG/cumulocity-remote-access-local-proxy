@@ -97,6 +97,7 @@ def start():
     tcp_size = int(os.environ.get('C8Y_TCPSIZE')) if os.environ.get('C8Y_TCPSIZE', '').isnumeric() else 4096
     tcp_timeout = int(os.environ.get('C8Y_TCPTIMEOUT')) if os.environ.get('C8Y_TCPTIMEOUT', '').isnumeric() else 0
     port = int(os.environ.get('C8Y_PORT')) if os.environ.get('C8Y_PORT', '').isnumeric() else 2222
+    ping_interval = int(os.environ.get('C8Y_PING_INTERVAL')) if os.environ.get('C8Y_PING_INTERVAL', '').isnumeric() else 0
     token = os.environ.get('C8Y_TOKEN')
     tfacode = None
     script_mode = False
@@ -169,8 +170,21 @@ def start():
     if not is_authorized:
         logging.error(f'User {user} is not authorized to use Cloud Remote Access. Contact your Cumulocity Admin!')
         sys.exit(1)
-    websocket_client = WebsocketClient(
-        host, tenant, user, password, config_id, device_id, session, token, ignore_ssl_validate, reconnects)
+
+    client_opts = {
+        'host': host,
+        'tenant': tenant,
+        'user': user,
+        'password': password,
+        'config_id': config_id,
+        'device_id': device_id,
+        'session': session,
+        'token': token,
+        'ignore_ssl_validate': ignore_ssl_validate,
+        'reconnects': reconnects,
+        'ping_interval': ping_interval,
+    }
+    websocket_client = WebsocketClient(**client_opts)
     wst = websocket_client.connect()
     tcp_server = TCPServer(port, websocket_client, tcp_size, tcp_timeout, wst, script_mode)
     # TCP is blocking...

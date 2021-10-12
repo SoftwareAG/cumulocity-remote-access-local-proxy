@@ -78,7 +78,7 @@ class WebsocketClient(threading.Thread):
             self.web_socket = websocket.WebSocketApp(
                 url, header=headers, cookie=cookie_string)
         # self.logger.debug(f'Cookie String: {cookie_string}')
-        
+
         # pylint: disable=unnecessary-lambda
         # See https://stackoverflow.com/questions/26980966/using-a-websocket-client-as-a-class-in-python
         self.web_socket.on_message = lambda ws, msg: self._on_ws_message(

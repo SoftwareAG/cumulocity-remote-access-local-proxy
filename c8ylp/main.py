@@ -94,7 +94,7 @@ def start():
     tenant = os.environ.get('C8Y_TENANT')
     user = os.environ.get('C8Y_USER')
     password = os.environ.get('C8Y_PASSWORD')
-    tcp_size = int(os.environ.get('C8Y_TCPSIZE')) if os.environ.get('C8Y_TCPSIZE', '').isnumeric() else 32768
+    tcp_size = int(os.environ.get('C8Y_TCPSIZE')) if os.environ.get('C8Y_TCPSIZE', '').isnumeric() else 4096
     tcp_timeout = int(os.environ.get('C8Y_TCPTIMEOUT')) if os.environ.get('C8Y_TCPTIMEOUT', '').isnumeric() else 0
     port = int(os.environ.get('C8Y_PORT')) if os.environ.get('C8Y_PORT', '').isnumeric() else 2222
     token = os.environ.get('C8Y_TOKEN')

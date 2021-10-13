@@ -28,7 +28,18 @@ import certifi
 
 class WebsocketClient(threading.Thread):
 
-    def __init__(self, host, tenant, user, password, config_id, device_id, session, token, ignore_ssl_validate=False, reconnects=5):
+    def __init__(self,
+            host,
+            tenant,
+            user,
+            password,
+            config_id,
+            device_id,
+            session,
+            token,
+            ignore_ssl_validate=False,
+            reconnects=5,
+            ping_interval = 0):
         self.host = host
         self.tenant = tenant
         self.user = user
@@ -40,6 +51,9 @@ class WebsocketClient(threading.Thread):
         self._ws_open_event = None
         self._ws_open = False
         self._ws_timeout = 10
+        self._ws_ping_interval = ping_interval
+        # ping timeout must be less than the interval, so just take a percentage
+        self._ws_ping_timeout = ping_interval * 0.9 if ping_interval > 0 else None
         self.logger = logging.getLogger(__name__)
         self.wst = None
         self.session = session
@@ -78,7 +92,7 @@ class WebsocketClient(threading.Thread):
             self.web_socket = websocket.WebSocketApp(
                 url, header=headers, cookie=cookie_string)
         # self.logger.debug(f'Cookie String: {cookie_string}')
-        
+
         # pylint: disable=unnecessary-lambda
         # See https://stackoverflow.com/questions/26980966/using-a-websocket-client-as-a-class-in-python
         self.web_socket.on_message = lambda ws, msg: self._on_ws_message(
@@ -87,7 +101,12 @@ class WebsocketClient(threading.Thread):
             ws, error)
         self.web_socket.on_close = lambda ws,msg,msg2: self._on_ws_close(ws,msg,msg2)
         self.web_socket.on_open = lambda ws: self._on_ws_open(ws)
-        web_socket_kwargs = {'ping_interval': 10, 'ping_timeout': 7}
+
+        # Note: Don't use a ping interval as it can cause the connection to be closed
+        web_socket_kwargs = {
+            'ping_interval': self._ws_ping_interval,
+            'ping_timeout': self._ws_ping_timeout,
+        }
 
         # Load ca certificates
         sslopt_ca_certs = {'ca_certs': certifi.where()}
@@ -152,9 +171,13 @@ class WebsocketClient(threading.Thread):
                 self._ws_open = False
                 self._ws_open_event.set()
                 self.stop()
+                return
+
         if isinstance(error, websocket.WebSocketTimeoutException):
             self.logger.info(
                 f'Device {self.device_id} seems to be offline. No connection possible.')
+            # Stop websocket
+            self.stop()
         else:
             self.logger.error(f'WebSocket Error received: {error}')
 

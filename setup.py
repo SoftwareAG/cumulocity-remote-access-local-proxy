@@ -24,7 +24,7 @@ long_description = (this_directory / "README.md").read_text()
 setup(name='c8ylp',
       long_description=long_description,
       long_description_content_type='text/markdown',
-      version='1.4.8',
+      version='1.4.9',
       description='Cumulocity Local Client Proxy',
       author='Stefan Witschel',
       url = "https://github.com/SoftwareAG/cumulocity-remote-access-local-proxy",
@@ -40,7 +40,8 @@ setup(name='c8ylp',
       },
       install_requires = [
         'requests>=2.26.0',
-        'websocket_client>=1.2.1'
-        'certifi>=2020.12.5'
+        'websocket_client>=1.2.1',
+        'certifi>=2020.12.5',
+        'stdiomask>=0.0.6'
       ],
       zip_safe=False)

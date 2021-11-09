@@ -43,11 +43,43 @@ class CumulocityClient:
             self.session.verify = False
         self.logger = logging.getLogger(__name__)
     
+    def set_tfa_token(self, tfacode: str):
+        self.tfacode = tfacode
+    
     def validate_tenant_id(self):
         tenant_id = None
         current_user_url = self.url + f'/tenant/loginOptions'
         headers = {}
         response = self.session.get(current_user_url, headers=headers)
+        self.logger.debug(f'Response received: {response}')
+        if response.status_code == 200:
+            login_options_body = json.loads(response.content.decode('utf-8'))
+            login_options = login_options_body['loginOptions']
+            for option in login_options:
+                if 'initRequest' in option:
+                    tenant_id = option['initRequest'].split('=')[1]
+                    if self.tenant != tenant_id:
+                        self.logger.debug(f'Wrong Tenant ID {self.tenant}, Correct Tenant ID: {tenant_id}')
+                        self.tenant = tenant_id
+                    else:
+                        tenant_id = None
+                    break
+        
+        else:
+            self.logger.error(f'Error validating Tenant ID!')
+        return tenant_id
+    
+    def check_tfa_token_needed(self):
+        tenant_id = None
+        current_tenant_url = self.url + f'/tenant/currentTenant'
+        if self.token:
+            headers = {'Content-Type': 'application/json',
+                       'Authorization': 'Bearer ' +self.token}
+        else:
+            headers = {'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': self.session.cookies.get_dict()['XSRF-TOKEN']
+                    }
+        response = self.session.get(current_tenant_url, headers=headers)
         self.logger.debug(f'Response received: {response}')
         if response.status_code == 200:
             login_options_body = json.loads(response.content.decode('utf-8'))
@@ -115,14 +147,15 @@ class CumulocityClient:
             'password': self.password,
             'tfa_code': self.tfacode
         }
-        self.logger.debug(f'Sending requests to {oauth_url}')
+        self.logger.debug(f'Sending requests to {oauth_url} with body {body}')
         response = self.session.post(oauth_url,headers=headers,data=body)
         if response.status_code == 200:
             self.logger.debug(f'Authenticateion successful. Tokens have been updated {self.session.cookies.get_dict()}!')
             os.environ['C8Y_TOKEN'] = self.session.cookies.get_dict()['authorization']
         elif response.status_code == 401:
             self.logger.error(f'User {self.user} is not authorized to access Tenant {self.tenant} or TFA-Code is invalid.')
-            sys.exit(1)
+            return None
+            #sys.exit(1)
         else:
             self.logger.error(f'Server Error received for User {self.user} and Tenant {self.tenant}. Status Code: {response.status_code}')
             sys.exit(1)
@@ -197,6 +230,10 @@ class CumulocityClient:
             return mor
 
     def get_config_id(self, mor, config):
+        if 'c8y_RemoteAccessList' not in mor:
+            device = mor['name']
+            self.logger.error(f'No Remote Access Configuration has been found for device "{device}"')
+            sys.exit(1)
         access_list = mor['c8y_RemoteAccessList']
         device = mor['name']
         config_id = None

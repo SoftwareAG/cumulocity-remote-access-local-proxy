@@ -103,7 +103,7 @@ class CumulocityClient:
                     break
 
         else:
-            self.logger.error(f"Could not validate Tenant ID")
+            self.logger.error("Could not validate Tenant ID")
         return tenant_id
 
     def validate_remote_access_role(self) -> bool:
@@ -119,14 +119,14 @@ class CumulocityClient:
             user = json.loads(response.content.decode("utf-8"))
             effective_roles = user["effectiveRoles"]
             for role in effective_roles:
-                if "ROLE_REMOTE_ACCESS_ADMIN" == role["id"]:
+                if role["id"] == "ROLE_REMOTE_ACCESS_ADMIN":
                     self.logger.debug(
                         f"Remote Access Role assigned to User {self.user}!"
                     )
                     is_valid = True
                     break
         else:
-            self.logger.error(f"Could not get the user's data")
+            self.logger.error("Could not get the user's data")
             is_valid = False
         return is_valid
 
@@ -212,7 +212,8 @@ class CumulocityClient:
             raise error
         else:
             error = Exception(
-                f"Server Error received for User {self.user} and Tenant {self.tenant}. Status Code: {response.status_code}"
+                f"Server Error received for User {self.user} and Tenant {self.tenant}. " \
+                    "Status Code: {response.status_code}"
             )
             self.logger.error(error)
             raise error

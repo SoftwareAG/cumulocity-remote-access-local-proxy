@@ -1,3 +1,4 @@
+"""TCP server"""
 #  Copyright (c) 2021 Software AG, Darmstadt, Germany and/or its licensors
 #
 #  SPDX-License-Identifier: Apache-2.0
@@ -17,7 +18,6 @@
 
 import logging
 import socket
-import sys
 import threading
 
 
@@ -37,6 +37,7 @@ class TCPServer:
         self.wst = wst
         self.tcp_timeout_counter = None
         self.script_mode = script_mode
+        self._tcp_timeout_counter = 0
         self.logger = logging.getLogger(__name__)
 
     def start(self):
@@ -51,10 +52,10 @@ class TCPServer:
             self._tcp_timeout_counter = 0
             self._tcp_open_event = threading.Event()
             self.sock.listen(1)
-            self.logger.info(f"Waiting for incoming connections...")
+            self.logger.info("Waiting for incoming connections...")
             self.connection, client_address = self.sock.accept()
             self.connection.settimeout(1)
-            self.logger.info(f"TCP Client connected: {client_address}")
+            self.logger.info("TCP Client connected: ", client_address)
             self._tcp_open_event.set()
             while not self.conn_is_closed and self.connection:
                 try:
@@ -68,7 +69,7 @@ class TCPServer:
                         self._tcp_timeout_counter = 0
                         if data:
                             if self.web_socket_client.is_ws_available():
-                                self.logger.debug(f"Sent Data to WebSocket...")
+                                self.logger.debug("Sent Data to WebSocket...")
                                 self.web_socket_client.web_socket.sock.send_binary(data)
                         else:
                             break
@@ -81,9 +82,9 @@ class TCPServer:
                     ):
                         self.logger.debug(f"TCP Timeout {self.tcp_timeout} reached!")
                         break
-                    else:
-                        self._tcp_timeout_counter += 1
-                        continue
+
+                    self._tcp_timeout_counter += 1
+                    continue
 
                 except Exception as ex:
                     self.logger.debug(f"Type of TCP Error {type(ex)}")
@@ -107,7 +108,7 @@ class TCPServer:
         )
 
     def _restart(self):
-        self.logger.info(f"Restarting TCP Connection...")
+        self.logger.info("Restarting TCP Connection...")
         self.stop_connection()
         if self.web_socket_client.is_ws_available():
             self._start_connection()
@@ -131,8 +132,8 @@ class TCPServer:
             self.conn_is_closed = True
 
     def stop(self):
-        self.logger.info(f"Shutting down TCP Server...")
+        self.logger.info("Shutting down TCP Server...")
         self.stop_connection()
         if self.sock:
             self.sock.close()
-        self.logger.info(f"TCP Server shutdown successful!")
+        self.logger.info("TCP Server shutdown successful!")

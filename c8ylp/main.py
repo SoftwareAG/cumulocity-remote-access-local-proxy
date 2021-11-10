@@ -26,8 +26,8 @@ import sys
 import signal
 from logging.handlers import RotatingFileHandler
 import platform
-import click
 import dataclasses
+import click
 
 from c8ylp.rest_client.c8yclient import CumulocityClient
 from c8ylp.tcp_socket.tcp_server import TCPServer
@@ -64,8 +64,10 @@ def validate_token(ctx, param, value):
     try:
         client.validate_credentials()
     except:
-        logging.warning(f'Token is no longer valid for host {hostname}. The token will be ignored')
-        return ''
+        logging.warning(
+            f"Token is no longer valid for host {hostname}. The token will be ignored"
+        )
+        return ""
     return value
 
 
@@ -73,6 +75,7 @@ def print_version(ctx, param, value):
     if not value or ctx.resilient_parsing:
         return
     from c8ylp import __version__
+
     click.echo(f"Version {__version__}")
     ctx.exit(ExitCodes.OK)
 
@@ -183,7 +186,9 @@ def print_version(ctx, param, value):
 )
 @click.option(
     "--pidfile",
-    default=lambda: pathlib.Path("~/.c8ylp/c8ylp").expanduser() if os.name == "nt" else "/var/run/c8ylp",
+    default=lambda: pathlib.Path("~/.c8ylp/c8ylp").expanduser()
+    if os.name == "nt"
+    else "/var/run/c8ylp",
     help="PID-File file location to store all Processes currently running",
 )
 @click.option(
@@ -352,6 +357,7 @@ def create_client(ctx: click.Context, opts: ProxyOptions):
 
     return client
 
+
 def get_config_id(mor, config):
     if "c8y_RemoteAccessList" not in mor:
         device = mor["name"]
@@ -389,6 +395,7 @@ def get_config_id(mor, config):
             )
             sys.exit(1)
     return config_id
+
 
 def start(ctx: click.Context, opts: ProxyOptions):
     if platform.system() in ("Linux", "Darwin"):
@@ -453,14 +460,14 @@ def start(ctx: click.Context, opts: ProxyOptions):
         logging.error(f"Error on TCP-Server {ex}")
     finally:
         if opts.use_pid:
-            clean_pid_file(None)
+            clean_pid_file(opts.pidfile)
         tcp_server.stop()
         ctx.exit(ExitCodes.OK)
 
 
 def upsert_pid_file(pidfile, device, url, config, user):
     try:
-        clean_pid_file(None)
+        clean_pid_file(pidfile)
         pid_file_text = get_pid_file_text(device, url, config, user)
         logging.debug(f"Adding {pid_file_text} to PID-File {pidfile}")
         if not os.path.exists(pidfile):
@@ -523,7 +530,7 @@ def kill_existing_instances(pidfile):
                 if pid != other_pid and pid_is_active(other_pid):
                     logging.info(f"Killing other running Process with PID {other_pid}")
                     os.kill(get_pid_from_line(line), 9)
-                clean_pid_file(other_pid)
+                clean_pid_file(pidfile, other_pid)
 
 
 if __name__ == "__main__":

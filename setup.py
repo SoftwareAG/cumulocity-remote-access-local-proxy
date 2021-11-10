@@ -23,29 +23,31 @@ import versioneer
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
-setup(name='c8ylp',
-      long_description=long_description,
-      long_description_content_type='text/markdown',
-      # version='1.5.0',
-      version=versioneer.get_version(),
-      cmdclass=versioneer.get_cmdclass(),
-      description='Cumulocity Local Client Proxy',
-      author='Stefan Witschel',
-      url = "https://github.com/SoftwareAG/cumulocity-remote-access-local-proxy",
-      license='Apache v2',
-      packages=['c8ylp',
-                'c8ylp.tcp_socket',
-                'c8ylp.websocket_client',
-                'c8ylp.rest_client'],
-      entry_points={
-        'console_scripts': [
-              'c8ylp=c8ylp.main:start'
-            ],
-      },
-      install_requires = [
-        'requests>=2.26.0',
-        'websocket_client>=1.2.1',
-        'certifi>=2020.12.5',
-        'stdiomask>=0.0.6'
-      ],
-      zip_safe=False)
+setup(
+    name="c8ylp",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    # version='1.5.0',
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
+    description="Cumulocity Local Client Proxy",
+    author="Stefan Witschel",
+    url="https://github.com/SoftwareAG/cumulocity-remote-access-local-proxy",
+    license="Apache v2",
+    packages=[
+        "c8ylp",
+        "c8ylp.tcp_socket",
+        "c8ylp.websocket_client",
+        "c8ylp.rest_client",
+    ],
+    entry_points={
+        "console_scripts": ["c8ylp=c8ylp.main:start"],
+    },
+    install_requires=[
+        "requests>=2.26.0",
+        "websocket_client>=1.2.1",
+        "certifi>=2020.12.5",
+        "stdiomask>=0.0.6",
+    ],
+    zip_safe=False,
+)

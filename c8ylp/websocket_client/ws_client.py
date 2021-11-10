@@ -1,3 +1,4 @@
+"""Websocket client"""
 #  Copyright (c) 2021 Software AG, Darmstadt, Germany and/or its licensors
 #
 #  SPDX-License-Identifier: Apache-2.0
@@ -19,10 +20,10 @@ import logging
 import threading
 import platform
 
-import websocket
 import ssl
 import os
 import signal
+import websocket
 import certifi
 
 
@@ -53,10 +54,11 @@ class WebsocketClient(threading.Thread):
         self.wst = None
         self.session = session
         self.token = token
-        self.trigger_reconnect = True if reconnects >= 0 else False
+        self.trigger_reconnect = reconnects >= 0
         self.reconnect_counter = 0
         self.ignore_ssl_validate = ignore_ssl_validate
         self.max_reconnects = reconnects
+        super().__init__()
 
     def connect(self):
         self._ws_open_event = threading.Event()
@@ -125,7 +127,7 @@ class WebsocketClient(threading.Thread):
 
     def reconnect(self):
         self.reconnect_counter += 1
-        self.logger.info(f"Reconnecting to WebSocket...")
+        self.logger.info("Reconnecting to WebSocket...")
         if self.web_socket:
             self.web_socket.keep_running = False
             self.web_socket.close()
@@ -134,8 +136,7 @@ class WebsocketClient(threading.Thread):
 
     def stop(self):
         # Closing WebSocket
-        # self.tcp_server.stop()
-        self.logger.debug(f"Stopping WebSocket Connection...")
+        self.logger.debug("Stopping WebSocket Connection...")
         self.trigger_reconnect = False
         self.tcp_server.stop_connection()
         if self.web_socket:
@@ -204,6 +205,6 @@ class WebsocketClient(threading.Thread):
                 os.kill(os.getpid(), signal.SIGINT)
 
     def _on_ws_open(self, _ws):
-        self.logger.info(f"WebSocket Connection opened!")
+        self.logger.info("WebSocket Connection opened!")
         self._ws_open = True
         self._ws_open_event.set()

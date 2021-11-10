@@ -3,6 +3,7 @@
 import logging
 import requests
 
+
 class BaseUrlSession(requests.Session):
     """Cumulocity requests session which automatically adds the given prefix
     to urls when sending the requests (if the url is not already fully defined)
@@ -12,10 +13,11 @@ class BaseUrlSession(requests.Session):
     References:
         * https://github.com/psf/requests/issues/2554
     """
+
     def __init__(self, prefix_url: str, reuse_session: bool = False):
-        if not prefix_url.startswith('http'):
+        if not prefix_url.startswith("http"):
             # default to https!
-            prefix_url = f'https://{prefix_url}'
+            prefix_url = f"https://{prefix_url}"
         self.prefix_url = prefix_url
         self.reuse_session = reuse_session
         self.default_timeout = 30.0
@@ -30,7 +32,7 @@ class BaseUrlSession(requests.Session):
         Returns:
             str: Returns full url (prepends the prefixUrl if a partial url is detected)
         """
-        if not url.startswith('http'):
+        if not url.startswith("http"):
             url = self.prefix_url + "/" + url.lstrip("/")
         return url
 
@@ -54,15 +56,17 @@ class BaseUrlSession(requests.Session):
 
         if self.reuse_session:
             send_kwargs = {
-                'timeout': kwargs.pop('timeout', self.default_timeout),
-                'proxies': kwargs.pop('proxies', self.proxies),
-                'allow_redirects': kwargs.pop('allow_redirects', True),
-                'stream': kwargs.pop('stream', self.stream),
-                'verify': kwargs.pop('verify', self.verify),
-                'cert': kwargs.pop('cert', self.cert),
+                "timeout": kwargs.pop("timeout", self.default_timeout),
+                "proxies": kwargs.pop("proxies", self.proxies),
+                "allow_redirects": kwargs.pop("allow_redirects", True),
+                "stream": kwargs.pop("stream", self.stream),
+                "verify": kwargs.pop("verify", self.verify),
+                "cert": kwargs.pop("cert", self.cert),
             }
-            
-            prepped = super(BaseUrlSession, self).prepare_request(requests.Request(method, url, *args, **kwargs))
+
+            prepped = super(BaseUrlSession, self).prepare_request(
+                requests.Request(method, url, *args, **kwargs)
+            )
             logging.debug(f"Sending requests to {url}")
             response = super(BaseUrlSession, self).send(prepped, **send_kwargs)
             return response
@@ -73,16 +77,18 @@ class BaseUrlSession(requests.Session):
 
         # Extract send arguments
         send_kwargs = {
-            'timeout': kwargs.pop('timeout', self.default_timeout),
-            'proxies': kwargs.pop('proxies', self.proxies),
-            'allow_redirects': kwargs.pop('allow_redirects', True),
-            'stream': kwargs.pop('stream', self.stream),
-            'verify': kwargs.pop('verify', self.verify),
-            'cert': kwargs.pop('cert', self.cert),
+            "timeout": kwargs.pop("timeout", self.default_timeout),
+            "proxies": kwargs.pop("proxies", self.proxies),
+            "allow_redirects": kwargs.pop("allow_redirects", True),
+            "stream": kwargs.pop("stream", self.stream),
+            "verify": kwargs.pop("verify", self.verify),
+            "cert": kwargs.pop("cert", self.cert),
         }
 
         # prepare request
-        prep = super(BaseUrlSession, self).prepare_request(requests.Request(method, url, *args, **kwargs))
+        prep = super(BaseUrlSession, self).prepare_request(
+            requests.Request(method, url, *args, **kwargs)
+        )
 
         logging.debug(f"Sending requests to {url}")
 

@@ -1,3 +1,4 @@
+"""TCP socket"""
 #  Copyright (c) 2021 Software AG, Darmstadt, Germany and/or its licensors
 #
 #  SPDX-License-Identifier: Apache-2.0

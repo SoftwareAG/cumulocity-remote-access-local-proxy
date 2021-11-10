@@ -95,7 +95,6 @@ Examples:
 
 
 if __name__ == "__main__":
-    """Main cli intervace to"""
     if len(sys.argv) > 1:
         subcommand = sys.argv[1]
 

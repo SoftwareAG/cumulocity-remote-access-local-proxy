@@ -18,13 +18,17 @@
 from setuptools import setup
 from pathlib import Path
 
+import versioneer
+
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
 setup(name='c8ylp',
       long_description=long_description,
       long_description_content_type='text/markdown',
-      version='1.5.0',
+      # version='1.5.0',
+      version=versioneer.get_version(),
+      cmdclass=versioneer.get_cmdclass(),
       description='Cumulocity Local Client Proxy',
       author='Stefan Witschel',
       url = "https://github.com/SoftwareAG/cumulocity-remote-access-local-proxy",

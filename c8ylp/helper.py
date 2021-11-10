@@ -39,11 +39,13 @@ def wait_for_port(port: int, timeout: float = 30.0) -> None:
     while True:
         if is_port_open(port):
             duration = time.monotonic() - start_at
-            print(f'Port is open. waited={duration:.2f}s')
+            print(f"Port is open. waited={duration:.2f}s")
             break
 
         if time.monotonic() >= expires_at:
-            raise TimeoutError(f'Timed out waiting for port to be opened. port={port}, timeout={timeout}')
+            raise TimeoutError(
+                f"Timed out waiting for port to be opened. port={port}, timeout={timeout}"
+            )
         time.sleep(0.25)
 
 
@@ -58,8 +60,8 @@ def is_port_open(port: int) -> bool:
     """
     with socketcontext() as sock:
         try:
-            sock.bind(('', port))
-        except OSError  as ex:
+            sock.bind(("", port))
+        except OSError as ex:
             # port already in use error
             if ex.errno == 98:
                 return True
@@ -68,15 +70,15 @@ def is_port_open(port: int) -> bool:
 
 
 def get_unused_port() -> int:
-    """Get a port which is currently unused
-    """
+    """Get a port which is currently unused"""
     with socketcontext() as sock:
-        sock.bind(('', 0))
+        sock.bind(("", 0))
         return sock.getsockname()[1]
 
 
 def show_usage() -> None:
-    print("""
+    print(
+        """
 Usage:
 
     python3 -m c8ylp.helper <port|wait> [...options]
@@ -88,22 +90,22 @@ Examples:
 
     #> python3 -m c8ylp.helper wait <port> <timeout_sec>
     # Wait for a port to be open
-        """)
+        """
+    )
 
 
-if __name__ == '__main__':
-    """Main cli intervace to
-    """
+if __name__ == "__main__":
+    """Main cli intervace to"""
     if len(sys.argv) > 1:
         subcommand = sys.argv[1]
-    
-    if '--help' in sys.argv or '-h' in sys.argv:
+
+    if "--help" in sys.argv or "-h" in sys.argv:
         show_usage()
         sys.exit(0)
 
-    if subcommand.lower() == 'port':
+    if subcommand.lower() == "port":
         print(get_unused_port())
-    elif subcommand.lower() == 'wait':
+    elif subcommand.lower() == "wait":
         port = 2222
         timeout = 30.0
 
@@ -120,6 +122,6 @@ if __name__ == '__main__':
             print(ex)
             sys.exit(1)
     else:
-        print('Error: Unknown command')
+        print("Error: Unknown command")
         show_usage()
         sys.exit(2)

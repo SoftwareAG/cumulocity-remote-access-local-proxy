@@ -16,247 +16,279 @@
 #
 
 import json
-import os
 import logging
-import sys
-from base64 import b64encode
+from typing import Any, Dict
 
 import requests
+from requests.auth import HTTPBasicAuth
+
+from c8ylp.rest_client.sessions import BaseUrlSession
+
+
+class CumulocityPermissionDeviceError(Exception):
+    """Cumulocity Device Permission error"""
+
+    def __init__(self, user: str, device: str) -> None:
+        message = (
+            f"User {user} is not authorized to read Device Data of Device {device}"
+        )
+        super().__init__(message)
+
+
+class BearerAuth(requests.auth.AuthBase):
+    """Bearer/token based authorization"""
+
+    def __init__(self, token: str):
+        self.token = token
+
+    def __call__(self, r):
+        r.headers["authorization"] = "Bearer " + self.token
+        return r
 
 
 class CumulocityClient:
+    """Cumulocity REST Client"""
 
-    def __init__(self, hostname: str, tenant: str, user: str, password: str, tfacode: str,
-                 ignore_ssl_validate: bool = False):
+    def __init__(
+        self,
+        hostname: str,
+        tenant: str = None,
+        user: str = None,
+        password: str = None,
+        tfacode: str = None,
+        token: str = None,
+        ignore_ssl_validate: bool = False,
+    ):
         self.hostname = hostname
+
+        if hostname.startswith("http"):
+            self.url = hostname
+        else:
+            self.url = f"https://{hostname}"
+
+        self.session = BaseUrlSession(prefix_url=self.url, reuse_session=True)
+
+        if ignore_ssl_validate:
+            self.session.verify = False
+
         self.tenant = tenant
         self.user = user
         self.password = password
         self.tfacode = tfacode
-        self.session = requests.Session()
-        self.token = os.environ.get('C8Y_TOKEN')
-        if hostname.startswith('http'):
-            self.url = hostname
+        self.token = token
+
+        if token:
+            self.set_bearer_auth(token)
         else:
-            self.url = f'https://{hostname}'
-        if ignore_ssl_validate:
-            self.session.verify = False
+            self.set_basic_auth(user, password)
+
         self.logger = logging.getLogger(__name__)
-    
-    def set_tfa_token(self, tfacode: str):
-        self.tfacode = tfacode
-    
+
     def validate_tenant_id(self):
         tenant_id = None
-        current_user_url = self.url + f'/tenant/loginOptions'
-        headers = {}
-        response = self.session.get(current_user_url, headers=headers)
-        self.logger.debug(f'Response received: {response}')
+        response = self.session.get("/tenant/loginOptions")
         if response.status_code == 200:
-            login_options_body = json.loads(response.content.decode('utf-8'))
-            login_options = login_options_body['loginOptions']
+            login_options_body = json.loads(response.content.decode("utf-8"))
+            login_options = login_options_body.get("loginOptions", {})
             for option in login_options:
-                if 'initRequest' in option:
-                    tenant_id = option['initRequest'].split('=')[1]
+                if "initRequest" in option:
+                    _, _, tenant_id = option.get("initRequest", "").partition("=")
                     if self.tenant != tenant_id:
-                        self.logger.debug(f'Wrong Tenant ID {self.tenant}, Correct Tenant ID: {tenant_id}')
+                        self.logger.warning(
+                            f"Wrong Tenant ID {self.tenant}, Correct Tenant ID: {tenant_id}"
+                        )
                         self.tenant = tenant_id
                     else:
                         tenant_id = None
                     break
-        
+
         else:
-            self.logger.error(f'Error validating Tenant ID!')
-        return tenant_id
-    
-    def check_tfa_token_needed(self):
-        tenant_id = None
-        current_tenant_url = self.url + f'/tenant/currentTenant'
-        if self.token:
-            headers = {'Content-Type': 'application/json',
-                       'Authorization': 'Bearer ' +self.token}
-        else:
-            headers = {'Content-Type': 'application/json',
-                    'X-XSRF-TOKEN': self.session.cookies.get_dict()['XSRF-TOKEN']
-                    }
-        response = self.session.get(current_tenant_url, headers=headers)
-        self.logger.debug(f'Response received: {response}')
-        if response.status_code == 200:
-            login_options_body = json.loads(response.content.decode('utf-8'))
-            login_options = login_options_body['loginOptions']
-            for option in login_options:
-                if 'initRequest' in option:
-                    tenant_id = option['initRequest'].split('=')[1]
-                    if self.tenant != tenant_id:
-                        self.logger.debug(f'Wrong Tenant ID {self.tenant}, Correct Tenant ID: {tenant_id}')
-                        self.tenant = tenant_id
-                    else:
-                        tenant_id = None
-                    break
-        
-        else:
-            self.logger.error(f'Error validating Tenant ID!')
+            self.logger.error(f"Could not validate Tenant ID")
         return tenant_id
 
-    def validate_remote_access_role(self):
+    def validate_remote_access_role(self) -> bool:
+        """Check if the current user has permission to access the remote access feature
+        i.e. the ROLE_REMOTE_ACCESS_ADMIN role.
+
+        Returns:
+            bool: True if the user had the correct role assigned to them
+        """
         is_valid = False
-        current_user_url = self.url + f'/user/currentUser'
-        if self.token:
-            headers = {'Content-Type': 'application/json',
-                       'Authorization': 'Bearer ' +self.token}
-        else:
-            headers = {'Content-Type': 'application/json',
-                    'X-XSRF-TOKEN': self.session.cookies.get_dict()['XSRF-TOKEN']
-                    }
-        response = self.session.get(current_user_url, headers=headers)
-        self.logger.debug(f'Response received: {response}')
+        response = self.session.get("/user/currentUser")
         if response.status_code == 200:
-            user = json.loads(response.content.decode('utf-8'))
-            effective_roles = user['effectiveRoles']
+            user = json.loads(response.content.decode("utf-8"))
+            effective_roles = user["effectiveRoles"]
             for role in effective_roles:
-                if 'ROLE_REMOTE_ACCESS_ADMIN' == role['id']:
-                    self.logger.debug(f'Remote Access Role assigned to User {self.user}!')
+                if "ROLE_REMOTE_ACCESS_ADMIN" == role["id"]:
+                    self.logger.debug(
+                        f"Remote Access Role assigned to User {self.user}!"
+                    )
                     is_valid = True
                     break
         else:
-            self.logger.error(f'Error retrieving User Data!')
+            self.logger.error(f"Could not get the user's data")
             is_valid = False
         return is_valid
 
-    def validate_token(self):
-        is_valid = False
-        current_user_url = self.url + f'/user/currentUser'
-        headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + self.token}
-        response = self.session.get(current_user_url, headers=headers)
-        self.logger.debug(f'Response received: {response}')
+    def set_bearer_auth(self, token: str) -> None:
+        """Set authorization header to use a bearer token
+
+        Args:
+            token (str): [description]
+        """
+        self.session.auth = BearerAuth(token)
+
+    def set_basic_auth(self, username: str, password: str) -> None:
+        """Set the authorization header to use basic authentication
+
+        Args:
+            username (str): Cumulocity username
+            password (str): Cumulocity password
+        """
+        self.session.auth = HTTPBasicAuth(username, password)
+
+    def validate_credentials(self) -> bool:
+        """Validate client's credentials by sending a request
+
+        If the request fails, then the token and password will be configured
+        in the client will be set to None.
+
+        Raises:
+            PermissionError: Permission error if the credentials are not valid
+
+        Returns:
+            bool: True if the credentials were validated
+        """
+        response = self.session.get("/user/currentUser")
         if response.status_code == 200:
-            is_valid = True
-        else:
-            self.logger.error(f'Error validating Token {response.status_code}. Please provide Tenant User and Password!')
-            del os.environ['C8Y_TOKEN']
-            is_valid = False
-            sys.exit(1)
-        return is_valid
+            return True
 
-    def retrieve_token(self):
-        oauth_url = self.url + f'/tenant/oauth?tenant_id={self.tenant}'
-        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-        body = {
-            'grant_type': 'PASSWORD',
-            'username': self.user,
-            'password': self.password,
-            'tfa_code': self.tfacode
+        # clear token/password (as they maybe invalid)
+        self.token = None
+        self.password = None
+
+        message = PermissionError(
+            f"Error validating Token {response.status_code}. Please provide Tenant, User and Password"
+        )
+        self.logger.error(message)
+        raise message
+
+    def login_oauth(self):
+        """Login via OAuth2 and set the give token if the login is successful
+
+        Raises:
+            PermissionError: Error if the provided credentials and/or tfa code are incorrect
+            Exception: Unexpected error
+        """
+        oauth_url = f"/tenant/oauth?tenant_id={self.tenant}"
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
         }
-        self.logger.debug(f'Sending requests to {oauth_url} with body {body}')
-        response = self.session.post(oauth_url,headers=headers,data=body)
+        body = {
+            "grant_type": "PASSWORD",
+            "username": self.user,
+            "password": self.password,
+            "tfa_code": self.tfacode,
+        }
+        self.logger.debug(
+            f"Sending requests to {oauth_url} with body {str(body).replace(str(self.password), '******')}"
+        )
+        self.session.auth = None
+        response = self.session.post(oauth_url, headers=headers, data=body)
         if response.status_code == 200:
-            self.logger.debug(f'Authenticateion successful. Tokens have been updated {self.session.cookies.get_dict()}!')
-            os.environ['C8Y_TOKEN'] = self.session.cookies.get_dict()['authorization']
+            self.logger.debug(
+                f"Authentication successful. Tokens have been updated {self.session.cookies.get_dict()}"
+            )
+            self.token = self.session.cookies.get_dict()["authorization"]
+            self.set_bearer_auth(self.token)
+            self.session.headers["X-XSRF-TOKEN"] = self.session.cookies.get_dict()[
+                "XSRF-TOKEN"
+            ]
         elif response.status_code == 401:
-            self.logger.error(f'User {self.user} is not authorized to access Tenant {self.tenant} or TFA-Code is invalid.')
-            return None
-            #sys.exit(1)
+            error = PermissionError(
+                f"User {self.user} is not authorized to access Tenant {self.tenant} or TFA-Code is invalid."
+            )
+            self.logger.error(error)
+            raise error
         else:
-            self.logger.error(f'Server Error received for User {self.user} and Tenant {self.tenant}. Status Code: {response.status_code}')
-            sys.exit(1)
-        return self.session
+            error = Exception(
+                f"Server Error received for User {self.user} and Tenant {self.tenant}. Status Code: {response.status_code}"
+            )
+            self.logger.error(error)
+            raise error
 
-    def read_ext_Id(self, device, extype):
-        identiy_url = self.url + f'/identity/externalIds/{extype}/{device}'
-        #auth_string = f'{self.tenant}/{self.user}:{self.password}'
-        #encoded_auth_string = b64encode(
-        #    bytes(auth_string, 'utf-8')).decode('ascii')
-        if self.token:
-            headers = {'Content-Type': 'application/json',
-                       'Authorization': 'Bearer ' +self.token}
-        else:
-            headers = {'Content-Type': 'application/json',
-                    'X-XSRF-TOKEN': self.session.cookies.get_dict()['XSRF-TOKEN']
-                   #'Authorization': 'Basic ' + encoded_auth_string
-                    }
-        self.logger.debug(f'Sending requests to {identiy_url}')
-        response = self.session.get(identiy_url, headers=headers)
-        self.logger.debug(f'Response received: {response}')
-        ext_id = None
+    def get_external_id(
+        self, serial_number: str, identity_type: str = "c8y_Serial"
+    ) -> Dict[str, Any]:
+        """Get the external id provded the serial number and external id type
+
+        Args:
+            serial_number (str): Device external identity
+            identity_type (str, optional): External identity type. Defaults to 'c8y_Serial'.
+
+        Raises:
+            CumulocityPermissionDeviceError: Error when the user does not have the correct permissions
+                to access the API or device
+            Exception: Unexpected error
+
+        Returns:
+            Dict[str, Any]: External Id definition containing the managed object id
+        """
+        response = self.session.get(
+            f"/identity/externalIds/{identity_type}/{serial_number}"
+        )
+
         if response.status_code == 200:
-            ext_id = json.loads(response.content.decode('utf-8'))
-        elif response.status_code == 401:
-            self.logger.error(f'User {self.user} is not authorized to read Device Data of Device {device}')
-            sys.exit(1)
+            return json.loads(response.content.decode("utf-8"))
+
+        error = Exception(
+            f"Error on retrieving device. Status Code {response.status_code}"
+        )
+        if response.status_code == 401:
+            error = CumulocityPermissionDeviceError(self.user, serial_number)
         elif response.status_code == 404:
-            self.logger.error(f'Device {device} not found!')
-            # print(f'Device {device} not found!')
-            sys.exit(1)
-        else:
-            self.logger.error(f'Error on retrieving device. Status Code {response.status_code}')
-            # print(f'Error on retrieving device. Status Code {response.status_code}')
-            sys.exit(1)
-        return ext_id
+            error = Exception(f"Device {serial_number} not found")
 
-    def read_mo(self, device, extype):
-        ext_id = self.read_ext_Id(device, extype)
-        mor_id = None
-        mor = None
-        if ext_id['managedObject']['id']:
-            mor_id = ext_id['managedObject']['id']
-        if mor_id:
-            managed_object_url = self.url + f'/inventory/managedObjects/{mor_id}'
-            if self.token:
-                headers = {'Content-Type': 'application/json',
-                       'Authorization': 'Bearer ' +self.token}
-            else:
-                headers = {'Content-Type': 'application/json',
-                    'X-XSRF-TOKEN': self.session.cookies.get_dict()['XSRF-TOKEN']
-                   #'Authorization': 'Basic ' + encoded_auth_string
-                    }
-            #auth_string = f'{self.tenant}/{self.user}:{self.password}'
-            #encoded_auth_string = b64encode(
-            #    bytes(auth_string, 'utf-8')).decode('ascii')
-            self.logger.debug(f'Sending requests to {managed_object_url}')
-            response = self.session.get(managed_object_url, headers=headers)
-            self.logger.debug(f'Response received: {response}')
-            if response.status_code == 200:
-                mor = json.loads(response.content.decode('utf-8'))
-                return mor
-            elif response.status_code == 401:
-                self.logger.error(f'User {self.user} is not authorized to read Device Data of Device {device}')
-                sys.exit(1)
-            elif response.status_code == 404:
-                self.logger.error(f'Device {device} not found!')
-                sys.exit(1)
-            else:
-                self.logger.error(f'Error on retrieving device. Status Code {response.status_code}')
-                sys.exit(1)
-            return mor
+        self.logger.error(error)
+        raise error
 
-    def get_config_id(self, mor, config):
-        if 'c8y_RemoteAccessList' not in mor:
-            device = mor['name']
-            self.logger.error(f'No Remote Access Configuration has been found for device "{device}"')
-            sys.exit(1)
-        access_list = mor['c8y_RemoteAccessList']
-        device = mor['name']
-        config_id = None
-        for remote_access in access_list:
-            if not remote_access['protocol'] == 'PASSTHROUGH':
-                continue
-            if config and remote_access['name'] == config:
-                config_id = remote_access['id']
-                self.logger.info(f'Using Configuration with Name "{config}" and Remote Port {remote_access["port"]}')
-                break
-            if not config:
-                config_id = remote_access['id']
-                self.logger.info(f'Using Configuration with Name "{config}" and Remote Port {remote_access["port"]}')
-                break
-        if not config_id:
-            if config:
-                self.logger.error(
-                    f'Provided config name "{config}" for "{device}" was not found or not of type "PASSTHROUGH"')
-                sys.exit(1)
-            else:
-                self.logger.error(f'No config of Type "PASSTHROUGH" has been found for device "{device}"')
-                sys.exit(1)
-        return config_id
+    def get_managed_object(
+        self, serial_number: str, identity_type: str = "c8y_Serial"
+    ) -> Dict[str, Any]:
+        """Get a managed object by looking it up via its external identity
+
+        Args:
+            serial_number (str): Device external identity
+            identity_type (str, optional): External identity type. Defaults to 'c8y_Serial'.
+
+        Raises:
+            CumulocityPermissionDeviceError: Error when the user does not have the correct permissions
+                to access the API or device
+            Exception: Unexpected error
+
+        Returns:
+            Dict[str, Any]: Device managed object
+        """
+        ext_id = self.get_external_id(serial_number, identity_type)
+        mor_id = ext_id.get("managedObject", {}).get("id")
+
+        if not mor_id:
+            raise Exception("Managed object id is empty")
+
+        response = self.session.get(f"/inventory/managedObjects/{mor_id}")
+        if response.status_code == 200:
+            return json.loads(response.content.decode("utf-8"))
+
+        error = Exception(
+            f"Error on retrieving device. Status Code {response.status_code}"
+        )
+        if response.status_code == 401:
+            error = CumulocityPermissionDeviceError(self.user, serial_number)
+        elif response.status_code == 404:
+            error = Exception(f"Device {serial_number} not found")
+
+        self.logger.error(error)
+        raise error
 
     def get_device_id(self, mor):
-        return mor['id']
+        return mor["id"]

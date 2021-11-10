@@ -18,44 +18,275 @@
 #  limitations under the License.
 #
 
-import getopt
+from enum import IntEnum
 import logging
 import os
 import pathlib
 import sys
 import signal
-import threading
 from logging.handlers import RotatingFileHandler
-from os.path import expanduser
 import platform
-import stdiomask
+import click
+import dataclasses
 
 from c8ylp.rest_client.c8yclient import CumulocityClient
 from c8ylp.tcp_socket.tcp_server import TCPServer
 from c8ylp.websocket_client.ws_client import WebsocketClient
+from c8ylp.helper import get_unused_port
 
-PIDFILE = '/var/run/c8ylp/c8ylp'
+
+class ExitCodes(IntEnum):
+    """Exit codes"""
+
+    OK = 0
+    NO_SESSION = 2
+    NOT_AUTHORIZED = 3
+    PID_FILE_ERROR = 4
+
 
 class ExitCommand(Exception):
-    pass
+    """ExitCommand error"""
+
 
 def signal_handler(signal, frame):
     raise ExitCommand()
 
-def start():
-    if platform.system() in ('Linux', 'Darwin'):
-        signal.signal(signal.SIGUSR1, signal_handler)
-    else:
-        signal.signal(signal.SIGINT, signal_handler)
-    home = expanduser('~')
-    path = pathlib.Path(home + '/.c8ylp')
-    loglevel = logging.INFO
-    path.mkdir(parents=True, exist_ok=True)
+
+def validate_token(ctx, param, value):
+    click.echo("Validating existing token")
+    if isinstance(value, tuple):
+        return value
+
+    hostname = ctx.params.get("hostname")
+
+    client = CumulocityClient(hostname=hostname, token=value)
+
+    try:
+        client.validate_credentials()
+    except:
+        logging.warning(f'Token is no longer valid for host {hostname}. The token will be ignored')
+        return ''
+    return value
+
+
+def print_version(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
+    from c8ylp import __version__
+    click.echo(f"Version {__version__}")
+    ctx.exit(ExitCodes.OK)
+
+
+@click.command()
+@click.option(
+    "--hostname",
+    "-h",
+    is_eager=True,
+    required=True,
+    envvar="C8Y_HOST",
+    help="Cumulocity Hostname",
+)
+@click.option(
+    "--device",
+    "-d",
+    required=True,
+    envvar="C8Y_DEVICE",
+    help="Device external identity",
+)
+@click.option(
+    "--extype", envvar="C8Y_EXTYPE", default="c8y_Serial", help="external Id Type"
+)
+@click.option(
+    "--config",
+    "-c",
+    required=True,
+    envvar="C8Y_CONFIG",
+    default="Passthrough",
+    help="name of the C8Y Remote Access Configuration",
+)
+@click.option("--tenant", "-t", envvar="C8Y_TENANT", help="Cumulocity tenant id")
+@click.option(
+    "--user",
+    "-u",
+    envvar="C8Y_USER",
+    help="Cumulocity username",
+)
+@click.option(
+    "--token",
+    "-t",
+    callback=validate_token,
+    envvar="C8Y_TOKEN",
+    is_eager=True,
+    help="Cumulocity token",
+)
+@click.option(
+    "--password",
+    "-p",
+    envvar="C8Y_PASSWORD",
+    prompt=False,
+    hide_input=True,
+    help="Cumulocity password",
+)
+@click.option(
+    "--tfacode",
+    envvar="C8Y_TFACODE",
+    help="TFA Code when an user with the Option 'TFA enabled' is used",
+)
+@click.option(
+    "--port",
+    envvar="C8Y_PORT",
+    type=int,
+    callback=lambda ctx, param, value: get_unused_port() if value < 1 else value,
+    default=2222,
+    help="TCP Port which should be opened",
+)
+@click.option(
+    "--ping-interval",
+    envvar="C8Y_PING_INTERVAL",
+    type=int,
+    default=0,
+    help="Websocket ping interval in seconds. 0=disabled",
+)
+@click.option("--kill", "-k", help="Kills all existing processes of c8ylp")
+@click.option("--tcpsize", envvar="C8Y_TCPSIZE", default=4096, help="TCP Package Size")
+@click.option(
+    "--tcptimeout",
+    envvar="C8Y_TCPTIMEOUT",
+    default=0,
+    help="Timeout in sec. for inactivity. Can be activited with values > 0",
+)
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    default=False,
+    help="Print Debug Information into the Logs and Console when set",
+)
+@click.option(
+    "--scriptmode",
+    "-s",
+    is_flag=True,
+    default=False,
+    help="Stops the TCP Server after first connection. No automatical restart!",
+)
+@click.option(
+    "--ignore-ssl-validate",
+    is_flag=True,
+    default=False,
+    help="Ignore Validation for SSL Certificates while connecting to Websocket",
+)
+@click.option(
+    "--use-pid",
+    is_flag=True,
+    default=False,
+    help="Will create a PID-File in /var/run/c8ylp to store all Processes currently running",
+)
+@click.option(
+    "--pidfile",
+    default=lambda: pathlib.Path("~/.c8ylp/c8ylp").expanduser() if os.name == "nt" else "/var/run/c8ylp",
+    help="PID-File file location to store all Processes currently running",
+)
+@click.option(
+    "--reconnects",
+    type=int,
+    default=5,
+    callback=lambda c, p, v: -1 if c.params["scriptmode"] else 5,
+    help="number of reconnects to the Cloud Remote Service. 0 for infinite reconnects",
+)
+@click.pass_context
+@click.option(
+    "--version",
+    is_flag=True,
+    default=False,
+    required=False,
+    callback=print_version,
+    expose_value=False,
+    is_eager=True,
+    help="Show version number",
+)
+def cli(
+    ctx,
+    hostname,
+    device,
+    extype,
+    config,
+    tenant,
+    user,
+    token,
+    password,
+    tfacode,
+    port,
+    ping_interval,
+    kill,
+    tcpsize,
+    tcptimeout,
+    verbose,
+    scriptmode,
+    ignore_ssl_validate,
+    use_pid,
+    pidfile,
+    reconnects,
+):
+    click.echo(locals())
+    options = ProxyOptions().fromdict(locals())
+    options.validate()
+    start(ctx, options)
+
+
+@dataclasses.dataclass
+class ProxyOptions:
+    hostname = ""
+    device = ""
+    extype = ""
+    config = ""
+    tenant = ""
+    user = ""
+    token = ""
+    password = ""
+    tfacode = ""
+    port = 0
+    ping_interval = ""
+    kill = ""
+    tcpsize = ""
+    tcptimeout = ""
+    verbose = False
+    scriptmode = False
+    ignore_ssl_validate = False
+    use_pid = False
+    pidfile = ""
+    reconnects = 0
+
+    def fromdict(self, d):
+        assert isinstance(d, dict)
+        for key, value in d.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+        return self
+
+    def validate(self) -> bool:
+        if self.token:
+            return True
+
+        # if not (self.user and self.password):
+        #     raise click.BadParameter(
+        #         "--user and --password are required when not using a token"
+        #     )
+
+        return True
+
+
+def configure_logger(path: str = None, verbose: bool = False):
+    if not path:
+        path = pathlib.Path.home() / ".c8ylp"
+        path.mkdir(parents=True, exist_ok=True)
+
+    loglevel = logging.DEBUG if verbose else logging.WARNING
     logger = logging.getLogger()
     logger.setLevel(loglevel)
     log_file_formatter = logging.Formatter(
-        '%(asctime)s %(threadName)s %(levelname)s %(name)s %(message)s')
-    log_console_formatter = logging.Formatter('%(message)s')
+        "%(asctime)s %(threadName)s %(levelname)s %(name)s %(message)s"
+    )
+    log_console_formatter = logging.Formatter("[c8ylp] %(levelname)-8s %(message)s")
 
     # Set default log format
     if len(logger.handlers) == 0:
@@ -68,182 +299,194 @@ def start():
         handler.setFormatter(log_console_formatter)
 
     # Max 5 log files each 10 MB.
-    rotate_handler = RotatingFileHandler(filename=path / 'localproxy.log', maxBytes=10000000,
-                                         backupCount=5)
+    rotate_handler = RotatingFileHandler(
+        filename=path / "localproxy.log", maxBytes=10000000, backupCount=5
+    )
     rotate_handler.setFormatter(log_file_formatter)
     rotate_handler.setLevel(loglevel)
     # Log to Rotating File
     logger.addHandler(rotate_handler)
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "h:d:c:t:u:p:kvs",
-                                   ["help", "hostname=", "device=", "extype=", "config=", "tenant=", "username=",
-                                    "password=", "tfacode=", "port=", "kill", "tcpsize=", "tcptimeout=", "verbose",
-                                    "scriptmode",
-                                    "ignore-ssl-validate", "use-pid", "reconnects="])
-    except getopt.GetoptError as e:
-        logging.error(e)
-        help()
+    return logger
 
-    logging.debug(f'OPTIONS: {opts}')
-    # if len(opts) == 0:
-    #    print(help())
-    host = os.environ.get('C8Y_HOST')
-    device = os.environ.get('C8Y_DEVICE')
 
-    extype = os.environ.get('C8Y_EXTYPE') if os.environ.get('C8Y_EXTYPE') else 'c8y_Serial'
-    config_name = os.environ.get('C8Y_CONFIG') if os.environ.get('C8Y_CONFIG') else 'Passthrough'
-    tenant = os.environ.get('C8Y_TENANT')
-    user = os.environ.get('C8Y_USER')
-    password = os.environ.get('C8Y_PASSWORD')
-    tcp_size = int(os.environ.get('C8Y_TCPSIZE')) if os.environ.get('C8Y_TCPSIZE', '').isnumeric() else 4096
-    tcp_timeout = int(os.environ.get('C8Y_TCPTIMEOUT')) if os.environ.get('C8Y_TCPTIMEOUT', '').isnumeric() else 0
-    port = int(os.environ.get('C8Y_PORT')) if os.environ.get('C8Y_PORT', '').isnumeric() else 2222
-    ping_interval = int(os.environ.get('C8Y_PING_INTERVAL')) if os.environ.get('C8Y_PING_INTERVAL', '').isnumeric() else 0
-    token = os.environ.get('C8Y_TOKEN')
-    tfacode = None
-    script_mode = False
-    ignore_ssl_validate = False
-    use_pid = False
-    kill_instances = False
-    reconnects = 5
-    for option_key, option_value in opts:
-        if option_key in ('-h', '--hostname'):
-            host = option_value
-        elif option_key in ('-d', '--device'):
-            device = option_value
-        elif option_key in '--extype':
-            extype = option_value
-        elif option_key in ('-c', '--config'):
-            config_name = option_value
-        elif option_key in ('-t', '--tenant'):
-            tenant = option_value
-        elif option_key in ('-u', '--username'):
-            user = option_value
-        elif option_key in ('-p', '--password'):
-            password = option_value
-        elif option_key in ['--tfacode']:
-            tfacode = option_value
-        elif option_key in ['--port']:
-            port = int(option_value)
-        elif option_key in ['-k', '--kill']:
-            kill_instances = True
-        elif option_key in ['--tcpsize']:
-            tcp_size = int(option_value)
-        elif option_key in ['--tcptimeout']:
-            tcp_timeout = int(option_value)
-        elif option_key in ['-v', '--verbose']:
-            verbose_log()
-        elif option_key in ['-s', '--scriptmode']:
-            script_mode = True
-        elif option_key in ['--ignore-ssl-validate']:
-            ignore_ssl_validate = True
-        elif option_key in ['--use-pid']:
-            use_pid = True
-        elif option_key in ['--reconnects']:
-            reconnects = int(option_value)
-        elif option_key in ['--help']:
-            help()
-    if script_mode:
-        reconnects = -1
-    password = validate_parameter(host, device, extype, config_name,
-                       tenant, user, password, token, script_mode)
-    if use_pid:
-        upsert_pid_file(device, host, config_name, user)
-    if kill_instances:
-        if use_pid:
-            kill_existing_instances()
-        else:
-            logging.warn(f'WARNING: Killing existing instances is only supported when "--use-pid" is used.')
-    client = CumulocityClient(host, tenant, user, password, tfacode, ignore_ssl_validate)
-    tenant_id_valid = client.validate_tenant_id()
-    if tenant_id_valid is not None:
-        logging.warn(f'WARNING: Tenant ID {tenant} does not exist. Try using this Tenant ID {tenant_id_valid} next time!')
-    session = None
-    if token:
-        client.validate_token()
-        session = client.session
-    else:
-        session = client.retrieve_token()
-    if session == None and tfacode == None:
-        if not script_mode:
-            tfacode = stdiomask.getpass(prompt='Enter your TFA-Token:  ', mask='*')
-            client.tfacode = tfacode
-            session = client.retrieve_token()
-    if session == None:
+def create_client(ctx: click.Context, opts: ProxyOptions):
+    client = CumulocityClient(
+        hostname=opts.hostname,
+        tenant=opts.tenant,
+        user=opts.user,
+        password=opts.password,
+        tfacode=opts.tfacode,
+        token=opts.token,
+        ignore_ssl_validate=opts.ignore_ssl_validate,
+    )
+    client.validate_tenant_id()
+
+    retries = 2
+    success = False
+    while retries:
+        try:
+            if client.token:
+                client.validate_credentials()
+            else:
+                client.login_oauth()
+
+            success = True
+            break
+        except Exception as ex:
+            logging.info(ex)
+
+            if not opts.scriptmode:
+                if not client.password:
+                    client.password = click.prompt(
+                        text="Enter your Password", hide_input=True
+                    )
+
+                if not client.tfacode:
+                    client.tfacode = click.prompt(
+                        text="Enter your TFA-Token", hide_input=False
+                    )
+        retries -= 1
+
+    if not success:
+        ctx.exit(ExitCodes.NO_SESSION)
+
+    return client
+
+def get_config_id(mor, config):
+    if "c8y_RemoteAccessList" not in mor:
+        device = mor["name"]
+        logging.error(
+            f'No Remote Access Configuration has been found for device "{device}"'
+        )
         sys.exit(1)
-    mor = client.read_mo(device, extype)
-    config_id = client.get_config_id(mor, config_name)
+    access_list = mor["c8y_RemoteAccessList"]
+    device = mor["name"]
+    config_id = None
+    for remote_access in access_list:
+        if not remote_access["protocol"] == "PASSTHROUGH":
+            continue
+        if config and remote_access["name"] == config:
+            config_id = remote_access["id"]
+            logging.info(
+                f'Using Configuration with Name "{config}" and Remote Port {remote_access["port"]}'
+            )
+            break
+        if not config:
+            config_id = remote_access["id"]
+            logging.info(
+                f'Using Configuration with Name "{config}" and Remote Port {remote_access["port"]}'
+            )
+            break
+    if not config_id:
+        if config:
+            logging.error(
+                f'Provided config name "{config}" for "{device}" was not found or not of type "PASSTHROUGH"'
+            )
+            sys.exit(1)
+        else:
+            logging.error(
+                f'No config of Type "PASSTHROUGH" has been found for device "{device}"'
+            )
+            sys.exit(1)
+    return config_id
+
+def start(ctx: click.Context, opts: ProxyOptions):
+    if platform.system() in ("Linux", "Darwin"):
+        signal.signal(signal.SIGUSR1, signal_handler)
+    else:
+        signal.signal(signal.SIGINT, signal_handler)
+
+    configure_logger(verbose=opts.verbose)
+
+    if opts.use_pid:
+        try:
+            upsert_pid_file(
+                opts.pidfile, opts.device, opts.hostname, opts.config, opts.user
+            )
+        except PermissionError:
+            ctx.exit(ExitCodes.PID_FILE_ERROR)
+    if opts.kill:
+        if opts.use_pid:
+            kill_existing_instances(opts.pidfile)
+        else:
+            logging.warning(
+                f'WARNING: Killing existing instances is only supported when "--use-pid" is used.'
+            )
+
+    client = create_client(ctx, opts)
+    mor = client.get_managed_object(opts.device, opts.extype)
+    config_id = get_config_id(mor, opts.config)
     device_id = client.get_device_id(mor)
-    
+
     is_authorized = client.validate_remote_access_role()
     if not is_authorized:
-        logging.error(f'User {user} is not authorized to use Cloud Remote Access. Contact your Cumulocity Admin!')
-        sys.exit(1)
+        logging.error(
+            f"User {opts.user} is not authorized to use Cloud Remote Access. Contact your Cumulocity Admin!"
+        )
+        ctx.exit(ExitCodes.NOT_AUTHORIZED)
 
     client_opts = {
-        'host': host,
-        'tenant': tenant,
-        'user': user,
-        'password': password,
-        'config_id': config_id,
-        'device_id': device_id,
-        'session': session,
-        'token': token,
-        'ignore_ssl_validate': ignore_ssl_validate,
-        'reconnects': reconnects,
-        'ping_interval': ping_interval,
+        "host": opts.hostname,
+        "config_id": config_id,
+        "device_id": device_id,
+        "session": client.session,
+        "token": opts.token,
+        "ignore_ssl_validate": opts.ignore_ssl_validate,
+        "reconnects": opts.reconnects,
+        "ping_interval": opts.ping_interval,
     }
     websocket_client = WebsocketClient(**client_opts)
     wst = websocket_client.connect()
-    tcp_server = TCPServer(port, websocket_client, tcp_size, tcp_timeout, wst, script_mode)
+    tcp_server = TCPServer(
+        opts.port,
+        websocket_client,
+        opts.tcpsize,
+        opts.tcptimeout,
+        wst,
+        opts.scriptmode,
+    )
     # TCP is blocking...
     websocket_client.tcp_server = tcp_server
     try:
         tcp_server.start()
     except Exception as ex:
-        logging.error(f'Error on TCP-Server {ex}')
+        logging.error(f"Error on TCP-Server {ex}")
     finally:
-        if use_pid:
+        if opts.use_pid:
             clean_pid_file(None)
         tcp_server.stop()
-        sys.exit(0)
+        ctx.exit(ExitCodes.OK)
 
 
-def verbose_log():
-    logging.info(f'Verbose logging activated.')
-    logging.getLogger().setLevel(logging.DEBUG)
-    for handler in logging.getLogger().handlers:
-        handler.setLevel(logging.DEBUG)
-
-
-def upsert_pid_file(device, url, config, user):
+def upsert_pid_file(pidfile, device, url, config, user):
     try:
         clean_pid_file(None)
         pid_file_text = get_pid_file_text(device, url, config, user)
-        logging.debug(f'Adding {pid_file_text} to PID-File {PIDFILE}')
-        if not os.path.exists(PIDFILE):
-            if not os.path.exists(os.path.dirname(PIDFILE)):
-                os.makedirs(os.path.dirname(PIDFILE))
-            file = open(PIDFILE, 'w')
+        logging.debug(f"Adding {pid_file_text} to PID-File {pidfile}")
+        if not os.path.exists(pidfile):
+            if not os.path.exists(os.path.dirname(pidfile)):
+                os.makedirs(os.path.dirname(pidfile))
+            file = open(pidfile, "w")
             file.seek(0)
         else:
-            file = open(PIDFILE, 'a+')
+            file = open(pidfile, "a+")
             file.seek(0)
         file.write(pid_file_text)
-        file.write('\n')
+        file.write("\n")
     except PermissionError:
         logging.error(
-            f'Could not write PID-File {PIDFILE}. Please create the folder manually and assign the correct permissions.')
-        sys.exit(1)
+            f"Could not write PID-File {pidfile}. Please create the folder manually and assign the correct permissions."
+        )
+        raise
 
 
 def get_pid_file_text(device, url, config, user):
     pid = str(os.getpid())
-    return f'{pid},{url},{device},{config},{user}'
+    return f"{pid},{url},{device},{config},{user}"
 
 
 def get_pid_from_line(line):
-    return int(str.split(line, ',')[0])
+    return int(str.split(line, ",")[0])
 
 
 def pid_is_active(pid):
@@ -255,105 +498,33 @@ def pid_is_active(pid):
         return True
 
 
-def clean_pid_file(pid):
-    if os.path.exists(PIDFILE):
-        logging.debug(f'Cleaning Up PID {pid} in PID-File {PIDFILE}')
+def clean_pid_file(pidfile, pid):
+    if os.path.exists(pidfile):
+        logging.debug(f"Cleaning Up PID {pid} in PID-File {pidfile}")
         pid = pid if pid is not None else os.getpid()
-        with open(PIDFILE, "r+") as file:
+        with open(pidfile, "w+") as file:
             lines = file.readlines()
             file.seek(0)
             for line in lines:
                 if get_pid_from_line(line) != pid:
                     file.write(line)
             file.truncate()
-            if os.path.getsize(PIDFILE) == 0:
-                os.remove(PIDFILE)
+
+        if os.path.getsize(pidfile) == 0:
+            os.remove(pidfile)
 
 
-def kill_existing_instances():
-    if os.path.exists(PIDFILE):
-        file = open(PIDFILE)
-        pid = int(os.getpid())
-        #logging.info(f'Current PID {pid}')
-        for line in file:
-            other_pid = get_pid_from_line(line)
-            if pid != other_pid and pid_is_active(other_pid):
-                logging.info(
-                    f'Killing other running Process with PID {other_pid}')
-                os.kill(get_pid_from_line(line), 9)
-            clean_pid_file(other_pid)
+def kill_existing_instances(pidfile):
+    if os.path.exists(pidfile):
+        with open(pidfile) as file:
+            pid = int(os.getpid())
+            for line in file:
+                other_pid = get_pid_from_line(line)
+                if pid != other_pid and pid_is_active(other_pid):
+                    logging.info(f"Killing other running Process with PID {other_pid}")
+                    os.kill(get_pid_from_line(line), 9)
+                clean_pid_file(other_pid)
 
 
-def validate_parameter(host, device, extpye, config_name, tenant, user, password, token, script_mode):
-    if not host:
-        logging.error(f'Hostname is missing!')
-        print('Mandatory parameter -h, --hostname is missing')
-        print(_help_message())
-        sys.exit(1)
-
-    if not device:
-        logging.error(f'Device Name is missing!')
-        print('Mandatory parameter -d, --device is missing')
-        print(_help_message())
-        sys.exit(1)
-
-    if not config_name:
-        logging.error(f'Configuration Name is missing!')
-        print('Mandatory parameter -c, --config is missing')
-        print(_help_message())
-        sys.exit(1)
-
-    if not tenant and not token:
-        logging.error(f'Tenant is missing!')
-        print('Mandatory parameter -t, --tenant is missing')
-        print(_help_message())
-        sys.exit(1)
-
-    if not user and not token:
-        logging.error(f'User is missing!')
-        print('Mandatory parameter -u, --user is missing')
-        print(_help_message())
-        sys.exit(1)
-
-    if not password and not token:
-        logging.error(f'Password is missing!')
-        if not script_mode:
-            password = stdiomask.getpass(prompt='Enter your Cumulocity Password: ', mask='*')
-        #print('Mandatory parameter -p, --password is missing')
-        #print(_help_message())
-        #sys.exit(1)
-    return password
-
-
-def help():
-    print(_help_message())
-    sys.exit(2)
-
-
-def _help_message() -> str:
-    return str('Usage: c8ylp [params]\n'
-               '\n'
-               'Parameter:\n'
-               ' --help                 show this help message and exit\n'
-               ' -h, --hostname         REQUIRED, the Cumulocity Hostname\n'
-               ' -d, --device           REQUIRED, the Device Name (ext. Id of Cumulocity)\n'
-               ' --extype               OPTIONAL, the external Id Type. Default: "c8y_Serial"\n'
-               ' -c, --config           OPTIONAL, the name of the C8Y Remote Access Configuration. Default: "Passthrough"\n'
-               ' -t, --tenant           REQUIRED, the tenant Id of Cumulocity\n'
-               ' -u, --user             REQUIRED, the username of Cumulocity\n'
-               ' -p, --password         REQUIRED, the password of Cumulocity\n'
-               ' --tfacode              OPTIONAL, the TFA Code when an user with the Option "TFA enabled" is used\n'
-               ' --port                 OPTIONAL, the TCP Port which should be opened. Default: 2222\n'
-               ' -k, --kill             OPTIONAL, kills all existing processes of c8ylp\n'
-               ' --tcpsize              OPTIONAL, the TCP Package Size. Default: 32768\n'
-               ' --tcptimeout           OPTIONAL, Timeout in sec. for inactivity. Can be activited with values > 0. Default: Deactivated\n'
-               ' -v, --verbose          OPTIONAL, Print Debug Information into the Logs and Console when set.\n'
-               ' -s, --scriptmode       OPTIONAL, Stops the TCP Server after first connection. No automatical restart!\n'
-               ' --ignore-ssl-validate  OPTIONAL, Ignore Validation for SSL Certificates while connecting to Websocket\n'
-               ' --use-pid              OPTIONAL, Will create a PID-File in /var/run/c8ylp to store all Processes currently running.\n'
-               ' --reconnects           OPTIONAL, The number of reconnects to the Cloud Remote Service. 0 for infinite reconnects. Default: 5'
-               '\n')
-
-
-if __name__ == '__main__':
-    start()
+if __name__ == "__main__":
+    sys.exit(cli())

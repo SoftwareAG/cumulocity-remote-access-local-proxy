@@ -28,6 +28,7 @@ import certifi
 
 
 class WebsocketClient(threading.Thread):
+    """Websocket client"""
     def __init__(
         self,
         host,
@@ -56,11 +57,13 @@ class WebsocketClient(threading.Thread):
         self.token = token
         self.trigger_reconnect = reconnects >= 0
         self.reconnect_counter = 0
+        self.ws_handshake_error = False
         self.ignore_ssl_validate = ignore_ssl_validate
         self.max_reconnects = reconnects
         super().__init__()
 
     def connect(self):
+        """Connect websocket"""
         self._ws_open_event = threading.Event()
         # websocket.enableTrace(True) # Enable this for Debug Purpose only
         if self.host.startswith("https"):
@@ -70,7 +73,7 @@ class WebsocketClient(threading.Thread):
         elif not self.host.startswith("wss://"):
             self.host = f"wss://{self.host}"
         url = f"{self.host}/service/remoteaccess/client/{self.device_id}/configurations/{self.config_id}"
-        self.logger.info(f"Connecting to WebSocket with URL {url} ...")
+        self.logger.info("Connecting to WebSocket with URL %s ...", url)
 
         if self.token:
             headers = {
@@ -115,7 +118,7 @@ class WebsocketClient(threading.Thread):
             sslopt_ca_certs["cert_reqs"] = ssl.CERT_NONE
         web_socket_kwargs["sslopt"] = sslopt_ca_certs
 
-        self.logger.debug(f"websocket options: {web_socket_kwargs}")
+        self.logger.debug("websocket options: %s", web_socket_kwargs)
 
         self.wst = threading.Thread(
             target=self.web_socket.run_forever, kwargs=web_socket_kwargs
@@ -126,6 +129,7 @@ class WebsocketClient(threading.Thread):
         return self.wst
 
     def reconnect(self):
+        """Reconnect websocket"""
         self.reconnect_counter += 1
         self.logger.info("Reconnecting to WebSocket...")
         if self.web_socket:
@@ -135,6 +139,7 @@ class WebsocketClient(threading.Thread):
         self.connect()
 
     def stop(self):
+        """Stop websocket"""
         # Closing WebSocket
         self.logger.debug("Stopping WebSocket Connection...")
         self.trigger_reconnect = False
@@ -144,7 +149,12 @@ class WebsocketClient(threading.Thread):
             self.web_socket.close()
         self.web_socket = None
 
-    def is_ws_available(self):
+    def is_ws_available(self) -> bool:
+        """Check if websocket is open
+
+        Returns:
+            bool: True if the websocket is open
+        """
         if self._ws_open:
             return True
         self._ws_open_event.wait(timeout=self._ws_timeout)
@@ -152,20 +162,20 @@ class WebsocketClient(threading.Thread):
 
     def _on_ws_message(self, _ws, message):
         try:
-            self.logger.debug(f"WebSocket Message received: {message}")
+            self.logger.debug("WebSocket Message received: %s", message)
             if self.tcp_server.is_tcp_socket_connected():
                 if self.tcp_server.connection is not None:
-                    self.logger.debug(f"Sending to TCP Socket: {message}")
+                    self.logger.debug("Sending to TCP Socket: %s", message)
                     self.tcp_server.connection.send(message)
         except Exception as ex:
-            self.logger.error(f"Error on handling WebSocket Message {message}: {ex}")
+            self.logger.error("Error on handling WebSocket Message %s: %s", message, ex)
             self.stop()
 
     def _on_ws_error(self, _ws, error):
-        self.logger.debug(f"Type of WS Error {type(error)}")
+        self.logger.debug("Type of WS Error %s", type(error))
         if hasattr(error, "status_code"):
             self.logger.error(
-                f"WebSocket Error received: {error} with status {error.status_code}"
+                "WebSocket Error received: %s with status %s", error, error.status_code
             )
             if error.status_code == 401:
                 self.ws_handshake_error = True
@@ -176,16 +186,16 @@ class WebsocketClient(threading.Thread):
 
         if isinstance(error, websocket.WebSocketTimeoutException):
             self.logger.info(
-                f"Device {self.device_id} seems to be offline. No connection possible."
+                "Device %s seems to be offline. No connection possible.", self.device_id
             )
             # Stop websocket
             self.stop()
         else:
-            self.logger.error(f"WebSocket Error received: {error}")
+            self.logger.error("WebSocket Error received: %s", error)
 
     def _on_ws_close(self, _ws, close_status, close_reason):
         self.logger.info(
-            f"WebSocket Connection closed. Status: {close_status}, Reason: {close_reason}"
+            "WebSocket Connection closed. Status: %s, Reason: %s", close_status, close_reason
         )
         self._ws_open = False
         self._ws_open_event.set()
@@ -196,7 +206,7 @@ class WebsocketClient(threading.Thread):
         if self.trigger_reconnect and (
             self.max_reconnects == 0 or self.reconnect_counter < self.max_reconnects
         ):
-            self.logger.info(f"Reconnect with counter {self.reconnect_counter}")
+            self.logger.info("Reconnect with counter %s", self.reconnect_counter)
             self.reconnect()
         else:
             if platform.system() in ("Linux", "Darwin"):

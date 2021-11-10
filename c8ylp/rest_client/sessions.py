@@ -21,7 +21,7 @@ class BaseUrlSession(requests.Session):
         self.prefix_url = prefix_url
         self.reuse_session = reuse_session
         self.default_timeout = 30.0
-        super(BaseUrlSession, self).__init__()
+        super().__init__()
 
     def expand_url(self, url: str) -> str:
         """Example the url if only a partial url (i.e /event/events) is given.
@@ -64,11 +64,11 @@ class BaseUrlSession(requests.Session):
                 "cert": kwargs.pop("cert", self.cert),
             }
 
-            prepped = super(BaseUrlSession, self).prepare_request(
+            prepped = super().prepare_request(
                 requests.Request(method, url, *args, **kwargs)
             )
-            logging.debug(f"Sending requests to {url}")
-            response = super(BaseUrlSession, self).send(prepped, **send_kwargs)
+            logging.debug("Sending requests to %s", url)
+            response = super().send(prepped, **send_kwargs)
             return response
 
         #
@@ -86,11 +86,11 @@ class BaseUrlSession(requests.Session):
         }
 
         # prepare request
-        prep = super(BaseUrlSession, self).prepare_request(
+        prep = super().prepare_request(
             requests.Request(method, url, *args, **kwargs)
         )
 
-        logging.debug(f"Sending requests to {url}")
+        logging.debug("Sending requests to %s", url)
 
         # Send the request
         with requests.Session() as session:

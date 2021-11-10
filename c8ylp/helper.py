@@ -77,6 +77,7 @@ def get_unused_port() -> int:
 
 
 def show_usage() -> None:
+    """Show usage"""
     print(
         """
 Usage:
@@ -105,17 +106,17 @@ if __name__ == "__main__":
     if subcommand.lower() == "port":
         print(get_unused_port())
     elif subcommand.lower() == "wait":
-        port = 2222
-        timeout = 30.0
+        PORT = 2222
+        TIMEOUT = 30.0
 
         if len(sys.argv) > 2:
-            port = int(sys.argv[2])
+            PORT = int(sys.argv[2])
 
         if len(sys.argv) > 3:
-            timeout = float(sys.argv[3])
+            TIMEOUT = float(sys.argv[3])
 
         try:
-            wait_for_port(port, timeout)
+            wait_for_port(PORT, TIMEOUT)
             sys.exit(0)
         except TimeoutError as ex:
             print(ex)

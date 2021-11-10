@@ -1,3 +1,4 @@
+"""Cumulocity client"""
 #  Copyright (c) 2021 Software AG, Darmstadt, Germany and/or its licensors
 #
 #  SPDX-License-Identifier: Apache-2.0
@@ -37,7 +38,7 @@ class CumulocityPermissionDeviceError(Exception):
 
 class BearerAuth(requests.auth.AuthBase):
     """Bearer/token based authorization"""
-
+    # pylint: disable=too-few-public-methods
     def __init__(self, token: str):
         self.token = token
 
@@ -84,18 +85,26 @@ class CumulocityClient:
 
         self.logger = logging.getLogger(__name__)
 
-    def validate_tenant_id(self):
+    def validate_tenant_id(self) -> str:
+        """Validate the tenant id configured in the client
+        If it is does not match the Url, then it will be updated to match.
+
+        Returns:
+            str: Tenant ID
+        """
         tenant_id = None
         response = self.session.get("/tenant/loginOptions")
         if response.status_code == 200:
             login_options_body = json.loads(response.content.decode("utf-8"))
-            login_options = login_options_body.get("loginOptions", {})
+            login_options = login_options_body.get("loginOptions", dict())
             for option in login_options:
                 if "initRequest" in option:
                     _, _, tenant_id = option.get("initRequest", "").partition("=")
                     if self.tenant != tenant_id:
                         self.logger.warning(
-                            f"Wrong Tenant ID {self.tenant}, Correct Tenant ID: {tenant_id}"
+                            "Wrong Tenant ID %s, Correct Tenant ID: %s",
+                            self.tenant,
+                            tenant_id,
                         )
                         self.tenant = tenant_id
                     else:
@@ -121,7 +130,7 @@ class CumulocityClient:
             for role in effective_roles:
                 if role["id"] == "ROLE_REMOTE_ACCESS_ADMIN":
                     self.logger.debug(
-                        f"Remote Access Role assigned to User {self.user}!"
+                        "Remote Access Role assigned to User %s", self.user
                     )
                     is_valid = True
                     break
@@ -191,13 +200,16 @@ class CumulocityClient:
             "tfa_code": self.tfacode,
         }
         self.logger.debug(
-            f"Sending requests to {oauth_url} with body {str(body).replace(str(self.password), '******')}"
+            "Sending requests to %s with body %s",
+            oauth_url,
+            str(body).replace(str(self.password), "******"),
         )
         self.session.auth = None
         response = self.session.post(oauth_url, headers=headers, data=body)
         if response.status_code == 200:
             self.logger.debug(
-                f"Authentication successful. Tokens have been updated {self.session.cookies.get_dict()}"
+                "Authentication successful. Tokens have been updated %s",
+                self.session.cookies.get_dict(),
             )
             self.token = self.session.cookies.get_dict()["authorization"]
             self.set_bearer_auth(self.token)
@@ -206,14 +218,14 @@ class CumulocityClient:
             ]
         elif response.status_code == 401:
             error = PermissionError(
-                f"User {self.user} is not authorized to access Tenant {self.tenant} or TFA-Code is invalid."
+                f"User {self.user} is not authorized to access Tenant {self.tenant} or TFA-Code is invalid.",
             )
             self.logger.error(error)
             raise error
         else:
             error = Exception(
-                f"Server Error received for User {self.user} and Tenant {self.tenant}. " \
-                    "Status Code: {response.status_code}"
+                f"Server Error received for User {self.user} and Tenant {self.tenant}. "
+                f"Status Code: {response.status_code}"
             )
             self.logger.error(error)
             raise error
@@ -271,7 +283,7 @@ class CumulocityClient:
             Dict[str, Any]: Device managed object
         """
         ext_id = self.get_external_id(serial_number, identity_type)
-        mor_id = ext_id.get("managedObject", {}).get("id")
+        mor_id = ext_id.get("managedObject", dict()).get("id")
 
         if not mor_id:
             raise Exception("Managed object id is empty")
@@ -290,6 +302,3 @@ class CumulocityClient:
 
         self.logger.error(error)
         raise error
-
-    def get_device_id(self, mor):
-        return mor["id"]

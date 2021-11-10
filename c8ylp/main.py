@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""Main cli interface to c8ylp"""
 # -*- coding: utf-8 -*-
 
 #  Copyright (c) 2021 Software AG, Darmstadt, Germany and/or its licensors
@@ -27,8 +28,10 @@ import signal
 from logging.handlers import RotatingFileHandler
 import platform
 import dataclasses
+from typing import Any, Dict, NoReturn
 import click
 
+from c8ylp import __version__
 from c8ylp.rest_client.c8yclient import CumulocityClient
 from c8ylp.tcp_socket.tcp_server import TCPServer
 from c8ylp.websocket_client.ws_client import WebsocketClient
@@ -48,11 +51,23 @@ class ExitCommand(Exception):
     """ExitCommand error"""
 
 
-def signal_handler(signal, frame):
+def signal_handler(_signal, _frame):
+    """Signal handler"""
     raise ExitCommand()
 
 
-def validate_token(ctx, param, value):
+def validate_token(ctx, _param, value) -> Any:
+    """Validate Cumulocity token. If it is invalid then it
+    will be ignored.
+
+    Args:
+        ctx (Any): Click context
+        _param (Any): Click param
+        value (Any): Parameter value
+
+    Returns:
+        Any: Parameter value
+    """
     click.echo("Validating existing token")
     if isinstance(value, tuple):
         return value
@@ -63,18 +78,27 @@ def validate_token(ctx, param, value):
 
     try:
         client.validate_credentials()
-    except:
+    except Exception:
         logging.warning(
-            f"Token is no longer valid for host {hostname}. The token will be ignored"
+            "Token is no longer valid for host %s. The token will be ignored", hostname
         )
         return ""
     return value
 
 
-def print_version(ctx, param, value):
+def print_version(ctx, _param, value) -> Any:
+    """Print command version
+
+    Args:
+        ctx (Any): Click context
+        _param (Any): Click param
+        value (Any): Parameter value
+
+    Returns:
+        Any: Parameter value
+    """
     if not value or ctx.resilient_parsing:
         return
-    from c8ylp import __version__
 
     click.echo(f"Version {__version__}")
     ctx.exit(ExitCodes.OK)
@@ -232,14 +256,17 @@ def cli(
     pidfile,
     reconnects,
 ):
+    """Main CLI command to start the local proxy server"""
+    # pylint: disable=too-many-locals,unused-argument
     click.echo(locals())
     options = ProxyOptions().fromdict(locals())
-    options.validate()
     start(ctx, options)
 
 
 @dataclasses.dataclass
 class ProxyOptions:
+    """Local proxy options"""
+
     hostname = ""
     device = ""
     extype = ""
@@ -261,26 +288,33 @@ class ProxyOptions:
     pidfile = ""
     reconnects = 0
 
-    def fromdict(self, d):
-        assert isinstance(d, dict)
-        for key, value in d.items():
+    def fromdict(self, src_dict: Dict[str, Any]) -> "ProxyOptions":
+        """Load proxy settings from a dictionary
+
+        Args:
+            src_dict (Dict[str, Any]): [description]
+
+        Returns:
+            ProxyOptions: Proxy options after the values have been set
+                via the dictionary
+        """
+        assert isinstance(src_dict, dict)
+        for key, value in src_dict.items():
             if hasattr(self, key):
                 setattr(self, key, value)
         return self
 
-    def validate(self) -> bool:
-        if self.token:
-            return True
 
-        # if not (self.user and self.password):
-        #     raise click.BadParameter(
-        #         "--user and --password are required when not using a token"
-        #     )
+def configure_logger(path: str = None, verbose: bool = False) -> logging.Logger:
+    """Configure logger
 
-        return True
+    Args:
+        path (str, optional): Path where the persistent logger should write to. Defaults to None.
+        verbose (bool, optional): Use verbose logging. Defaults to False.
 
-
-def configure_logger(path: str = None, verbose: bool = False):
+    Returns:
+        logging.Logger: Created logger
+    """
     if not path:
         path = pathlib.Path.home() / ".c8ylp"
         path.mkdir(parents=True, exist_ok=True)
@@ -314,7 +348,17 @@ def configure_logger(path: str = None, verbose: bool = False):
     return logger
 
 
-def create_client(ctx: click.Context, opts: ProxyOptions):
+def create_client(ctx: click.Context, opts: ProxyOptions) -> CumulocityClient:
+    """Create Cumulocity client and prompt for missing credentials
+    if necessary.
+
+    Args:
+        ctx (click.Context): Click context
+        opts (ProxyOptions): Proxy options
+
+    Returns:
+        CumulocityClient: Configured Cumulocity client
+    """
     client = CumulocityClient(
         hostname=opts.hostname,
         tenant=opts.tenant,
@@ -358,11 +402,21 @@ def create_client(ctx: click.Context, opts: ProxyOptions):
     return client
 
 
-def get_config_id(mor, config):
+def get_config_id(mor: Dict[str, Any], config: str) -> str:
+    """Get the remote access configuration id matching a specific type
+    from a device managed object
+
+    Args:
+        mor (Dict[str, Any]): Device managed object
+        config (str): Expected configuration type
+
+    Returns:
+        str: Remote access configuration id
+    """
     if "c8y_RemoteAccessList" not in mor:
         device = mor["name"]
         logging.error(
-            f'No Remote Access Configuration has been found for device "{device}"'
+            'No Remote Access Configuration has been found for device "%s"', device
         )
         sys.exit(1)
     access_list = mor["c8y_RemoteAccessList"]
@@ -374,30 +428,42 @@ def get_config_id(mor, config):
         if config and remote_access["name"] == config:
             config_id = remote_access["id"]
             logging.info(
-                f'Using Configuration with Name "{config}" and Remote Port {remote_access["port"]}'
+                'Using Configuration with Name "%s" and Remote Port %s',
+                config,
+                remote_access["port"],
             )
             break
         if not config:
             config_id = remote_access["id"]
             logging.info(
-                f'Using Configuration with Name "{config}" and Remote Port {remote_access["port"]}'
+                'Using Configuration with Name "%s" and Remote Port %s',
+                config,
+                remote_access["port"],
             )
             break
     if not config_id:
         if config:
             logging.error(
-                f'Provided config name "{config}" for "{device}" was not found or not of type "PASSTHROUGH"'
+                'Provided config name "%s" for "%s" was not found or not of type "PASSTHROUGH"',
+                config,
+                device,
             )
             sys.exit(1)
         else:
             logging.error(
-                f'No config of Type "PASSTHROUGH" has been found for device "{device}"'
+                'No config of Type "PASSTHROUGH" has been found for device "%s"', device
             )
             sys.exit(1)
     return config_id
 
 
-def start(ctx: click.Context, opts: ProxyOptions):
+def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
+    """Start the local proxy
+
+    Args:
+        ctx (click.Context): Click context
+        opts (ProxyOptions): Proxy options
+    """
     if platform.system() in ("Linux", "Darwin"):
         signal.signal(signal.SIGUSR1, signal_handler)
     else:
@@ -417,18 +483,19 @@ def start(ctx: click.Context, opts: ProxyOptions):
             kill_existing_instances(opts.pidfile)
         else:
             logging.warning(
-                f'WARNING: Killing existing instances is only supported when "--use-pid" is used.'
+                'Killing existing instances is only supported when "--use-pid" is used.'
             )
 
     client = create_client(ctx, opts)
     mor = client.get_managed_object(opts.device, opts.extype)
     config_id = get_config_id(mor, opts.config)
-    device_id = client.get_device_id(mor)
+    device_id = mor.get("id")
 
     is_authorized = client.validate_remote_access_role()
     if not is_authorized:
         logging.error(
-            f"User {opts.user} is not authorized to use Cloud Remote Access. Contact your Cumulocity Admin!"
+            "User %s is not authorized to use Cloud Remote Access. Contact your Cumulocity Admin!",
+            opts.user,
         )
         ctx.exit(ExitCodes.NOT_AUTHORIZED)
 
@@ -457,46 +524,83 @@ def start(ctx: click.Context, opts: ProxyOptions):
     try:
         tcp_server.start()
     except Exception as ex:
-        logging.error(f"Error on TCP-Server {ex}")
+        logging.error("Error on TCP-Server. %s", ex)
     finally:
         if opts.use_pid:
-            clean_pid_file(opts.pidfile)
+            clean_pid_file(opts.pidfile, os.getpid())
         tcp_server.stop()
         ctx.exit(ExitCodes.OK)
 
 
-def upsert_pid_file(pidfile, device, url, config, user):
+def upsert_pid_file(pidfile: str, device: str, url: str, config: str, user: str):
+    """Create/update pid file
+
+    Args:
+        pidfile (str): PID file path
+        device (str): Device external identity
+        url (str): Cumulocity URL
+        config (str): Remote access configuration type
+        user (str): Cumulocity user
+    """
     try:
-        clean_pid_file(pidfile)
+        clean_pid_file(pidfile, os.getpid())
         pid_file_text = get_pid_file_text(device, url, config, user)
-        logging.debug(f"Adding {pid_file_text} to PID-File {pidfile}")
+        logging.debug("Adding %s to PID-File %s", pid_file_text, pidfile)
+
         if not os.path.exists(pidfile):
             if not os.path.exists(os.path.dirname(pidfile)):
                 os.makedirs(os.path.dirname(pidfile))
-            file = open(pidfile, "w")
+
+        with open(pid_file_text, "a+") as file:
             file.seek(0)
-        else:
-            file = open(pidfile, "a+")
-            file.seek(0)
-        file.write(pid_file_text)
-        file.write("\n")
+            file.write(pid_file_text)
+            file.write("\n")
+
     except PermissionError:
         logging.error(
-            f"Could not write PID-File {pidfile}. Please create the folder manually and assign the correct permissions."
+            "Could not write PID-File %s. Please create the folder manually and assign the correct permissions.",
+            pidfile,
         )
         raise
 
 
-def get_pid_file_text(device, url, config, user):
+def get_pid_file_text(device: str, url: str, config: str, user: str) -> str:
+    """Format pid file text contents
+
+    Args:
+        device (str): Device external identity
+        url (str): Cumulocity url
+        config (str): Remote access type
+        user (str): User
+
+    Returns:
+        str: Text contents that should be written to a pid file
+    """
     pid = str(os.getpid())
     return f"{pid},{url},{device},{config},{user}"
 
 
-def get_pid_from_line(line):
+def get_pid_from_line(line: str) -> int:
+    """Get the process id from the contents of a pid file
+
+    Args:
+        line (str): Encoded PID information
+
+    Returns:
+        int: Porcess id
+    """
     return int(str.split(line, ",")[0])
 
 
-def pid_is_active(pid):
+def pid_is_active(pid: int) -> bool:
+    """Check if a PID is active
+
+    Args:
+        pid (int): Process ID
+
+    Returns:
+        bool: True if the process is still running
+    """
     try:
         os.kill(pid, 0)
     except OSError:
@@ -505,9 +609,15 @@ def pid_is_active(pid):
         return True
 
 
-def clean_pid_file(pidfile, pid):
+def clean_pid_file(pidfile: str, pid: int):
+    """Clean up pid file
+
+    Args:
+        pidfile (str): PID file path
+        pid (int): current process id
+    """
     if os.path.exists(pidfile):
-        logging.debug(f"Cleaning Up PID {pid} in PID-File {pidfile}")
+        logging.debug("Cleaning Up PID %s in PID-File %s", pid, pidfile)
         pid = pid if pid is not None else os.getpid()
         with open(pidfile, "w+") as file:
             lines = file.readlines()
@@ -521,17 +631,23 @@ def clean_pid_file(pidfile, pid):
             os.remove(pidfile)
 
 
-def kill_existing_instances(pidfile):
+def kill_existing_instances(pidfile: str):
+    """Kill existing instances of c8ylp
+
+    Args:
+        pidfile (str): PID file path
+    """
     if os.path.exists(pidfile):
         with open(pidfile) as file:
             pid = int(os.getpid())
             for line in file:
                 other_pid = get_pid_from_line(line)
                 if pid != other_pid and pid_is_active(other_pid):
-                    logging.info(f"Killing other running Process with PID {other_pid}")
+                    logging.info("Killing other running Process with PID %s", other_pid)
                     os.kill(get_pid_from_line(line), 9)
                 clean_pid_file(pidfile, other_pid)
 
 
 if __name__ == "__main__":
-    sys.exit(cli())
+    # pylint: disable=no-value-for-parameter
+    cli()

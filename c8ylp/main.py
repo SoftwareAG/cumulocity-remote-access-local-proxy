@@ -161,6 +161,7 @@ def start():
     session = None
     if token:
         client.validate_token()
+        session = client.session
     else:
         session = client.retrieve_token()
     if session == None and tfacode == None:

@@ -20,17 +20,7 @@ import logging
 import socket
 import socketserver
 import threading
-import platform
-import os
-import signal
-
-
-class ProxyInterface:
-    def send_message(self):
-        pass
-
-    def shutdown(self):
-        pass
+import sys
 
 
 class TCPHandler(socketserver.BaseRequestHandler):
@@ -48,7 +38,13 @@ class TCPHandler(socketserver.BaseRequestHandler):
         request: socket.socket = self.request
         logging.info("Handling request: %s", request)
 
-        self.server.active_request = request
+        # connect websocket
+        if not self.server.web_socket_client.is_open():
+            self.server.web_socket_client.connect()
+
+        # update link to current tcp socket send
+        self.server.web_socket_client.proxy_send_message = request.send
+
         while True:
             try:
                 data = request.recv(1024)
@@ -58,17 +54,14 @@ class TCPHandler(socketserver.BaseRequestHandler):
                     logging.info("No data. Request will be closed")
                     break
 
-                if (
-                    self.server.web_socket_client
-                    and self.server.web_socket_client.is_ws_available()
-                ):
-                    logging.debug("Writing data to ws: %s", data)
-                    self.server.web_socket_client.web_socket.sock.send_binary(data)
+                logging.debug("Writing data to ws: %s", data)
+                self.server.web_socket_client.send_binary(data)
             except ConnectionResetError as ex:
                 logging.info("Connection was reset. %s", ex)
                 break
 
-        self.server.active_request = None
+        # logging.info("Sending FIN")
+        # request.send(b"FIN")
 
 
 class CustomTCPServer(socketserver.TCPServer):
@@ -86,13 +79,12 @@ class CustomTCPServer(socketserver.TCPServer):
         self.port = port
         self.buffer_size = buffer_size
         self.web_socket_client = web_socket_client
-        self.active_request = None
         super().__init__(
             server_address, RequestHandlerClass, bind_and_activate=bind_and_activate
         )
 
 
-class TCPServer:
+class TCPProxyServer:
     """TCP Server"""
 
     def __init__(
@@ -108,6 +100,10 @@ class TCPServer:
         self.script_mode = script_mode
         self._running = threading.Event()
         self.logger = logging.getLogger(__name__)
+
+        # Expose funcs to web socket client
+        self.web_socket_client.proxy = self
+
         self.server = CustomTCPServer(
             self.web_socket_client,
             ("localhost", port),
@@ -120,15 +116,7 @@ class TCPServer:
         self.max_reconnects = max_reconnects
         self.reconnect_counter = 0
 
-    def send_message(self, data):
-        if self.server and self.server.active_request:
-            self.server.active_request.send(data)
-
     def shutdown_request(self):
-        if self.server.active_request:
-            self.logger.info("Shutting down request")
-            self.server.shutdown_request(self.server.active_request)
-
         # trigger a reconnect (if not in script mode)
         self.handle_reconnect()
 
@@ -138,10 +126,12 @@ class TCPServer:
         ):
             self.logger.info("Reconnect with counter %s", self.reconnect_counter)
             self.reconnect_counter += 1
-            self.web_socket_client.reconnect()
         else:
             # Force shutdown
-            self.shutdown()
+            # Exit rather than shutting down as it is
+            # running in a background thread, calling .shutdown()
+            # will cause a deadlock
+            sys.exit(0)
 
     def serve_forever(self):
         self._running.set()
@@ -151,6 +141,4 @@ class TCPServer:
     def shutdown(self):
         if self._running.is_set():
             logging.info("Shutting down TCP server")
-            if self.server.active_request:
-                self.server.shutdown_request(self.server.active_request)
             self.server.shutdown()

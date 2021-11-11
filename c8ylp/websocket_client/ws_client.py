@@ -87,6 +87,8 @@ class WebsocketClient(threading.Thread):
         self.token = token
         self.ws_handshake_error = False
         self.ignore_ssl_validate = ignore_ssl_validate
+
+        self.proxy_send_message = None
         super().__init__()
 
     def connect(self):
@@ -160,7 +162,6 @@ class WebsocketClient(threading.Thread):
         """Reconnect websocket"""
         self.logger.info("Reconnecting to WebSocket")
         if self.web_socket:
-            self.web_socket.keep_running = False
             self.web_socket.close()
         self.web_socket = None
         self.connect()
@@ -169,10 +170,8 @@ class WebsocketClient(threading.Thread):
         """Stop websocket"""
         # Closing WebSocket
         self.logger.debug("Stopping WebSocket Connection")
-        self.trigger_reconnect = False
-        self.proxy.shutdown_request()
+
         if self.web_socket:
-            self.web_socket.keep_running = False
             self.web_socket.close()
         self.web_socket = None
 
@@ -184,12 +183,25 @@ class WebsocketClient(threading.Thread):
         """
         return self._ws_open_event.wait(timeout=self._ws_timeout)
 
+    def is_open(self) -> bool:
+        """Check if websocket is open
+
+        Returns:
+            bool: True if the websocket is open
+        """
+        return self._ws_open_event.is_set()
+
+    def send_binary(self, data):
+        if self.web_socket and self.is_ws_available():
+            self.web_socket.sock.send_binary(data)
+
     def _on_ws_message(self, _ws, message):
         try:
             self.logger.debug("WebSocket Message received: %s", message)
 
             self.logger.debug("Sending to TCP Socket: %s", message)
-            self.proxy.send_message(message)
+            if self.proxy_send_message:
+                self.proxy_send_message(message)
 
         except Exception as ex:
             self.logger.error("Error on handling WebSocket Message %s: %s", message, ex)
@@ -224,10 +236,6 @@ class WebsocketClient(threading.Thread):
             close_reason,
         )
         self._ws_open_event.clear()
-
-        if self.proxy:
-            self.proxy.send_message(b"FIN")
-            self.proxy.shutdown_request()
 
     def _on_ws_open(self, _ws):
         self.logger.info("WebSocket Connection opened")

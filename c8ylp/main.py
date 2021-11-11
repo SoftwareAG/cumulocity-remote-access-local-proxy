@@ -38,7 +38,7 @@ import click
 from c8ylp import __version__
 from c8ylp.helper import get_unused_port, wait_for_port
 from c8ylp.rest_client.c8yclient import CumulocityClient
-from c8ylp.tcp_socket.tcp_server import TCPServer
+from c8ylp.tcp_socket.tcp_server import TCPProxyServer
 from c8ylp.websocket_client.ws_client import WebsocketClient
 
 
@@ -526,16 +526,15 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
         "ignore_ssl_validate": opts.ignore_ssl_validate,
         "ping_interval": opts.ping_interval,
     }
-    websocket_client = WebsocketClient(**client_opts).connect()
-    tcp_server = TCPServer(
+
+    tcp_server = TCPProxyServer(
         opts.port,
-        websocket_client,
+        WebsocketClient(**client_opts),
         opts.tcpsize,
         opts.tcptimeout,
         opts.scriptmode,
         max_reconnects=opts.reconnects,
     )
-    websocket_client.proxy = tcp_server
 
     try:
         logging.info("Starting tcp server")
@@ -548,16 +547,21 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
         if opts.execute_script:
             logging.info("Executing script")
             execute_script(ctx, opts)
+            raise ExitCommand()
         elif opts.ssh_user:
             logging.info("Starting ssh session")
             start_ssh(ctx, opts)
+            raise ExitCommand()
 
         # loop, waiting for server to stop
         while background.is_alive():
             time.sleep(0.5)
+            logging.info("Waiting in background: alive=%s, running=%s", background.is_alive(), tcp_server._running.is_set())
     except Exception as ex:
         if str(ex):
             logging.error("Error on TCP-Server. %s", ex)
+    except ExitCommand:
+        pass
     finally:
         if opts.use_pid:
             clean_pid_file(opts.pidfile, os.getpid())

@@ -36,6 +36,7 @@ from typing import Any, Dict, NoReturn
 import click
 
 from c8ylp import __version__
+from c8ylp.banner import BANNER1
 from c8ylp.helper import get_unused_port, wait_for_port
 from c8ylp.env import loadenv
 from c8ylp.rest_client.c8yclient import CumulocityClient
@@ -74,7 +75,7 @@ def validate_token(ctx, _param, value) -> Any:
     Returns:
         Any: Parameter value
     """
-    click.echo("Validating existing token")
+    click.secho("Validating detected c8y token: ", nl=False)
     if isinstance(value, tuple):
         return value
 
@@ -84,7 +85,9 @@ def validate_token(ctx, _param, value) -> Any:
 
     try:
         client.validate_credentials()
+        click.secho("OK", fg="green")
     except Exception:
+        click.secho("INVALID", fg="red")
         logging.warning(
             "Token is no longer valid for host %s. The token will be ignored", hostname
         )
@@ -261,10 +264,12 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
 )
 @click.option(
     "--env-file",
-    default="",
+    default=None,
     is_eager=True,
     expose_value=False,
-    type=click.Path(exists=True),
+    type=click.Path(
+        exists=True,
+    ),
     callback=load_envfile,
     help="Environment file to load",
 )
@@ -573,6 +578,7 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
 
     exit_code = ExitCodes.OK
     try:
+        click.secho(BANNER1)
         logging.info("Starting tcp server")
 
         background = threading.Thread(target=tcp_server.serve_forever, daemon=True)
@@ -589,6 +595,17 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
             logging.info("Starting ssh session")
             exit_code = start_ssh(ctx, opts)
             raise ExitCommand()
+
+        click.secho(
+            f"\nc8ylp is listening for device (ext_id) {opts.device} on localhost:{opts.port}",
+            fg="green",
+        )
+        ssh_username = opts.ssh_user or "username"
+        click.secho(
+            f"\nConnect to {opts.device} by executing the following in a new tab/console:\n\n"
+            f"\tssh -p {opts.port} {ssh_username}@localhost",
+            color=True,
+        )
 
         # loop, waiting for server to stop
         while background.is_alive():
@@ -610,6 +627,7 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
         tcp_server.shutdown()
         background.join()
         logging.info("Exit code: %s", exit_code)
+        click.echo("Exiting")
         ctx.exit(exit_code)
 
 

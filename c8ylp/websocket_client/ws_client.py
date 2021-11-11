@@ -18,17 +18,49 @@
 
 import logging
 import threading
-import platform
-
 import ssl
-import os
-import signal
+
 import websocket
 import certifi
 
 
+WEBSOCKET_CLOSE_REASONS = {
+    websocket.STATUS_NORMAL: "NORMAL",
+    websocket.STATUS_GOING_AWAY: "GOING_AWAY",
+    websocket.STATUS_PROTOCOL_ERROR: "PROTOCOL_ERROR",
+    websocket.STATUS_UNSUPPORTED_DATA_TYPE: "UNSUPPORTED_DATA_TYPE",
+    websocket.STATUS_STATUS_NOT_AVAILABLE: "STATUS_NOT_AVAILABLE",
+    websocket.STATUS_ABNORMAL_CLOSED: "ABNORMAL_CLOSED",
+    websocket.STATUS_INVALID_PAYLOAD: "INVALID_PAYLOAD",
+    websocket.STATUS_POLICY_VIOLATION: "POLICY_VIOLATION",
+    websocket.STATUS_MESSAGE_TOO_BIG: "MESSAGE_TOO_BIG",
+    websocket.STATUS_INVALID_EXTENSION: "INVALID_EXTENSION",
+    websocket.STATUS_UNEXPECTED_CONDITION: "UNEXPECTED_CONDITION",
+    websocket.STATUS_BAD_GATEWAY: "BAD_GATEWAY",
+    websocket.STATUS_TLS_HANDSHAKE_ERROR: "TLS_HANDSHAKE_ERROR",
+}
+
+
+def lookup_close_status_code(code: int) -> str:
+    """Lookup the websocket close status code and return a user friendly string
+    If the status code is unknown then it will be returned as a string without
+    a meaningful status.
+
+    Args:
+        code (int): Websocket close status/code
+
+    Returns:
+        str: Close status as text
+    """
+    if code in WEBSOCKET_CLOSE_REASONS:
+        return f"{code} ({WEBSOCKET_CLOSE_REASONS[code]})"
+
+    return str(code)
+
+
 class WebsocketClient(threading.Thread):
     """Websocket client"""
+
     def __init__(
         self,
         host,
@@ -37,16 +69,14 @@ class WebsocketClient(threading.Thread):
         session,
         token,
         ignore_ssl_validate=False,
-        reconnects=5,
         ping_interval=0,
     ):
         self.host = host
         self.config_id = config_id
         self.device_id = device_id
         self.web_socket = None
-        self.tcp_server = None
-        self._ws_open_event = None
-        self._ws_open = False
+        self.proxy = None
+        self._ws_open_event = threading.Event()
         self._ws_timeout = 10
         self._ws_ping_interval = ping_interval
         # ping timeout must be less than the interval, so just take a percentage
@@ -55,16 +85,14 @@ class WebsocketClient(threading.Thread):
         self.wst = None
         self.session = session
         self.token = token
-        self.trigger_reconnect = reconnects >= 0
-        self.reconnect_counter = 0
         self.ws_handshake_error = False
         self.ignore_ssl_validate = ignore_ssl_validate
-        self.max_reconnects = reconnects
         super().__init__()
 
     def connect(self):
         """Connect websocket"""
-        self._ws_open_event = threading.Event()
+        self._ws_open_event.clear()
+
         # websocket.enableTrace(True) # Enable this for Debug Purpose only
         if self.host.startswith("https"):
             self.host = self.host.replace("https", "wss")
@@ -73,7 +101,7 @@ class WebsocketClient(threading.Thread):
         elif not self.host.startswith("wss://"):
             self.host = f"wss://{self.host}"
         url = f"{self.host}/service/remoteaccess/client/{self.device_id}/configurations/{self.config_id}"
-        self.logger.info("Connecting to WebSocket with URL %s ...", url)
+        self.logger.info("Connecting to WebSocket with URL %s", url)
 
         if self.token:
             headers = {
@@ -126,12 +154,11 @@ class WebsocketClient(threading.Thread):
         self.wst.daemon = True
         self.wst.name = f"WSTunnelThread-{self.config_id}"
         self.wst.start()
-        return self.wst
+        return self
 
     def reconnect(self):
         """Reconnect websocket"""
-        self.reconnect_counter += 1
-        self.logger.info("Reconnecting to WebSocket...")
+        self.logger.info("Reconnecting to WebSocket")
         if self.web_socket:
             self.web_socket.keep_running = False
             self.web_socket.close()
@@ -141,9 +168,9 @@ class WebsocketClient(threading.Thread):
     def stop(self):
         """Stop websocket"""
         # Closing WebSocket
-        self.logger.debug("Stopping WebSocket Connection...")
+        self.logger.debug("Stopping WebSocket Connection")
         self.trigger_reconnect = False
-        self.tcp_server.stop_connection()
+        self.proxy.shutdown_request()
         if self.web_socket:
             self.web_socket.keep_running = False
             self.web_socket.close()
@@ -155,18 +182,15 @@ class WebsocketClient(threading.Thread):
         Returns:
             bool: True if the websocket is open
         """
-        if self._ws_open:
-            return True
-        self._ws_open_event.wait(timeout=self._ws_timeout)
-        return self._ws_open
+        return self._ws_open_event.wait(timeout=self._ws_timeout)
 
     def _on_ws_message(self, _ws, message):
         try:
             self.logger.debug("WebSocket Message received: %s", message)
-            if self.tcp_server.is_tcp_socket_connected():
-                if self.tcp_server.connection is not None:
-                    self.logger.debug("Sending to TCP Socket: %s", message)
-                    self.tcp_server.connection.send(message)
+
+            self.logger.debug("Sending to TCP Socket: %s", message)
+            self.proxy.send_message(message)
+
         except Exception as ex:
             self.logger.error("Error on handling WebSocket Message %s: %s", message, ex)
             self.stop()
@@ -179,8 +203,7 @@ class WebsocketClient(threading.Thread):
             )
             if error.status_code == 401:
                 self.ws_handshake_error = True
-                self._ws_open = False
-                self._ws_open_event.set()
+                self._ws_open_event.clear()
                 self.stop()
                 return
 
@@ -194,27 +217,18 @@ class WebsocketClient(threading.Thread):
             self.logger.error("WebSocket Error received: %s", error)
 
     def _on_ws_close(self, _ws, close_status, close_reason):
+        close_reason = close_reason or "NoReason"
         self.logger.info(
-            "WebSocket Connection closed. Status: %s, Reason: %s", close_status, close_reason
+            "WebSocket Connection closed. Status: %s, Reason: %s",
+            lookup_close_status_code(close_status),
+            close_reason,
         )
-        self._ws_open = False
-        self._ws_open_event.set()
-        if self.tcp_server.is_tcp_socket_available():
-            self.tcp_server.connection.send(b"FIN")
-            self.tcp_server.stop_connection()
-        # else:
-        if self.trigger_reconnect and (
-            self.max_reconnects == 0 or self.reconnect_counter < self.max_reconnects
-        ):
-            self.logger.info("Reconnect with counter %s", self.reconnect_counter)
-            self.reconnect()
-        else:
-            if platform.system() in ("Linux", "Darwin"):
-                os.kill(os.getpid(), signal.SIGUSR1)
-            else:
-                os.kill(os.getpid(), signal.SIGINT)
+        self._ws_open_event.clear()
+
+        if self.proxy:
+            self.proxy.send_message(b"FIN")
+            self.proxy.shutdown_request()
 
     def _on_ws_open(self, _ws):
         self.logger.info("WebSocket Connection opened!")
-        self._ws_open = True
         self._ws_open_event.set()

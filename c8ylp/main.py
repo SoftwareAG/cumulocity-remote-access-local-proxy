@@ -19,23 +19,27 @@
 #  limitations under the License.
 #
 
-from enum import IntEnum
+import dataclasses
 import logging
 import os
 import pathlib
-import sys
-import signal
-from logging.handlers import RotatingFileHandler
 import platform
-import dataclasses
+import signal
+import subprocess
+import sys
+import time
+from enum import IntEnum
+from logging.handlers import RotatingFileHandler
+import threading
 from typing import Any, Dict, NoReturn
+
 import click
 
 from c8ylp import __version__
+from c8ylp.helper import get_unused_port, wait_for_port
 from c8ylp.rest_client.c8yclient import CumulocityClient
 from c8ylp.tcp_socket.tcp_server import TCPServer
 from c8ylp.websocket_client.ws_client import WebsocketClient
-from c8ylp.helper import get_unused_port
 
 
 class ExitCodes(IntEnum):
@@ -222,6 +226,11 @@ def print_version(ctx, _param, value) -> Any:
     callback=lambda c, p, v: -1 if c.params["scriptmode"] else 5,
     help="number of reconnects to the Cloud Remote Service. 0 for infinite reconnects",
 )
+@click.option(
+    "--ssh-user",
+    default='',
+    help="SSH User to start an interactive ssh session with",
+)
 @click.pass_context
 @click.option(
     "--version",
@@ -255,6 +264,7 @@ def cli(
     use_pid,
     pidfile,
     reconnects,
+    ssh_user,
 ):
     """Main CLI command to start the local proxy server"""
     # pylint: disable=too-many-locals,unused-argument
@@ -287,6 +297,7 @@ class ProxyOptions:
     use_pid = False
     pidfile = ""
     reconnects = 0
+    ssh_user = None
 
     def fromdict(self, src_dict: Dict[str, Any]) -> "ProxyOptions":
         """Load proxy settings from a dictionary
@@ -319,7 +330,7 @@ def configure_logger(path: str = None, verbose: bool = False) -> logging.Logger:
         path = pathlib.Path.home() / ".c8ylp"
         path.mkdir(parents=True, exist_ok=True)
 
-    loglevel = logging.DEBUG if verbose else logging.WARNING
+    loglevel = logging.INFO if verbose else logging.WARNING
     logger = logging.getLogger()
     logger.setLevel(loglevel)
     log_file_formatter = logging.Formatter(
@@ -506,29 +517,49 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
         "session": client.session,
         "token": opts.token,
         "ignore_ssl_validate": opts.ignore_ssl_validate,
-        "reconnects": opts.reconnects,
         "ping_interval": opts.ping_interval,
     }
-    websocket_client = WebsocketClient(**client_opts)
-    wst = websocket_client.connect()
+    websocket_client = WebsocketClient(**client_opts).connect()
     tcp_server = TCPServer(
         opts.port,
         websocket_client,
         opts.tcpsize,
         opts.tcptimeout,
-        wst,
         opts.scriptmode,
+        max_reconnects=opts.reconnects,
     )
     # TCP is blocking...
-    websocket_client.tcp_server = tcp_server
+    websocket_client.proxy = tcp_server
+    background = True
     try:
-        tcp_server.start()
+        logging.info('Starting tcp server')
+
+        if background:
+            background = threading.Thread(target=tcp_server.serve_forever, daemon=True)
+            background.start()
+
+            wait_for_port(opts.port, 30.0)
+
+            if opts.ssh_user:
+                logging.info('Starting ssh session')
+                start_ssh(ctx, opts)
+
+            # Stop
+            while background.is_alive():
+                time.sleep(0.5)
+        else:
+            tcp_server.serve_forever()
     except Exception as ex:
-        logging.error("Error on TCP-Server. %s", ex)
+        if str(ex):
+            logging.error("Error on TCP-Server. %s", ex)
     finally:
         if opts.use_pid:
             clean_pid_file(opts.pidfile, os.getpid())
-        tcp_server.stop()
+        
+        tcp_server.shutdown()
+        if background:
+            # Stop
+            background.join()
         ctx.exit(ExitCodes.OK)
 
 
@@ -562,6 +593,30 @@ def upsert_pid_file(pidfile: str, device: str, url: str, config: str, user: str)
             pidfile,
         )
         raise
+
+
+def start_ssh(ctx: click.Context, opts: ProxyOptions):
+    command = ctx.params.get("command")
+
+    ssh_args = [
+        "ssh",
+        "-o",
+        "StrictHostKeyChecking=no",
+        "-o",
+        "UserKnownHostsFile=/dev/null",
+        "-p",
+        str(opts.port),
+        f"{opts.ssh_user}@localhost",
+    ]
+
+    if command:
+        logging.info("Executing a once-off command then exiting")
+        ssh_args.extend([command])
+
+    logging.info(f"Starting ssh session using: {' '.join(ssh_args)}")
+    exit_code = subprocess.call(ssh_args, env=os.environ)
+    if exit_code != 0:
+        logging.warning(f"SSH exited with a non-zero exit code. code={exit_code}")
 
 
 def get_pid_file_text(device: str, url: str, config: str, user: str) -> str:

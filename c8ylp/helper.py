@@ -8,6 +8,7 @@ Get unused port number
 #> python3 -m c8ylp.helper wait <port> <timeout_sec>
 Wait for the given port to be opened
 """
+import logging
 import time
 import sys
 import socket
@@ -24,7 +25,7 @@ def socketcontext(*args, **kw):
         sock.close()
 
 
-def wait_for_port(port: int, timeout: float = 30.0) -> None:
+def wait_for_port(port: int, timeout: float = 30.0, silent: bool = False) -> None:
     """Wait for a port to be opened
 
     Args:
@@ -39,7 +40,9 @@ def wait_for_port(port: int, timeout: float = 30.0) -> None:
     while True:
         if is_port_open(port):
             duration = time.monotonic() - start_at
-            print(f"Port is open. waited={duration:.2f}s")
+            if not silent:
+                # print(f"Port is open. waited={duration:.2f}s")
+                logging.info(f"Port is open. waited={duration:.2f}s")
             break
 
         if time.monotonic() >= expires_at:

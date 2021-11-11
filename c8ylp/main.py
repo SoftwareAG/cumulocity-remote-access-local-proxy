@@ -609,8 +609,8 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
 
         # loop, waiting for server to stop
         while background.is_alive():
-            time.sleep(0.5)
-            logging.info(
+            time.sleep(1)
+            logging.debug(
                 "Waiting in background: alive=%s",
                 background.is_alive(),
             )

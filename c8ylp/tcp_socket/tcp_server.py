@@ -17,6 +17,7 @@
 #
 
 import logging
+import os
 import socket
 import socketserver
 import threading
@@ -43,7 +44,21 @@ class TCPHandler(socketserver.BaseRequestHandler):
             self.server.web_socket_client.connect()
 
         # update link to current tcp socket send
-        self.server.web_socket_client.proxy_send_message = request.send
+        request_error = False
+        def safe_send(data):
+            nonlocal request_error
+            try:
+                if not request_error:
+                    request.send(data)
+            except OSError as ex:
+                request_error = True
+                if ex.errno == 9:
+                    # TODO: Check what is sending messages after it has been closed
+                    logging.info("Ignoring Bad file descriptor")
+                else:
+                    logging.error(ex)
+
+        self.server.web_socket_client.proxy_send_message = safe_send
 
         while True:
             try:
@@ -52,6 +67,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
 
                 if not data:
                     logging.info("No data. Request will be closed")
+                    self.server.web_socket_client.proxy_send_message = None
                     break
 
                 logging.debug("Writing data to ws: %s", data)

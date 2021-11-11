@@ -377,7 +377,7 @@ def configure_logger(path: str = None, verbose: bool = False) -> logging.Logger:
     log_file_formatter = logging.Formatter(
         "%(asctime)s %(threadName)s %(levelname)s %(name)s %(message)s"
     )
-    log_console_formatter = logging.Formatter("[c8ylp] %(levelname)-8s %(message)s")
+    log_console_formatter = logging.Formatter("[c8ylp]  %(levelname)-5s %(message)s")
 
     # Set default log format
     if len(logger.handlers) == 0:

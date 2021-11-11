@@ -61,7 +61,7 @@ class CumulocityClient:
         token: str = None,
         ignore_ssl_validate: bool = False,
     ):
-        self.hostname = hostname
+        hostname = hostname or ""
 
         if hostname.startswith("http"):
             self.url = hostname

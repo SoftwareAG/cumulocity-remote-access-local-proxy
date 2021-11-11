@@ -231,6 +231,11 @@ def print_version(ctx, _param, value) -> Any:
     default="",
     help="SSH User to start an interactive ssh session with",
 )
+@click.option(
+    "--execute-script",
+    default="",
+    help="Execute a script after the proxy has been started",
+)
 @click.pass_context
 @click.option(
     "--version",
@@ -265,6 +270,7 @@ def cli(
     pidfile,
     reconnects,
     ssh_user,
+    execute_script,
 ):
     """Main CLI command to start the local proxy server"""
     # pylint: disable=too-many-locals,unused-argument
@@ -298,6 +304,7 @@ class ProxyOptions:
     pidfile = ""
     reconnects = 0
     ssh_user = None
+    execute_script = None
 
     def fromdict(self, src_dict: Dict[str, Any]) -> "ProxyOptions":
         """Load proxy settings from a dictionary
@@ -528,27 +535,26 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
         opts.scriptmode,
         max_reconnects=opts.reconnects,
     )
-    # TCP is blocking...
     websocket_client.proxy = tcp_server
-    background = True
+
     try:
         logging.info("Starting tcp server")
 
-        if background:
-            background = threading.Thread(target=tcp_server.serve_forever, daemon=True)
-            background.start()
+        background = threading.Thread(target=tcp_server.serve_forever, daemon=True)
+        background.start()
 
-            wait_for_port(opts.port, 30.0)
+        wait_for_port(opts.port, 30.0)
 
-            if opts.ssh_user:
-                logging.info("Starting ssh session")
-                start_ssh(ctx, opts)
+        if opts.execute_script:
+            logging.info("Executing script")
+            execute_script(ctx, opts)
+        elif opts.ssh_user:
+            logging.info("Starting ssh session")
+            start_ssh(ctx, opts)
 
-            # Stop
-            while background.is_alive():
-                time.sleep(0.5)
-        else:
-            tcp_server.serve_forever()
+        # loop, waiting for server to stop
+        while background.is_alive():
+            time.sleep(0.5)
     except Exception as ex:
         if str(ex):
             logging.error("Error on TCP-Server. %s", ex)
@@ -557,9 +563,7 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
             clean_pid_file(opts.pidfile, os.getpid())
 
         tcp_server.shutdown()
-        if background:
-            # Stop
-            background.join()
+        background.join()
         ctx.exit(ExitCodes.OK)
 
 
@@ -595,7 +599,39 @@ def upsert_pid_file(pidfile: str, device: str, url: str, config: str, user: str)
         raise
 
 
+def execute_script(ctx: click.Context, opts: ProxyOptions):
+    """Execute a script with environment variables set with information
+    about the local proxy, i.e. device, port etc.
+
+    Args:
+        ctx (click.Context): Click context
+        opts (ProxyOptions): Proxy options
+    """
+
+    cmd_args = [
+        opts.execute_script,
+    ]
+
+    env = {
+        **os.environ,
+        "PORT": str(opts.port),
+        "DEVICE": str(opts.device),
+        "DEVICE_USER": str(opts.ssh_user),
+    }
+
+    logging.info(f"Starting ssh session using: {' '.join(cmd_args)}")
+    exit_code = subprocess.call(cmd_args, env=env, shell=True)
+    if exit_code != 0:
+        logging.warning(f"Script exited with a non-zero exit code. code={exit_code}")
+
+
 def start_ssh(ctx: click.Context, opts: ProxyOptions):
+    """Start interactive ssh session
+
+    Args:
+        ctx (click.Context): Click context
+        opts (ProxyOptions): Proxy options
+    """
     command = ctx.params.get("command")
 
     ssh_args = [

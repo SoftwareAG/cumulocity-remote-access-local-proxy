@@ -189,7 +189,7 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
     type=int,
     callback=lambda ctx, param, value: get_unused_port() if value < 1 else value,
     default=2222,
-    help="TCP Port which should be opened",
+    help="TCP Port which should be opened. 0=Random port",
 )
 @click.option(
     "--ping-interval",
@@ -209,6 +209,7 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
 @click.option(
     "--verbose",
     "-v",
+    envvar="VERBOSE",
     is_flag=True,
     default=False,
     help="Print Debug Information into the Logs and Console when set",
@@ -216,6 +217,7 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
 @click.option(
     "--scriptmode",
     "-s",
+    envvar="C8Y_SCRIPTMODE",
     is_flag=True,
     default=False,
     help="Stops the TCP Server after first connection. No automatical restart!",
@@ -230,7 +232,7 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
     "--use-pid",
     is_flag=True,
     default=False,
-    help="Will create a PID-File in /var/run/c8ylp to store all Processes currently running",
+    help="Will create a PID-File to store all Processes currently running (see --pidfile for the location)",
 )
 @click.option(
     "--pidfile",
@@ -250,17 +252,17 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
     "--ssh-user",
     default="",
     envvar="SSH_USER",
-    help="SSH User to start an interactive ssh session with",
+    help="Start an interactive ssh session with the given user",
 )
 @click.option(
     "--execute-script",
-    default="",
-    help="Execute a script after the proxy has been started",
+    type=str,
+    help="Execute a script after the proxy has been started then exit",
 )
 @click.option(
     "--ssh-command",
-    default="",
-    help="Execute a single ssh command then exit",
+    type=str,
+    help="Execute a command via ssh then exit",
 )
 @click.option(
     "--env-file",
@@ -271,7 +273,7 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
         exists=True,
     ),
     callback=load_envfile,
-    help="Environment file to load",
+    help="Environment file to load. Any settings loaded via this file will control other parameters",
 )
 @click.pass_context
 @click.option(

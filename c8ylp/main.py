@@ -49,6 +49,7 @@ class ExitCodes(IntEnum):
     NO_SESSION = 2
     NOT_AUTHORIZED = 3
     PID_FILE_ERROR = 4
+    UNKNOWN = 9
 
 
 class ExitCommand(Exception):
@@ -229,12 +230,18 @@ def print_version(ctx, _param, value) -> Any:
 @click.option(
     "--ssh-user",
     default="",
+    envvar="SSH_USER",
     help="SSH User to start an interactive ssh session with",
 )
 @click.option(
     "--execute-script",
     default="",
     help="Execute a script after the proxy has been started",
+)
+@click.option(
+    "--ssh-command",
+    default="",
+    help="Execute a single ssh command then exit",
 )
 @click.pass_context
 @click.option(
@@ -271,6 +278,7 @@ def cli(
     reconnects,
     ssh_user,
     execute_script,
+    ssh_command,
 ):
     """Main CLI command to start the local proxy server"""
     # pylint: disable=too-many-locals,unused-argument
@@ -304,6 +312,7 @@ class ProxyOptions:
     pidfile = ""
     reconnects = 0
     ssh_user = None
+    ssh_command = None
     execute_script = None
 
     def fromdict(self, src_dict: Dict[str, Any]) -> "ProxyOptions":
@@ -482,6 +491,7 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
         ctx (click.Context): Click context
         opts (ProxyOptions): Proxy options
     """
+    # pylint: disable=too-many-branches,too-many-statements
     if platform.system() in ("Linux", "Darwin"):
         signal.signal(signal.SIGUSR1, signal_handler)
     else:
@@ -536,6 +546,7 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
         max_reconnects=opts.reconnects,
     )
 
+    exit_code = ExitCodes.OK
     try:
         logging.info("Starting tcp server")
 
@@ -546,29 +557,35 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
 
         if opts.execute_script:
             logging.info("Executing script")
-            execute_script(ctx, opts)
+            exit_code = run_script(ctx, opts)
             raise ExitCommand()
-        elif opts.ssh_user:
+
+        if opts.ssh_user:
             logging.info("Starting ssh session")
-            start_ssh(ctx, opts)
+            exit_code = start_ssh(ctx, opts)
             raise ExitCommand()
 
         # loop, waiting for server to stop
         while background.is_alive():
             time.sleep(0.5)
-            logging.info("Waiting in background: alive=%s, running=%s", background.is_alive(), tcp_server._running.is_set())
+            logging.info(
+                "Waiting in background: alive=%s",
+                background.is_alive(),
+            )
+    except ExitCommand:
+        pass
     except Exception as ex:
         if str(ex):
             logging.error("Error on TCP-Server. %s", ex)
-    except ExitCommand:
-        pass
+            exit_code = ExitCodes.UNKNOWN
     finally:
         if opts.use_pid:
             clean_pid_file(opts.pidfile, os.getpid())
 
         tcp_server.shutdown()
         background.join()
-        ctx.exit(ExitCodes.OK)
+        logging.info("Exit code: %s", exit_code)
+        ctx.exit(exit_code)
 
 
 def upsert_pid_file(pidfile: str, device: str, url: str, config: str, user: str):
@@ -603,13 +620,16 @@ def upsert_pid_file(pidfile: str, device: str, url: str, config: str, user: str)
         raise
 
 
-def execute_script(ctx: click.Context, opts: ProxyOptions):
+def run_script(_ctx: click.Context, opts: ProxyOptions) -> int:
     """Execute a script with environment variables set with information
     about the local proxy, i.e. device, port etc.
 
     Args:
         ctx (click.Context): Click context
         opts (ProxyOptions): Proxy options
+
+    Returns:
+        int: Exit code of script
     """
 
     cmd_args = [
@@ -623,20 +643,24 @@ def execute_script(ctx: click.Context, opts: ProxyOptions):
         "DEVICE_USER": str(opts.ssh_user),
     }
 
-    logging.info(f"Starting ssh session using: {' '.join(cmd_args)}")
+    logging.info("Starting ssh session using: %s", ' '.join(cmd_args))
     exit_code = subprocess.call(cmd_args, env=env, shell=True)
     if exit_code != 0:
-        logging.warning(f"Script exited with a non-zero exit code. code={exit_code}")
+        logging.warning("Script exited with a non-zero exit code. code=%s", exit_code)
+
+    return exit_code
 
 
-def start_ssh(ctx: click.Context, opts: ProxyOptions):
+def start_ssh(_ctx: click.Context, opts: ProxyOptions) -> int:
     """Start interactive ssh session
 
     Args:
         ctx (click.Context): Click context
         opts (ProxyOptions): Proxy options
+
+    Returns:
+        int: Exit code of ssh command
     """
-    command = ctx.params.get("command")
 
     ssh_args = [
         "ssh",
@@ -649,14 +673,16 @@ def start_ssh(ctx: click.Context, opts: ProxyOptions):
         f"{opts.ssh_user}@localhost",
     ]
 
-    if command:
+    if opts.ssh_command:
         logging.info("Executing a once-off command then exiting")
-        ssh_args.extend([command])
+        ssh_args.extend([opts.ssh_command])
 
-    logging.info(f"Starting ssh session using: {' '.join(ssh_args)}")
+    logging.info("Starting ssh session using: %s", ' '.join(ssh_args))
     exit_code = subprocess.call(ssh_args, env=os.environ)
     if exit_code != 0:
-        logging.warning(f"SSH exited with a non-zero exit code. code={exit_code}")
+        logging.warning("SSH exited with a non-zero exit code. code=%s", exit_code)
+
+    return exit_code
 
 
 def get_pid_file_text(device: str, url: str, config: str, user: str) -> str:

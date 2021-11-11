@@ -19,6 +19,7 @@
 import logging
 import threading
 import ssl
+from typing import Any, Callable
 
 import websocket
 import certifi
@@ -88,7 +89,7 @@ class WebsocketClient(threading.Thread):
         self.ws_handshake_error = False
         self.ignore_ssl_validate = ignore_ssl_validate
 
-        self.proxy_send_message = None
+        self.proxy_send_message: Callable = None
         super().__init__()
 
     def connect(self):
@@ -191,7 +192,12 @@ class WebsocketClient(threading.Thread):
         """
         return self._ws_open_event.is_set()
 
-    def send_binary(self, data):
+    def send_binary(self, data: Any) -> None:
+        """Send binary data to websocket
+
+        Args:
+            data (Any): Data / message to be sent
+        """
         if self.web_socket and self.is_ws_available():
             self.web_socket.sock.send_binary(data)
 
@@ -200,7 +206,8 @@ class WebsocketClient(threading.Thread):
             self.logger.debug("WebSocket Message received: %s", message)
 
             self.logger.debug("Sending to TCP Socket: %s", message)
-            if self.proxy_send_message:
+            if self.proxy_send_message and callable(self.proxy_send_message):
+                # pylint: disable=not-callable
                 self.proxy_send_message(message)
 
         except Exception as ex:

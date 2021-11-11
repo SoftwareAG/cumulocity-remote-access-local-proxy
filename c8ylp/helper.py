@@ -41,8 +41,7 @@ def wait_for_port(port: int, timeout: float = 30.0, silent: bool = False) -> Non
         if is_port_open(port):
             duration = time.monotonic() - start_at
             if not silent:
-                # print(f"Port is open. waited={duration:.2f}s")
-                logging.info(f"Port is open. waited={duration:.2f}s")
+                logging.info("Port is open. waited=%.3fs", duration)
             break
 
         if time.monotonic() >= expires_at:

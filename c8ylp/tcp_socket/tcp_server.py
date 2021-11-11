@@ -167,3 +167,14 @@ class TCPProxyServer:
         if self._running.is_set():
             logging.info("Shutting down TCP server")
             self.server.shutdown()
+
+    def wait_for_running(self, timeout: float = 30.0) -> bool:
+        """Wait for the server to startup
+
+        Args:
+            timeout (float, optional): Timeout in seconds. Defaults to 30.0.
+
+        Returns:
+            bool: True if the server is running
+        """
+        return self._running.wait(timeout)

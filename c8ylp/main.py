@@ -37,7 +37,7 @@ import click
 
 from c8ylp import __version__
 from c8ylp.banner import BANNER1
-from c8ylp.helper import get_unused_port, wait_for_port
+from c8ylp.helper import get_unused_port
 from c8ylp.env import loadenv
 from c8ylp.rest_client.c8yclient import CumulocityClient
 from c8ylp.tcp_socket.tcp_server import TCPProxyServer
@@ -584,7 +584,10 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
         background = threading.Thread(target=tcp_server.serve_forever, daemon=True)
         background.start()
 
-        wait_for_port(opts.port, 30.0)
+        if not tcp_server.wait_for_running(30.0):
+            logging.warning(
+                "Server did not start up in time, but trying to proceed anyway"
+            )
 
         if opts.execute_script:
             logging.info("Executing script")

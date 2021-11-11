@@ -96,14 +96,22 @@ class TCPServer:
     """TCP Server"""
 
     def __init__(
-        self, port, web_socket_client, tcp_buffer_size, tcp_timeout, script_mode, max_reconnects=5
+        self,
+        port,
+        web_socket_client,
+        tcp_buffer_size,
+        tcp_timeout,
+        script_mode,
+        max_reconnects=5,
     ):
         self.web_socket_client = web_socket_client
         self.script_mode = script_mode
         self._running = threading.Event()
         self.logger = logging.getLogger(__name__)
         self.server = CustomTCPServer(
-            self.web_socket_client, ("localhost", port), TCPHandler,
+            self.web_socket_client,
+            ("localhost", port),
+            TCPHandler,
             port=port,
             buffer_size=tcp_buffer_size,
             tcp_timeout=tcp_timeout,

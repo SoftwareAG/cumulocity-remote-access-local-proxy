@@ -228,7 +228,7 @@ def print_version(ctx, _param, value) -> Any:
 )
 @click.option(
     "--ssh-user",
-    default='',
+    default="",
     help="SSH User to start an interactive ssh session with",
 )
 @click.pass_context
@@ -532,7 +532,7 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
     websocket_client.proxy = tcp_server
     background = True
     try:
-        logging.info('Starting tcp server')
+        logging.info("Starting tcp server")
 
         if background:
             background = threading.Thread(target=tcp_server.serve_forever, daemon=True)
@@ -541,7 +541,7 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
             wait_for_port(opts.port, 30.0)
 
             if opts.ssh_user:
-                logging.info('Starting ssh session')
+                logging.info("Starting ssh session")
                 start_ssh(ctx, opts)
 
             # Stop
@@ -555,7 +555,7 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
     finally:
         if opts.use_pid:
             clean_pid_file(opts.pidfile, os.getpid())
-        
+
         tcp_server.shutdown()
         if background:
             # Stop

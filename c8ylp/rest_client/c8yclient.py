@@ -38,6 +38,7 @@ class CumulocityPermissionDeviceError(Exception):
 
 class BearerAuth(requests.auth.AuthBase):
     """Bearer/token based authorization"""
+
     # pylint: disable=too-few-public-methods
     def __init__(self, token: str):
         self.token = token

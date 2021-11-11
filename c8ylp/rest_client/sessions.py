@@ -86,9 +86,7 @@ class BaseUrlSession(requests.Session):
         }
 
         # prepare request
-        prep = super().prepare_request(
-            requests.Request(method, url, *args, **kwargs)
-        )
+        prep = super().prepare_request(requests.Request(method, url, *args, **kwargs))
 
         logging.debug("Sending requests to %s", url)
 

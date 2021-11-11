@@ -29,11 +29,19 @@ class TCPHandler(socketserver.BaseRequestHandler):
 
     It is instantiated once per connection to the server
     """
+
     def handle(self):
-        """Websocket connection handler
-        """
+        """Websocket connection handler"""
         request: socket.socket = self.request
-        logging.info("Handling request: %s", request)
+
+        laddr = request.getsockname()
+        raddr = request.getpeername()
+        logging.info(
+            "Handling request: fd=%s, laddr=%s, raddr=%s",
+            request.fileno(),
+            laddr,
+            raddr,
+        )
 
         # connect websocket
         if not self.server.web_socket_client.is_open():
@@ -63,7 +71,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
                 logging.debug("%s wrote: %s", self.client_address, data)
 
                 if not data:
-                    logging.info("No data. Request will be closed")
+                    logging.debug("No data. Request will be closed")
                     self.server.web_socket_client.proxy_send_message = None
                     break
 
@@ -81,6 +89,7 @@ class CustomTCPServer(socketserver.TCPServer):
     """Custom TCP Server used to listen for local connections and proxy them to
     a websocket
     """
+
     def __init__(
         self,
         web_socket_client,
@@ -134,8 +143,7 @@ class TCPProxyServer:
         self.reconnect_counter = 0
 
     def handle_reconnect(self):
-        """Handle auto reconnect should the websocket connection be lost
-        """
+        """Handle auto reconnect should the websocket connection be lost"""
         if not self.script_mode and (
             self.max_reconnects == 0 or self.reconnect_counter < self.max_reconnects
         ):
@@ -149,15 +157,13 @@ class TCPProxyServer:
             sys.exit(0)
 
     def serve_forever(self):
-        """Server tcp server forever. Only returns once .shutdown has been called
-        """
+        """Server tcp server forever. Only returns once .shutdown has been called"""
         self._running.set()
         self.server.serve_forever()
         self._running.clear()
 
     def shutdown(self):
-        """Shutdown tcp server
-        """
+        """Shutdown tcp server"""
         if self._running.is_set():
             logging.info("Shutting down TCP server")
             self.server.shutdown()

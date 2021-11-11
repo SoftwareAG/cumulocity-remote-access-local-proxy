@@ -230,5 +230,5 @@ class WebsocketClient(threading.Thread):
             self.proxy.shutdown_request()
 
     def _on_ws_open(self, _ws):
-        self.logger.info("WebSocket Connection opened!")
+        self.logger.info("WebSocket Connection opened")
         self._ws_open_event.set()

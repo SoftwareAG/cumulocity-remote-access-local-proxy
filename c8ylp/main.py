@@ -37,6 +37,7 @@ import click
 
 from c8ylp import __version__
 from c8ylp.helper import get_unused_port, wait_for_port
+from c8ylp.env import loadenv
 from c8ylp.rest_client.c8yclient import CumulocityClient
 from c8ylp.tcp_socket.tcp_server import TCPProxyServer
 from c8ylp.websocket_client.ws_client import WebsocketClient
@@ -91,12 +92,27 @@ def validate_token(ctx, _param, value) -> Any:
     return value
 
 
-def print_version(ctx, _param, value) -> Any:
+def load_envfile(ctx: click.Context, _param: click.Parameter, value: Any):
+    """Load environment variables from a file
+
+    Args:
+        ctx (click.Context): Click context
+        _param (click.Parameter): Click parameter
+        value (Any): Parameter value
+    """
+    if not value or ctx.resilient_parsing:
+        return
+
+    click.echo(f"Loading envfile {value}")
+    loadenv(value)
+
+
+def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> Any:
     """Print command version
 
     Args:
-        ctx (Any): Click context
-        _param (Any): Click param
+        ctx (click.Context): Click context
+        _param (click.Parameter): Click param
         value (Any): Parameter value
 
     Returns:
@@ -243,6 +259,15 @@ def print_version(ctx, _param, value) -> Any:
     default="",
     help="Execute a single ssh command then exit",
 )
+@click.option(
+    "--env-file",
+    default="",
+    is_eager=True,
+    expose_value=False,
+    type=click.Path(exists=True),
+    callback=load_envfile,
+    help="Environment file to load",
+)
 @click.pass_context
 @click.option(
     "--version",
@@ -282,7 +307,7 @@ def cli(
 ):
     """Main CLI command to start the local proxy server"""
     # pylint: disable=too-many-locals,unused-argument
-    click.echo(locals())
+    # click.echo(locals())
     options = ProxyOptions().fromdict(locals())
     start(ctx, options)
 
@@ -643,7 +668,7 @@ def run_script(_ctx: click.Context, opts: ProxyOptions) -> int:
         "DEVICE_USER": str(opts.ssh_user),
     }
 
-    logging.info("Starting ssh session using: %s", ' '.join(cmd_args))
+    logging.info("Starting ssh session using: %s", " ".join(cmd_args))
     exit_code = subprocess.call(cmd_args, env=env, shell=True)
     if exit_code != 0:
         logging.warning("Script exited with a non-zero exit code. code=%s", exit_code)
@@ -677,7 +702,7 @@ def start_ssh(_ctx: click.Context, opts: ProxyOptions) -> int:
         logging.info("Executing a once-off command then exiting")
         ssh_args.extend([opts.ssh_command])
 
-    logging.info("Starting ssh session using: %s", ' '.join(ssh_args))
+    logging.info("Starting ssh session using: %s", " ".join(ssh_args))
     exit_code = subprocess.call(ssh_args, env=os.environ)
     if exit_code != 0:
         logging.warning("SSH exited with a non-zero exit code. code=%s", exit_code)

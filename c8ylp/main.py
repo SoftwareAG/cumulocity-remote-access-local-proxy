@@ -75,11 +75,15 @@ def validate_token(ctx, _param, value) -> Any:
     Returns:
         Any: Parameter value
     """
+    hostname = ctx.params.get("hostname")
+
+    if not hostname:
+        return value
+
     click.secho("Validating detected c8y token: ", nl=False)
     if isinstance(value, tuple):
         return value
 
-    hostname = ctx.params.get("hostname")
 
     client = CumulocityClient(hostname=hostname, token=value)
 

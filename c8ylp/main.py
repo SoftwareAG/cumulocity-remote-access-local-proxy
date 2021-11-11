@@ -595,7 +595,6 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
             raise ExitCommand()
 
         if opts.ssh_user:
-            logging.info("Starting ssh session")
             exit_code = start_ssh(ctx, opts)
             raise ExitCommand()
 

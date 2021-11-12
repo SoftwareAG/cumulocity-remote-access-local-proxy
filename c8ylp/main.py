@@ -84,7 +84,6 @@ def validate_token(ctx, _param, value) -> Any:
     if isinstance(value, tuple):
         return value
 
-
     client = CumulocityClient(hostname=hostname, token=value)
 
     try:
@@ -132,14 +131,45 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
     ctx.exit(ExitCodes.OK)
 
 
+def lazy_required(ctx: click.Context, _param: click.Parameter, value: Any):
+    """Apply lazy command argument parsing so that if a parameter is marked
+    as eager, it will only raise a MissingParameter exception if --help or
+    --version has not been specified (regardless of the order)
+
+    Args:
+        ctx (click.Context): Click Context
+        param (click.Parameter): Click Parameter
+        value (Any): Parameter value
+
+    Raises:
+        click.MissingParameter: Missing parameter exception
+
+    Returns:
+        Any: Parameter value
+    """
+    # Ignore error if help or version are being displayed
+    # using original sys.argv as the other click args may not have
+    # been procssed yet.
+    if "--help" in sys.argv or "--version" in sys.argv:
+        return None
+
+    if ctx.resilient_parsing:
+        return None
+
+    if not value:
+        raise click.MissingParameter()
+
+    return value
+
+
 @click.command()
 @click.option(
     "--hostname",
     "-h",
     is_eager=True,
-    required=True,
-    envvar="C8Y_HOST",
-    help="Cumulocity Hostname",
+    callback=lazy_required,
+    envvar=("C8Y_HOST", "C8Y_BASEURL"),
+    help="Cumulocity Hostname  [required]",
 )
 @click.option(
     "--device",
@@ -163,7 +193,7 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
 @click.option(
     "--user",
     "-u",
-    envvar="C8Y_USER",
+    envvar=("C8Y_USER", "C8Y_USERNAME"),
     help="Cumulocity username",
 )
 @click.option(
@@ -712,7 +742,6 @@ def start_ssh(_ctx: click.Context, opts: ProxyOptions) -> int:
     Returns:
         int: Exit code of ssh command
     """
-
     ssh_args = [
         "ssh",
         "-o",
@@ -727,6 +756,9 @@ def start_ssh(_ctx: click.Context, opts: ProxyOptions) -> int:
     if opts.ssh_command:
         logging.info("Executing a once-off command then exiting")
         ssh_args.extend([opts.ssh_command])
+        click.secho(f"Executing command via ssh on {opts.device}", fg="green")
+    else:
+        click.secho(f"Starting interactive ssh session with {opts.device} ({opts.hostname})", fg="green")
 
     logging.info("Starting ssh session using: %s", " ".join(ssh_args))
     exit_code = subprocess.call(ssh_args, env=os.environ)

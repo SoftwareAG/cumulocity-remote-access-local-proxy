@@ -129,12 +129,12 @@ def cli(ctx: click.Context):
 @options.SERVER_RECONNECT_LIMIT
 @options.ENV_FILE
 @click.pass_context
-def start(
+def server(
     ctx,
     *_args,
     **kwargs,
 ):
-    """Start local proxy in server mode.
+    """Start local proxy in server mode
 
     \b
         DEVICE is the device's external identity
@@ -189,10 +189,13 @@ def connect_ssh(
     *_args,
     **kwargs,
 ):
-    """Start the local proxy then either start an interactive ssh
-    session or send a single command via ssh to a device. Exit once this is completed.
+    """Start once-off proxy and connect via ssh
 
-    Use "--" before the additional arguments to prevent the arguments
+    An interactive ssh is opened if a remote command is not provided.
+
+    Once the ssh session is closed, then the local proxy will be shutdown.
+
+    Use "--" before the remote commands to prevent the arguments
     from being interpreted by c8ylp (i.e. to avoid clashes with c8ylp).
 
     \b
@@ -220,7 +223,7 @@ def connect_ssh(
 
 
 @cli.command(
-    "extension",
+    "plugin",
     context_settings=dict(
         ignore_unknown_options=True,
     ),
@@ -252,7 +255,7 @@ def extension(
     **kwargs,
 ):
     """
-    Run a custom command which will executed after the local proxy is started, then exits.
+    Start once-off proxy and execute a (local) script/command
 
         \b
         DEVICE is the device's external identity

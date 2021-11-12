@@ -583,7 +583,7 @@ def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
             raise ExitCommand()
 
         click.secho(
-            f"\nc8ylp is listening for device (ext_id) {opts.device} on localhost:{opts.port}",
+            f"\nc8ylp is listening for device (ext_id) {opts.device} ({opts.host}) on localhost:{opts.port}",
             fg="green",
         )
         ssh_username = opts.ssh_user or "<username>"
@@ -711,7 +711,9 @@ def start_ssh(_ctx: click.Context, opts: ProxyOptions) -> int:
     if opts.additional_args:
         logging.info("Executing a once-off command then exiting")
         ssh_args.extend(opts.additional_args)
-        click.secho(f"Executing command via ssh on {opts.device}", fg="green")
+        click.secho(
+            f"Executing command via ssh on {opts.device} ({opts.host})", fg="green"
+        )
     else:
         click.secho(
             f"Starting interactive ssh session with {opts.device} ({opts.host})",

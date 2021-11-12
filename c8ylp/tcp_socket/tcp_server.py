@@ -81,9 +81,6 @@ class TCPHandler(socketserver.BaseRequestHandler):
                 logging.info("Connection was reset. %s", ex)
                 break
 
-        logging.info("Sending FIN")
-        # request.send(b"FIN")
-
 
 class CustomTCPServer(socketserver.TCPServer):
     """Custom TCP Server used to listen for local connections and proxy them to

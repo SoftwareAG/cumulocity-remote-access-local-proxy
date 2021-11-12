@@ -81,7 +81,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
                 logging.info("Connection was reset. %s", ex)
                 break
 
-        # logging.info("Sending FIN")
+        logging.info("Sending FIN")
         # request.send(b"FIN")
 
 
@@ -166,6 +166,7 @@ class TCPProxyServer:
         """Shutdown tcp server"""
         if self._running.is_set():
             logging.info("Shutting down TCP server")
+            self.server.server_close()
             self.server.shutdown()
 
     def wait_for_running(self, timeout: float = 30.0) -> bool:

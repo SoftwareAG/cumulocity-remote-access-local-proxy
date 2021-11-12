@@ -25,6 +25,7 @@ import os
 import pathlib
 import platform
 import signal
+import shutil
 import subprocess
 import sys
 import threading
@@ -35,7 +36,6 @@ from logging.handlers import RotatingFileHandler
 from typing import Any, Dict, NoReturn
 
 import click
-import click_completion
 
 from c8ylp import options
 
@@ -44,9 +44,6 @@ from c8ylp.banner import BANNER1
 from c8ylp.rest_client.c8yclient import CumulocityClient
 from c8ylp.tcp_socket.tcp_server import TCPProxyServer
 from c8ylp.websocket_client.ws_client import WebsocketClient
-
-# update extended completion support
-click_completion.init()
 
 
 class ExitCodes(IntEnum):
@@ -104,8 +101,9 @@ def cli(ctx: click.Context):
 
 
 @cli.command(help="Start local proxy in server mode")
+@options.ARG_DEVICE
+# @options.DEVICE
 @options.HOSTNAME
-@options.DEVICE
 @options.EXTERNAL_IDENTITY_TYPE
 @options.REMOTE_ACCESS_TYPE
 @options.C8Y_TENANT
@@ -138,7 +136,8 @@ def start(
 
 
 @cli.command(help="Connect to a device via SSH")
-@click.argument("device", nargs=1)
+@options.ARG_DEVICE
+# @options.DEVICE
 @options.HOSTNAME
 @options.EXTERNAL_IDENTITY_TYPE
 @options.REMOTE_ACCESS_TYPE
@@ -355,14 +354,15 @@ def get_config_id(mor: Dict[str, Any], config: str) -> str:
     if not config_id:
         if config:
             logging.error(
-                'Provided config name "%s" for "%s" was not found or not of type "PASSTHROUGH"',
+                'Provided config name "%s" for "%s" was not found or none with protocal set to "PASSTHROUGH"',
                 config,
                 device,
             )
             sys.exit(1)
         else:
             logging.error(
-                'No config of Type "PASSTHROUGH" has been found for device "%s"', device
+                'No config with protocal set to "PASSTHROUGH" has been found for device "%s"',
+                device,
             )
             sys.exit(1)
     return config_id
@@ -398,8 +398,8 @@ def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
                 'Killing existing instances is only supported when "--use-pid" is used.'
             )
 
-    client = create_client(ctx, opts)
     try:
+        client = create_client(ctx, opts)
         mor = client.get_managed_object(opts.device, opts.external_type)
         config_id = get_config_id(mor, opts.config)
         device_id = mor.get("id")
@@ -412,6 +412,7 @@ def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
             )
             ctx.exit(ExitCodes.NOT_AUTHORIZED)
     except Exception as ex:
+        logging.error("Could not retrieve device information. reason=%s", ex)
         ctx.exit(ExitCodes.UNKNOWN)
 
     client_opts = {
@@ -424,17 +425,18 @@ def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
         "ping_interval": opts.ping_interval,
     }
 
-    tcp_server = TCPProxyServer(
-        opts.port,
-        WebsocketClient(**client_opts),
-        opts.tcp_size,
-        opts.tcp_timeout,
-        opts.scriptmode,
-        max_reconnects=opts.reconnects,
-    )
-
-    exit_code = ExitCodes.OK
     try:
+        tcp_server = TCPProxyServer(
+            opts.port,
+            WebsocketClient(**client_opts),
+            opts.tcp_size,
+            opts.tcp_timeout,
+            opts.scriptmode,
+            max_reconnects=opts.reconnects,
+        )
+
+        exit_code = ExitCodes.OK
+
         click.secho(BANNER1)
         logging.info("Starting tcp server")
 
@@ -563,6 +565,11 @@ def start_ssh(_ctx: click.Context, opts: ProxyOptions) -> int:
     Returns:
         int: Exit code of ssh command
     """
+    if not shutil.which("ssh"):
+        raise Exception(
+            "ssh client not found. Please make sure the 'ssh' client is included in your PATH variable"
+        )
+
     ssh_args = [
         "ssh",
         "-o",

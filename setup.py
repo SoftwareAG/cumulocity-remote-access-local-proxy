@@ -48,7 +48,6 @@ setup(
         "certifi>=2020.12.5",
         "stdiomask>=0.0.6",
         "click==8.0.3",
-        "click_completion==0.5.2",
     ],
     zip_safe=False,
 )

@@ -121,7 +121,6 @@ def validate_token(ctx: click.Context, _param, value) -> Any:
 HOSTNAME = click.option(
     # "--hostname",
     "--host",
-    "-h",
     "host",
     is_eager=True,
     callback=lazy_required,
@@ -129,10 +128,17 @@ HOSTNAME = click.option(
     help="Cumulocity Hostname  [required]",
 )
 
+
+ARG_DEVICE = click.argument(
+    "device",
+    nargs=1,
+    required=True,
+)
+
 DEVICE = click.option(
     "--device",
     "-d",
-    required=True,
+    required=False,
     envvar="C8Y_DEVICE",
     help="Device external identity",
 )

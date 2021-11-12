@@ -185,6 +185,7 @@ The script will have the following environment variables available to it:\n
     ),
 )
 @options.ARG_DEVICE
+@options.ARG_SCRIPT
 # @options.DEVICE
 @options.HOSTNAME
 @options.EXTERNAL_IDENTITY_TYPE
@@ -200,7 +201,6 @@ The script will have the following environment variables available to it:\n
 @options.TCP_TIMEOUT
 @options.LOGGING_VERBOSE
 @options.SSL_IGNORE_VERIFY
-@options.EXECUTE_SCRIPT
 @options.ENV_FILE
 @click.argument("script_args", nargs=-1, type=click.UNPROCESSED)
 @click.pass_context
@@ -209,9 +209,13 @@ def extension(
     *_args,
     **kwargs,
 ):
+    """Extension command to allow the user to execute their own custom connection script"""
     opts = ProxyOptions().fromdict(kwargs)
     opts.scriptmode = True
-    logging.debug(f"Extra args: {opts.script_args}")
+    logging.debug(
+        "Collected additional args which will be passed to script later: %s",
+        opts.script_args,
+    )
     start_proxy(ctx, opts)
 
 
@@ -241,7 +245,7 @@ class ProxyOptions:
     reconnects = 0
     ssh_user = ""
     ssh_command = ""
-    execute_script = ""
+    script = ""
     script_args = None
 
     def fromdict(self, src_dict: Dict[str, Any]) -> "ProxyOptions":
@@ -496,7 +500,7 @@ def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
                 "Server did not start up in time, but trying to proceed anyway"
             )
 
-        if opts.execute_script:
+        if opts.script:
             logging.info("Executing script")
             exit_code = run_script(ctx, opts)
             raise ExitCommand()
@@ -585,7 +589,7 @@ def run_script(_ctx: click.Context, opts: ProxyOptions) -> int:
     """
 
     cmd_args = [
-        opts.execute_script,
+        opts.script,
     ]
 
     if opts.script_args:
@@ -737,8 +741,3 @@ def kill_existing_instances(pidfile: str):
                     logging.info("Killing other running Process with PID %s", other_pid)
                     os.kill(get_pid_from_line(line), 9)
                 clean_pid_file(pidfile, other_pid)
-
-
-if __name__ == "__main__":
-    # --pylint: disable=no-value-for-parameter
-    cli()

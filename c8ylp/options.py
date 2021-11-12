@@ -301,9 +301,13 @@ SSH_COMMAND = click.option(
     help="Execute a command via ssh then exit",
 )
 
+ARG_SCRIPT = click.argument(
+    "script", type=click.Path(resolve_path=True), nargs=1, required=True
+)
+
 EXECUTE_SCRIPT = click.option(
     "--script",
-    "execute_script",
+    "script",
     type=click.Path(resolve_path=True),
     required=True,
     help="Execute a script after the proxy has been started then exit",

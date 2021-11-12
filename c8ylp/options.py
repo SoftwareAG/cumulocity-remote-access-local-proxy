@@ -147,6 +147,7 @@ EXTERNAL_IDENTITY_TYPE = click.option(
     "--external-type",
     envvar="C8Y_EXTERNAL_TYPE",
     default="c8y_Serial",
+    show_default=True,
     help="external Id Type",
 )
 
@@ -156,6 +157,7 @@ REMOTE_ACCESS_TYPE = click.option(
     required=True,
     envvar="C8Y_CONFIG",
     default="Passthrough",
+    show_default=True,
     help="name of the C8Y Remote Access Configuration",
 )
 
@@ -191,7 +193,7 @@ C8Y_PASSWORD = click.option(
 C8Y_TFACODE = click.option(
     "--tfa-code",
     envvar="C8Y_TFACODE",
-    help="TFA Code when an user with the Option 'TFA enabled' is used",
+    help="TFA Code. Required when the 'TFA enabled' is enabled for a user",
 )
 
 PORT = click.option(
@@ -200,6 +202,7 @@ PORT = click.option(
     type=int,
     callback=lambda ctx, param, value: get_unused_port() if value < 1 else value,
     default=2222,
+    show_default=True,
     help="TCP Port which should be opened. 0=Random port",
 )
 
@@ -208,6 +211,7 @@ PING_INTERVAL = click.option(
     envvar="C8Y_PING_INTERVAL",
     type=int,
     default=0,
+    show_default=True,
     help="Websocket ping interval in seconds. 0=disabled",
 )
 
@@ -217,13 +221,18 @@ KILL_EXISTING = click.option(
 
 
 TCP_SIZE = click.option(
-    "--tcp-size", envvar="C8Y_TCPSIZE", default=4096, help="TCP Package Size"
+    "--tcp-size",
+    envvar="C8Y_TCPSIZE",
+    default=4096,
+    show_default=True,
+    help="TCP Package Size",
 )
 
 TCP_TIMEOUT = click.option(
     "--tcp-timeout",
     envvar="C8Y_TCPTIMEOUT",
     default=0,
+    show_default=True,
     help="Timeout in sec. for inactivity. Can be activited with values > 0",
 )
 
@@ -264,6 +273,7 @@ PID_FILE = click.option(
     default=lambda: pathlib.Path("~/.c8ylp/c8ylp").expanduser()
     if os.name == "nt"
     else "/var/run/c8ylp",
+    show_default=True,
     help="PID-File file location to store all Processes currently running",
 )
 
@@ -271,6 +281,7 @@ SERVER_RECONNECT_LIMIT = click.option(
     "--reconnects",
     type=int,
     default=5,
+    show_default=True,
     callback=lambda c, p, v: -1 if c.params["scriptmode"] else 5,
     help="number of reconnects to the Cloud Remote Service. 0 for infinite reconnects",
 )

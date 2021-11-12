@@ -83,7 +83,7 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
     ctx.exit(ExitCodes.OK)
 
 
-@click.group(invoke_without_command=True)
+@click.group(invoke_without_command=True, help="Cumulocity Remote Access Local Proxy")
 @click.option(
     "--version",
     is_flag=True,

@@ -589,16 +589,17 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
         mor = client.get_managed_object(opts.device, opts.extype)
         config_id = get_config_id(mor, opts.config)
         device_id = mor.get("id")
+
+        is_authorized = client.validate_remote_access_role()
+        if not is_authorized:
+            logging.error(
+                "User %s is not authorized to use Cloud Remote Access. Contact your Cumulocity Admin!",
+                opts.user,
+            )
+            ctx.exit(ExitCodes.NOT_AUTHORIZED)
     except Exception as ex:
         ctx.exit(ExitCodes.UNKNOWN)
 
-    is_authorized = client.validate_remote_access_role()
-    if not is_authorized:
-        logging.error(
-            "User %s is not authorized to use Cloud Remote Access. Contact your Cumulocity Admin!",
-            opts.user,
-        )
-        ctx.exit(ExitCodes.NOT_AUTHORIZED)
 
     client_opts = {
         "host": opts.hostname,
@@ -645,7 +646,7 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
             f"\nc8ylp is listening for device (ext_id) {opts.device} on localhost:{opts.port}",
             fg="green",
         )
-        ssh_username = opts.ssh_user or "username"
+        ssh_username = opts.ssh_user or "<username>"
         click.secho(
             f"\nConnect to {opts.device} by executing the following in a new tab/console:\n\n"
             f"\tssh -p {opts.port} {ssh_username}@localhost",

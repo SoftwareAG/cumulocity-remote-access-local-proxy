@@ -153,3 +153,7 @@ mender/docker-device/mender_output
 
 #
 .devcontainer
+
+# dot env
+*.cfg
+*.env

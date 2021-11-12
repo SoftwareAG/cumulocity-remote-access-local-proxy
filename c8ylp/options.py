@@ -294,12 +294,7 @@ SSH_USER = click.option(
     help="Start an interactive ssh session with the given user",
 )
 
-SSH_COMMAND = click.option(
-    "--command",
-    "ssh_command",
-    type=str,
-    help="Execute a command via ssh then exit",
-)
+ARG_SSH_COMMAND = click.argument("command", nargs=1, required=True)
 
 ARG_SCRIPT = click.argument(
     "script", type=click.Path(resolve_path=True), nargs=1, required=True

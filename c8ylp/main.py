@@ -85,6 +85,7 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
 
 @click.group(
     invoke_without_command=True,
+    no_args_is_help=True,
     context_settings=dict(help_option_names=["-h", "--help"]),
     help="Cumulocity Remote Access Local Proxy",
 )
@@ -93,21 +94,18 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
     is_flag=True,
     default=False,
     required=False,
-    callback=print_version,
     expose_value=False,
     is_eager=True,
+    callback=print_version,
     help="Show version number",
 )
 @click.pass_context
 def cli(ctx: click.Context):
     """Main cli entry point"""
     ctx.ensure_object(dict)
-    if not ctx.invoked_subcommand:
-        # Show help when no sub commands are called
-        click.echo(ctx.get_help())
 
 
-@cli.command(help="Start local proxy in server mode")
+@cli.command()
 @options.ARG_DEVICE
 # @options.DEVICE
 @options.HOSTNAME
@@ -136,14 +134,36 @@ def start(
     *_args,
     **kwargs,
 ):
-    """Main CLI command to start the local proxy server"""
+    """Start local proxy in server mode.
+
+    \b
+        DEVICE is the device's external identity
+
+    Once the local proxy has started, clients such as ssh and scp can be used
+    to establish a connection to the device.
+
+    \b
+    Example 1: Start the local proxy, prompt for credentials (if not set via env variables)
+
+        \b
+        c8ylp start --host https://example.c8y.io device01
+
+    Example 2: Start the local proxy using environment file
+
+        \b
+        c8ylp start --env-file .env device01
+
+    Example 3: Start the local proxy with randomized port
+
+        \b
+        c8ylp start --env-file .env device01 --port 0
+    """
     opts = ProxyOptions().fromdict(kwargs)
     start_proxy(ctx, opts)
 
 
-@cli.command(help="Connect to a device via SSH")
+@cli.command()
 @options.ARG_DEVICE
-# @options.DEVICE
 @options.HOSTNAME
 @options.EXTERNAL_IDENTITY_TYPE
 @options.REMOTE_ACCESS_TYPE
@@ -159,15 +179,41 @@ def start(
 @options.LOGGING_VERBOSE
 @options.SSL_IGNORE_VERIFY
 @options.SSH_USER
-@options.SSH_COMMAND
 @options.ENV_FILE
+@click.argument(
+    "additional_args", metavar="[REMOTE_COMMANDS]...", nargs=-1, type=click.UNPROCESSED
+)
 @click.pass_context
 def connect_ssh(
     ctx,
     *_args,
     **kwargs,
 ):
-    """Main CLI command to start the local proxy server"""
+    """Start the local proxy then either start an interactive ssh
+    session or send a single command via ssh to a device. Exit once this is completed.
+
+    Use "--" before the additional arguments to prevent the arguments
+    from being interpreted by c8ylp (i.e. to avoid clashes with c8ylp).
+
+    \b
+        DEVICE is the device's external identity
+
+    Example 1: Start an interactive SSH connection
+
+    \b
+        c8ylp connect-ssh --env-file .env device01 --ssh-user admin
+
+    Example 2: Execute a command via SSH
+
+    \b
+        c8ylp connect-ssh --env-file .env device01 --ssh-user admin -- systemctl status ssh
+
+    Example 3: Execute a complex command via SSH (use quotes to ensure command is sent to the device)
+
+    \b
+        c8ylp connect-ssh --env-file .env device01 --ssh-user admin -- "systemctl status ssh; dpkg --list | grep ssh"
+
+    """
     opts = ProxyOptions().fromdict(kwargs)
     opts.scriptmode = True
     start_proxy(ctx, opts)
@@ -175,18 +221,12 @@ def connect_ssh(
 
 @cli.command(
     "extension",
-    help="""Run a custom extension which will start the local proxy, execute a script then exit
-The script will have the following environment variables available to it:\n
- * DEVICE - external device identity\n
- * PORT   - port number of the local proxy
-""",
     context_settings=dict(
         ignore_unknown_options=True,
     ),
 )
 @options.ARG_DEVICE
 @options.ARG_SCRIPT
-# @options.DEVICE
 @options.HOSTNAME
 @options.EXTERNAL_IDENTITY_TYPE
 @options.REMOTE_ACCESS_TYPE
@@ -202,19 +242,51 @@ The script will have the following environment variables available to it:\n
 @options.LOGGING_VERBOSE
 @options.SSL_IGNORE_VERIFY
 @options.ENV_FILE
-@click.argument("script_args", nargs=-1, type=click.UNPROCESSED)
+@click.argument(
+    "additional_args", metavar="[SCRIPT_ARGS]...", nargs=-1, type=click.UNPROCESSED
+)
 @click.pass_context
 def extension(
     ctx,
     *_args,
     **kwargs,
 ):
-    """Extension command to allow the user to execute their own custom connection script"""
+    """
+    Run a custom command which will executed after the local proxy is started, then exits.
+
+        \b
+        DEVICE is the device's external identity
+        SCRIPT is the script or command to run after the proxy has been started
+
+        All additional arguments will be passed to the script/command. Use "--" before
+        the additional arguments to prevent the arguments from being interpreted by
+        c8ylp (i.e. to avoid clashes with c8ylp).
+
+    \b
+    Available ENV variables (use single quotes to prevent expansion):
+
+      \b
+      DEVICE - external device identity
+      PORT   - port number of the local proxy
+
+    \b
+    Example 1: Use scp to copy a file to a device
+
+        \b
+        c8ylp extension device01 --env-file .env \\
+            -- /usr/bin/scp -P '$PORT' myfile.tar.gz admin@localhost:/tmp
+
+    Example 2: Run a custom script (not included) to copy a file from the device to
+    the current folder
+
+        \b
+        c8ylp extension device01 --env-file .env -v ./copyfrom.sh /var/log/dpkg.log ./
+    """
     opts = ProxyOptions().fromdict(kwargs)
     opts.scriptmode = True
-    logging.debug(
+    logging.info(
         "Collected additional args which will be passed to script later: %s",
-        opts.script_args,
+        opts.additional_args,
     )
     start_proxy(ctx, opts)
 
@@ -244,9 +316,8 @@ class ProxyOptions:
     pidfile = ""
     reconnects = 0
     ssh_user = ""
-    ssh_command = ""
     script = ""
-    script_args = None
+    additional_args = None
 
     def fromdict(self, src_dict: Dict[str, Any]) -> "ProxyOptions":
         """Load proxy settings from a dictionary
@@ -501,7 +572,6 @@ def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
             )
 
         if opts.script:
-            logging.info("Executing script")
             exit_code = run_script(ctx, opts)
             raise ExitCommand()
 
@@ -592,18 +662,17 @@ def run_script(_ctx: click.Context, opts: ProxyOptions) -> int:
         opts.script,
     ]
 
-    if opts.script_args:
-        cmd_args.extend(opts.script_args)
+    # add env variables which can be used in the extra arguments
+    os.environ["PORT"] = str(opts.port)
+    os.environ["DEVICE"] = str(opts.device)
 
-    env = {
-        **os.environ,
-        "PORT": str(opts.port),
-        "DEVICE": str(opts.device),
-        "DEVICE_USER": str(opts.ssh_user),
-    }
+    if opts.additional_args:
+        for value in opts.additional_args:
+            logging.info("Expanding script arguments: %s", value)
+            cmd_args.append(os.path.expandvars(value))
 
     logging.info("Executing extension: %s", " ".join(cmd_args))
-    exit_code = subprocess.call(cmd_args, env=env, shell=False)
+    exit_code = subprocess.call(cmd_args, env=os.environ, shell=False)
     if exit_code != 0:
         logging.warning("Script exited with a non-zero exit code. code=%s", exit_code)
 
@@ -636,9 +705,9 @@ def start_ssh(_ctx: click.Context, opts: ProxyOptions) -> int:
         f"{opts.ssh_user}@localhost",
     ]
 
-    if opts.ssh_command:
+    if opts.additional_args:
         logging.info("Executing a once-off command then exiting")
-        ssh_args.extend([opts.ssh_command])
+        ssh_args.extend(opts.additional_args)
         click.secho(f"Executing command via ssh on {opts.device}", fg="green")
     else:
         click.secho(

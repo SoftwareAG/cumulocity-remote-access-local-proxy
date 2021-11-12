@@ -102,11 +102,13 @@ class CumulocityClient:
                 if "initRequest" in option:
                     _, _, tenant_id = option.get("initRequest", "").partition("=")
                     if self.tenant != tenant_id:
-                        self.logger.warning(
-                            "Wrong Tenant ID %s, Correct Tenant ID: %s",
-                            self.tenant,
-                            tenant_id,
-                        )
+                        if self.tenant:
+                            # Skip warning if the tenant id is not set
+                            self.logger.warning(
+                                "Wrong Tenant ID %s, Correct Tenant ID: %s",
+                                self.tenant,
+                                tenant_id,
+                            )
                         self.tenant = tenant_id
                     else:
                         tenant_id = None

@@ -83,7 +83,11 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
     ctx.exit(ExitCodes.OK)
 
 
-@click.group(invoke_without_command=True, help="Cumulocity Remote Access Local Proxy")
+@click.group(
+    invoke_without_command=True,
+    context_settings=dict(help_option_names=["-h", "--help"]),
+    help="Cumulocity Remote Access Local Proxy",
+)
 @click.option(
     "--version",
     is_flag=True,
@@ -98,6 +102,9 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
 def cli(ctx: click.Context):
     """Main cli entry point"""
     ctx.ensure_object(dict)
+    if not ctx.invoked_subcommand:
+        # Show help when no sub commands are called
+        click.echo(ctx.get_help())
 
 
 @cli.command(help="Start local proxy in server mode")

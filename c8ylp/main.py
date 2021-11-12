@@ -27,22 +27,26 @@ import platform
 import signal
 import subprocess
 import sys
-import time
 import threading
+import time
 from datetime import timedelta
 from enum import IntEnum
 from logging.handlers import RotatingFileHandler
 from typing import Any, Dict, NoReturn
 
 import click
+import click_completion
+
+from c8ylp import options
 
 from c8ylp import __version__
 from c8ylp.banner import BANNER1
-from c8ylp.helper import get_unused_port
-from c8ylp.env import loadenv
 from c8ylp.rest_client.c8yclient import CumulocityClient
 from c8ylp.tcp_socket.tcp_server import TCPProxyServer
 from c8ylp.websocket_client.ws_client import WebsocketClient
+
+# update extended completion support
+click_completion.init()
 
 
 class ExitCodes(IntEnum):
@@ -64,59 +68,6 @@ def signal_handler(_signal, _frame):
     raise ExitCommand()
 
 
-def validate_token(ctx, _param, value) -> Any:
-    """Validate Cumulocity token. If it is invalid then it
-    will be ignored.
-
-    Args:
-        ctx (Any): Click context
-        _param (Any): Click param
-        value (Any): Parameter value
-
-    Returns:
-        Any: Parameter value
-    """
-    hostname = ctx.params.get("hostname")
-
-    if not hostname:
-        return value
-
-    if not value:
-        return value
-
-    click.secho("Validating detected c8y token: ", nl=False)
-    if isinstance(value, tuple):
-        return value
-
-    client = CumulocityClient(hostname=hostname, token=value)
-
-    try:
-        client.validate_credentials()
-        click.secho("OK", fg="green")
-    except Exception:
-        click.secho("INVALID", fg="red")
-        logging.warning(
-            "Token is no longer valid for host %s. The token will be ignored", hostname
-        )
-        return ""
-    return value
-
-
-def load_envfile(ctx: click.Context, _param: click.Parameter, value: Any):
-    """Load environment variables from a file
-
-    Args:
-        ctx (click.Context): Click context
-        _param (click.Parameter): Click parameter
-        value (Any): Parameter value
-    """
-    if not value or ctx.resilient_parsing:
-        return
-
-    click.echo(f"Loading env-file: {value}")
-    loadenv(value)
-
-
 def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> Any:
     """Print command version
 
@@ -135,185 +86,7 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
     ctx.exit(ExitCodes.OK)
 
 
-def lazy_required(ctx: click.Context, _param: click.Parameter, value: Any):
-    """Apply lazy command argument parsing so that if a parameter is marked
-    as eager, it will only raise a MissingParameter exception if --help or
-    --version has not been specified (regardless of the order)
-
-    Args:
-        ctx (click.Context): Click Context
-        param (click.Parameter): Click Parameter
-        value (Any): Parameter value
-
-    Raises:
-        click.MissingParameter: Missing parameter exception
-
-    Returns:
-        Any: Parameter value
-    """
-    # Ignore error if help or version are being displayed
-    # using original sys.argv as the other click args may not have
-    # been procssed yet.
-    if "--help" in sys.argv or "--version" in sys.argv:
-        return None
-
-    if ctx.resilient_parsing:
-        return None
-
-    if not value:
-        raise click.MissingParameter()
-
-    return value
-
-
-@click.command()
-@click.option(
-    "--hostname",
-    "-h",
-    is_eager=True,
-    callback=lazy_required,
-    envvar=("C8Y_HOST", "C8Y_BASEURL", "C8Y_URL"),
-    help="Cumulocity Hostname  [required]",
-)
-@click.option(
-    "--device",
-    "-d",
-    required=True,
-    envvar="C8Y_DEVICE",
-    help="Device external identity",
-)
-@click.option(
-    "--extype", envvar="C8Y_EXTYPE", default="c8y_Serial", help="external Id Type"
-)
-@click.option(
-    "--config",
-    "-c",
-    required=True,
-    envvar="C8Y_CONFIG",
-    default="Passthrough",
-    help="name of the C8Y Remote Access Configuration",
-)
-@click.option("--tenant", "-t", envvar="C8Y_TENANT", help="Cumulocity tenant id")
-@click.option(
-    "--user",
-    "-u",
-    envvar=("C8Y_USER", "C8Y_USERNAME"),
-    help="Cumulocity username",
-)
-@click.option(
-    "--token",
-    "-t",
-    callback=validate_token,
-    envvar="C8Y_TOKEN",
-    is_eager=True,
-    help="Cumulocity token",
-)
-@click.option(
-    "--password",
-    "-p",
-    envvar="C8Y_PASSWORD",
-    prompt=False,
-    hide_input=True,
-    help="Cumulocity password",
-)
-@click.option(
-    "--tfacode",
-    envvar="C8Y_TFACODE",
-    help="TFA Code when an user with the Option 'TFA enabled' is used",
-)
-@click.option(
-    "--port",
-    envvar="C8Y_PORT",
-    type=int,
-    callback=lambda ctx, param, value: get_unused_port() if value < 1 else value,
-    default=2222,
-    help="TCP Port which should be opened. 0=Random port",
-)
-@click.option(
-    "--ping-interval",
-    envvar="C8Y_PING_INTERVAL",
-    type=int,
-    default=0,
-    help="Websocket ping interval in seconds. 0=disabled",
-)
-@click.option("--kill", "-k", help="Kills all existing processes of c8ylp")
-@click.option("--tcpsize", envvar="C8Y_TCPSIZE", default=4096, help="TCP Package Size")
-@click.option(
-    "--tcptimeout",
-    envvar="C8Y_TCPTIMEOUT",
-    default=0,
-    help="Timeout in sec. for inactivity. Can be activited with values > 0",
-)
-@click.option(
-    "--verbose",
-    "-v",
-    envvar="VERBOSE",
-    is_flag=True,
-    default=False,
-    help="Print Debug Information into the Logs and Console when set",
-)
-@click.option(
-    "--scriptmode",
-    "-s",
-    envvar="C8Y_SCRIPTMODE",
-    is_flag=True,
-    default=False,
-    help="Stops the TCP Server after first connection. No automatical restart!",
-)
-@click.option(
-    "--ignore-ssl-validate",
-    is_flag=True,
-    default=False,
-    help="Ignore Validation for SSL Certificates while connecting to Websocket",
-)
-@click.option(
-    "--use-pid",
-    is_flag=True,
-    default=False,
-    help="Will create a PID-File to store all Processes currently running (see --pidfile for the location)",
-)
-@click.option(
-    "--pidfile",
-    default=lambda: pathlib.Path("~/.c8ylp/c8ylp").expanduser()
-    if os.name == "nt"
-    else "/var/run/c8ylp",
-    help="PID-File file location to store all Processes currently running",
-)
-@click.option(
-    "--reconnects",
-    type=int,
-    default=5,
-    callback=lambda c, p, v: -1 if c.params["scriptmode"] else 5,
-    help="number of reconnects to the Cloud Remote Service. 0 for infinite reconnects",
-)
-@click.option(
-    "--ssh-user",
-    default="",
-    envvar="SSH_USER",
-    help="Start an interactive ssh session with the given user",
-)
-@click.option(
-    "--execute-script",
-    type=str,
-    help="Execute a script after the proxy has been started then exit",
-)
-@click.option(
-    "--ssh-command",
-    type=str,
-    help="Execute a command via ssh then exit",
-)
-@click.option(
-    "--env-file",
-    default=None,
-    is_eager=True,
-    expose_value=False,
-    type=click.Path(
-        exists=True,
-    ),
-    callback=load_envfile,
-    help="Environment file to load. Any settings loaded via this file will control other parameters",
-)
-@click.pass_context
+@click.group(invoke_without_command=True)
 @click.option(
     "--version",
     is_flag=True,
@@ -324,66 +97,105 @@ def lazy_required(ctx: click.Context, _param: click.Parameter, value: Any):
     is_eager=True,
     help="Show version number",
 )
-def cli(
+@click.pass_context
+def cli(ctx: click.Context):
+    """Main cli entry point"""
+    ctx.ensure_object(dict)
+
+
+@cli.command(help="Start local proxy in server mode")
+@options.HOSTNAME
+@options.DEVICE
+@options.EXTERNAL_IDENTITY_TYPE
+@options.REMOTE_ACCESS_TYPE
+@options.C8Y_TENANT
+@options.C8Y_USER
+@options.C8Y_TOKEN
+@options.C8Y_PASSWORD
+@options.C8Y_TFACODE
+@options.PORT
+@options.PING_INTERVAL
+@options.KILL_EXISTING
+@options.TCP_SIZE
+@options.TCP_TIMEOUT
+@options.LOGGING_VERBOSE
+@options.MODE_SCRIPT
+@options.SSL_IGNORE_VERIFY
+@options.PID_USE
+@options.PID_FILE
+@options.SERVER_RECONNECT_LIMIT
+@options.EXECUTE_SCRIPT
+@options.ENV_FILE
+@click.pass_context
+def start(
     ctx,
-    hostname,
-    device,
-    extype,
-    config,
-    tenant,
-    user,
-    token,
-    password,
-    tfacode,
-    port,
-    ping_interval,
-    kill,
-    tcpsize,
-    tcptimeout,
-    verbose,
-    scriptmode,
-    ignore_ssl_validate,
-    use_pid,
-    pidfile,
-    reconnects,
-    ssh_user,
-    execute_script,
-    ssh_command,
+    *_args,
+    **kwargs,
 ):
     """Main CLI command to start the local proxy server"""
-    # pylint: disable=too-many-locals,unused-argument
-    # click.echo(locals())
-    options = ProxyOptions().fromdict(locals())
-    start(ctx, options)
+    opts = ProxyOptions().fromdict(kwargs)
+    start_proxy(ctx, opts)
+
+
+@cli.command(help="Connect to a device via SSH")
+@click.argument("device", nargs=1)
+@options.HOSTNAME
+@options.EXTERNAL_IDENTITY_TYPE
+@options.REMOTE_ACCESS_TYPE
+@options.C8Y_TENANT
+@options.C8Y_USER
+@options.C8Y_TOKEN
+@options.C8Y_PASSWORD
+@options.C8Y_TFACODE
+@options.PORT
+@options.PING_INTERVAL
+@options.TCP_SIZE
+@options.TCP_TIMEOUT
+@options.LOGGING_VERBOSE
+@options.SSL_IGNORE_VERIFY
+@options.SSH_USER
+@options.SSH_COMMAND
+@options.EXECUTE_SCRIPT
+@options.ENV_FILE
+@click.pass_context
+def connect_ssh(
+    ctx,
+    *_args,
+    **kwargs,
+):
+    """Main CLI command to start the local proxy server"""
+    opts = ProxyOptions().fromdict(kwargs)
+    opts.scriptmode = True
+    start_proxy(ctx, opts)
 
 
 @dataclasses.dataclass
 class ProxyOptions:
     """Local proxy options"""
 
-    hostname = ""
+    host = ""
     device = ""
-    extype = ""
+    external_type = ""
     config = ""
     tenant = ""
     user = ""
     token = ""
     password = ""
-    tfacode = ""
+    tfa_code = ""
     port = 0
     ping_interval = ""
-    kill = ""
-    tcpsize = ""
-    tcptimeout = ""
+    kill = False
+    tcp_size = 0
+    tcp_timeout = 0
     verbose = False
     scriptmode = False
     ignore_ssl_validate = False
     use_pid = False
     pidfile = ""
     reconnects = 0
-    ssh_user = None
-    ssh_command = None
-    execute_script = None
+    ssh_user = ""
+    ssh_command = ""
+    execute_script = ""
 
     def fromdict(self, src_dict: Dict[str, Any]) -> "ProxyOptions":
         """Load proxy settings from a dictionary
@@ -395,8 +207,10 @@ class ProxyOptions:
             ProxyOptions: Proxy options after the values have been set
                 via the dictionary
         """
+        logging.info("Loading from dictionary")
         assert isinstance(src_dict, dict)
         for key, value in src_dict.items():
+            logging.info("reading key: %s=%s", key, value)
             if hasattr(self, key):
                 setattr(self, key, value)
         return self
@@ -457,11 +271,11 @@ def create_client(ctx: click.Context, opts: ProxyOptions) -> CumulocityClient:
         CumulocityClient: Configured Cumulocity client
     """
     client = CumulocityClient(
-        hostname=opts.hostname,
+        hostname=opts.host,
         tenant=opts.tenant,
         user=opts.user,
         password=opts.password,
-        tfacode=opts.tfacode,
+        tfacode=opts.tfa_code,
         token=opts.token,
         ignore_ssl_validate=opts.ignore_ssl_validate,
     )
@@ -554,7 +368,7 @@ def get_config_id(mor: Dict[str, Any], config: str) -> str:
     return config_id
 
 
-def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
+def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
     """Start the local proxy
 
     Args:
@@ -572,7 +386,7 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
     if opts.use_pid:
         try:
             upsert_pid_file(
-                opts.pidfile, opts.device, opts.hostname, opts.config, opts.user
+                opts.pidfile, opts.device, opts.host, opts.config, opts.user
             )
         except PermissionError:
             ctx.exit(ExitCodes.PID_FILE_ERROR)
@@ -586,7 +400,7 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
 
     client = create_client(ctx, opts)
     try:
-        mor = client.get_managed_object(opts.device, opts.extype)
+        mor = client.get_managed_object(opts.device, opts.external_type)
         config_id = get_config_id(mor, opts.config)
         device_id = mor.get("id")
 
@@ -600,9 +414,8 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
     except Exception as ex:
         ctx.exit(ExitCodes.UNKNOWN)
 
-
     client_opts = {
-        "host": opts.hostname,
+        "host": opts.host,
         "config_id": config_id,
         "device_id": device_id,
         "session": client.session,
@@ -614,8 +427,8 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
     tcp_server = TCPProxyServer(
         opts.port,
         WebsocketClient(**client_opts),
-        opts.tcpsize,
-        opts.tcptimeout,
+        opts.tcp_size,
+        opts.tcp_timeout,
         opts.scriptmode,
         max_reconnects=opts.reconnects,
     )
@@ -766,7 +579,10 @@ def start_ssh(_ctx: click.Context, opts: ProxyOptions) -> int:
         ssh_args.extend([opts.ssh_command])
         click.secho(f"Executing command via ssh on {opts.device}", fg="green")
     else:
-        click.secho(f"Starting interactive ssh session with {opts.device} ({opts.hostname})", fg="green")
+        click.secho(
+            f"Starting interactive ssh session with {opts.device} ({opts.host})",
+            fg="green",
+        )
 
     logging.info("Starting ssh session using: %s", " ".join(ssh_args))
     session_start = time.monotonic()
@@ -866,5 +682,5 @@ def kill_existing_instances(pidfile: str):
 
 
 if __name__ == "__main__":
-    # pylint: disable=no-value-for-parameter
+    # --pylint: disable=no-value-for-parameter
     cli()

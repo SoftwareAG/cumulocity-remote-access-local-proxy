@@ -28,9 +28,10 @@ import signal
 import subprocess
 import sys
 import time
+import threading
+from datetime import timedelta
 from enum import IntEnum
 from logging.handlers import RotatingFileHandler
-import threading
 from typing import Any, Dict, NoReturn
 
 import click
@@ -581,9 +582,12 @@ def start(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
             )
 
     client = create_client(ctx, opts)
-    mor = client.get_managed_object(opts.device, opts.extype)
-    config_id = get_config_id(mor, opts.config)
-    device_id = mor.get("id")
+    try:
+        mor = client.get_managed_object(opts.device, opts.extype)
+        config_id = get_config_id(mor, opts.config)
+        device_id = mor.get("id")
+    except Exception as ex:
+        ctx.exit(ExitCodes.UNKNOWN)
 
     is_authorized = client.validate_remote_access_role()
     if not is_authorized:
@@ -761,10 +765,15 @@ def start_ssh(_ctx: click.Context, opts: ProxyOptions) -> int:
         click.secho(f"Starting interactive ssh session with {opts.device} ({opts.hostname})", fg="green")
 
     logging.info("Starting ssh session using: %s", " ".join(ssh_args))
+    session_start = time.monotonic()
     exit_code = subprocess.call(ssh_args, env=os.environ)
+    session_duration = timedelta(seconds=(int(time.monotonic() - session_start)))
     if exit_code != 0:
         logging.warning("SSH exited with a non-zero exit code. code=%s", exit_code)
 
+    msg = f"SSH Session duration: {session_duration}"
+    logging.info(msg)
+    click.echo(msg)
     return exit_code
 
 

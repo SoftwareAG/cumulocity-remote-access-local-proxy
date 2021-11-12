@@ -236,11 +236,14 @@ class WebsocketClient(threading.Thread):
             self.logger.error("WebSocket Error received: %s", error)
 
     def _on_ws_close(self, _ws, close_status, close_reason):
-        close_reason = close_reason or "NoReason"
+        reason = ""
+        if close_reason or close_status != websocket.STATUS_NORMAL:
+            reason = f", Reason: {close_reason}"
+
         self.logger.info(
-            "WebSocket Connection closed. Status: %s, Reason: %s",
+            "WebSocket Connection closed. Status: %s%s",
             lookup_close_status_code(close_status),
-            close_reason,
+            reason,
         )
         self._ws_open_event.clear()
 

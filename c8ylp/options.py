@@ -154,7 +154,7 @@ EXTERNAL_IDENTITY_TYPE = click.option(
 REMOTE_ACCESS_TYPE = click.option(
     "--config",
     "-c",
-    required=True,
+    required=False,
     envvar="C8Y_CONFIG",
     default="Passthrough",
     show_default=True,
@@ -302,8 +302,10 @@ SSH_COMMAND = click.option(
 )
 
 EXECUTE_SCRIPT = click.option(
-    "--execute-script",
-    type=str,
+    "--script",
+    "execute_script",
+    type=click.Path(resolve_path=True),
+    required=True,
     help="Execute a script after the proxy has been started then exit",
 )
 

@@ -129,7 +129,6 @@ def cli(ctx: click.Context):
 @options.PID_USE
 @options.PID_FILE
 @options.SERVER_RECONNECT_LIMIT
-@options.EXECUTE_SCRIPT
 @options.ENV_FILE
 @click.pass_context
 def start(
@@ -161,7 +160,6 @@ def start(
 @options.SSL_IGNORE_VERIFY
 @options.SSH_USER
 @options.SSH_COMMAND
-@options.EXECUTE_SCRIPT
 @options.ENV_FILE
 @click.pass_context
 def connect_ssh(
@@ -172,6 +170,48 @@ def connect_ssh(
     """Main CLI command to start the local proxy server"""
     opts = ProxyOptions().fromdict(kwargs)
     opts.scriptmode = True
+    start_proxy(ctx, opts)
+
+
+@cli.command(
+    "extension",
+    help="""Run a custom extension which will start the local proxy, execute a script then exit
+The script will have the following environment variables available to it:\n
+ * DEVICE - external device identity\n
+ * PORT   - port number of the local proxy
+""",
+    context_settings=dict(
+        ignore_unknown_options=True,
+    ),
+)
+@options.ARG_DEVICE
+# @options.DEVICE
+@options.HOSTNAME
+@options.EXTERNAL_IDENTITY_TYPE
+@options.REMOTE_ACCESS_TYPE
+@options.C8Y_TENANT
+@options.C8Y_USER
+@options.C8Y_TOKEN
+@options.C8Y_PASSWORD
+@options.C8Y_TFACODE
+@options.PORT
+@options.PING_INTERVAL
+@options.TCP_SIZE
+@options.TCP_TIMEOUT
+@options.LOGGING_VERBOSE
+@options.SSL_IGNORE_VERIFY
+@options.EXECUTE_SCRIPT
+@options.ENV_FILE
+@click.argument("script_args", nargs=-1, type=click.UNPROCESSED)
+@click.pass_context
+def extension(
+    ctx,
+    *_args,
+    **kwargs,
+):
+    opts = ProxyOptions().fromdict(kwargs)
+    opts.scriptmode = True
+    logging.debug(f"Extra args: {opts.script_args}")
     start_proxy(ctx, opts)
 
 
@@ -202,6 +242,7 @@ class ProxyOptions:
     ssh_user = ""
     ssh_command = ""
     execute_script = ""
+    script_args = None
 
     def fromdict(self, src_dict: Dict[str, Any]) -> "ProxyOptions":
         """Load proxy settings from a dictionary
@@ -547,6 +588,9 @@ def run_script(_ctx: click.Context, opts: ProxyOptions) -> int:
         opts.execute_script,
     ]
 
+    if opts.script_args:
+        cmd_args.extend(opts.script_args)
+
     env = {
         **os.environ,
         "PORT": str(opts.port),
@@ -554,8 +598,8 @@ def run_script(_ctx: click.Context, opts: ProxyOptions) -> int:
         "DEVICE_USER": str(opts.ssh_user),
     }
 
-    logging.info("Starting ssh session using: %s", " ".join(cmd_args))
-    exit_code = subprocess.call(cmd_args, env=env, shell=True)
+    logging.info("Executing extension: %s", " ".join(cmd_args))
+    exit_code = subprocess.call(cmd_args, env=env, shell=False)
     if exit_code != 0:
         logging.warning("Script exited with a non-zero exit code. code=%s", exit_code)
 

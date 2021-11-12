@@ -81,6 +81,9 @@ def validate_token(ctx, _param, value) -> Any:
     if not hostname:
         return value
 
+    if not value:
+        return value
+
     click.secho("Validating detected c8y token: ", nl=False)
     if isinstance(value, tuple):
         return value
@@ -110,7 +113,7 @@ def load_envfile(ctx: click.Context, _param: click.Parameter, value: Any):
     if not value or ctx.resilient_parsing:
         return
 
-    click.echo(f"Loading envfile {value}")
+    click.echo(f"Loading env-file: {value}")
     loadenv(value)
 
 

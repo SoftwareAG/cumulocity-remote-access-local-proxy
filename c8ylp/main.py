@@ -169,7 +169,7 @@ def lazy_required(ctx: click.Context, _param: click.Parameter, value: Any):
     "-h",
     is_eager=True,
     callback=lazy_required,
-    envvar=("C8Y_HOST", "C8Y_BASEURL"),
+    envvar=("C8Y_HOST", "C8Y_BASEURL", "C8Y_URL"),
     help="Cumulocity Hostname  [required]",
 )
 @click.option(

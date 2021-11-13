@@ -86,7 +86,7 @@ def lazy_required(ctx: click.Context, _param: click.Parameter, value: Any):
     # Ignore error if help or version are being displayed
     # using original sys.argv as the other click args may not have
     # been procssed yet.
-    if "--help" in sys.argv or "--version" in sys.argv:
+    if "--help" in sys.argv or "-h" in sys.argv or "--version" in sys.argv:
         return None
 
     if ctx.resilient_parsing:
@@ -146,7 +146,7 @@ HOSTNAME = click.option(
     "host",
     is_eager=True,
     prompt=True,
-    callback=lazy_required,
+    # callback=lazy_required,
     envvar=("C8Y_HOST", "C8Y_BASEURL", "C8Y_URL"),
     help="Cumulocity Hostname  [required]",
 )
@@ -398,7 +398,7 @@ ENV_FILE_OPTIONAL_EXISTS = click.option(
     envvar="C8YLP_ENV_FILE",
     is_eager=True,
     expose_value=True,
-    required=True,
+    required=False,
     type=click.Path(
         exists=False,
     ),

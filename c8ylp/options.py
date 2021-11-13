@@ -45,6 +45,24 @@ def load_envfile(ctx: click.Context, _param: click.Parameter, value: Any):
     loadenv(value)
 
 
+def deactivate_prompts(ctx: click.Context, _param: click.Parameter, value: Any):
+    """Deactivate all prompts
+
+    Args:
+        ctx (click.Context): Click Context
+        _param (click.Parameter): Click Parameter
+        value (Any): Parameter value
+
+    Returns:
+        Any: Parameter value
+    """
+    if value:
+        for i_param in ctx.command.params:
+            if isinstance(i_param, click.Option) and i_param.prompt is not None:
+                i_param.prompt = None
+    return value
+
+
 def lazy_required(ctx: click.Context, _param: click.Parameter, value: Any):
     """Apply lazy command argument parsing so that if a parameter is marked
     as eager, it will only raise a MissingParameter exception if --help or
@@ -246,12 +264,23 @@ LOGGING_VERBOSE = click.option(
 )
 
 MODE_SCRIPT = click.option(
-    "--scriptmode",
+    "--script-mode",
     "-s",
     envvar="C8Y_SCRIPTMODE",
     is_flag=True,
     default=False,
     help="Stops the TCP Server after first connection. No automatical restart!",
+)
+
+DISABLE_PROMPT = click.option(
+    "--disable-prompts",
+    "-d",
+    "disable_prompts",
+    default=False,
+    is_eager=True,
+    is_flag=True,
+    expose_value=True,
+    callback=deactivate_prompts,
 )
 
 SSL_IGNORE_VERIFY = click.option(
@@ -282,7 +311,7 @@ SERVER_RECONNECT_LIMIT = click.option(
     type=int,
     default=5,
     show_default=True,
-    callback=lambda c, p, v: -1 if c.params["scriptmode"] else 5,
+    callback=lambda c, p, v: -1 if c.params["script_mode"] else 5,
     help="number of reconnects to the Cloud Remote Service. 0 for infinite reconnects",
 )
 
@@ -291,6 +320,7 @@ SSH_USER = click.option(
     type=str,
     envvar="SSH_USER",
     required=True,
+    prompt=True,
     help="Start an interactive ssh session with the given user",
 )
 

@@ -128,6 +128,7 @@ def cli(ctx: click.Context):
 @options.PID_FILE
 @options.SERVER_RECONNECT_LIMIT
 @options.ENV_FILE
+@options.DISABLE_PROMPT
 @click.pass_context
 def server(
     ctx,
@@ -180,6 +181,7 @@ def server(
 @options.SSL_IGNORE_VERIFY
 @options.SSH_USER
 @options.ENV_FILE
+@options.DISABLE_PROMPT
 @click.argument(
     "additional_args", metavar="[REMOTE_COMMANDS]...", nargs=-1, type=click.UNPROCESSED
 )
@@ -218,7 +220,7 @@ def connect_ssh(
 
     """
     opts = ProxyOptions().fromdict(kwargs)
-    opts.scriptmode = True
+    opts.script_mode = True
     start_proxy(ctx, opts)
 
 
@@ -245,6 +247,7 @@ def connect_ssh(
 @options.LOGGING_VERBOSE
 @options.SSL_IGNORE_VERIFY
 @options.ENV_FILE
+@options.DISABLE_PROMPT
 @click.argument(
     "additional_args", metavar="[SCRIPT_ARGS]...", nargs=-1, type=click.UNPROCESSED
 )
@@ -286,7 +289,7 @@ def extension(
         c8ylp extension device01 --env-file .env -v ./copyfrom.sh /var/log/dpkg.log ./
     """
     opts = ProxyOptions().fromdict(kwargs)
-    opts.scriptmode = True
+    opts.script_mode = True
     logging.info(
         "Collected additional args which will be passed to script later: %s",
         opts.additional_args,
@@ -313,7 +316,7 @@ class ProxyOptions:
     tcp_size = 0
     tcp_timeout = 0
     verbose = False
-    scriptmode = False
+    script_mode = False
     ignore_ssl_validate = False
     use_pid = False
     pidfile = ""
@@ -321,6 +324,7 @@ class ProxyOptions:
     ssh_user = ""
     script = ""
     additional_args = None
+    disable_prompts = False
 
     def fromdict(self, src_dict: Dict[str, Any]) -> "ProxyOptions":
         """Load proxy settings from a dictionary
@@ -420,7 +424,7 @@ def create_client(ctx: click.Context, opts: ProxyOptions) -> CumulocityClient:
         except Exception as ex:
             logging.info(ex)
 
-            if not opts.scriptmode:
+            if not opts.disable_prompts:
                 if not client.password:
                     client.password = click.prompt(
                         text="Enter your Password", hide_input=True
@@ -557,7 +561,7 @@ def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
             WebsocketClient(**client_opts),
             opts.tcp_size,
             opts.tcp_timeout,
-            opts.scriptmode,
+            opts.script_mode,
             max_reconnects=opts.reconnects,
         )
 

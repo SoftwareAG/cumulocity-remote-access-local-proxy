@@ -173,7 +173,7 @@ def server(
 @options.C8Y_TOKEN
 @options.C8Y_PASSWORD
 @options.C8Y_TFACODE
-@options.PORT
+@options.PORT_DEFAULT_RANDOM
 @options.PING_INTERVAL
 @options.TCP_SIZE
 @options.TCP_TIMEOUT
@@ -240,7 +240,7 @@ def connect_ssh(
 @options.C8Y_TOKEN
 @options.C8Y_PASSWORD
 @options.C8Y_TFACODE
-@options.PORT
+@options.PORT_DEFAULT_RANDOM
 @options.PING_INTERVAL
 @options.TCP_SIZE
 @options.TCP_TIMEOUT

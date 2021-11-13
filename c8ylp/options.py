@@ -224,6 +224,16 @@ PORT = click.option(
     help="TCP Port which should be opened. 0=Random port",
 )
 
+PORT_DEFAULT_RANDOM = click.option(
+    "--port",
+    envvar="C8Y_PORT",
+    type=int,
+    callback=lambda ctx, param, value: get_unused_port() if value < 1 else value,
+    default=0,
+    show_default=True,
+    help="TCP Port which should be opened. 0=Random port",
+)
+
 PING_INTERVAL = click.option(
     "--ping-interval",
     envvar="C8Y_PING_INTERVAL",

@@ -39,10 +39,14 @@ def load_envfile(ctx: click.Context, _param: click.Parameter, value: Any):
         value (Any): Parameter value
     """
     if not value or ctx.resilient_parsing:
-        return
+        return value
 
     click.echo(f"Loading env-file: {value}")
-    loadenv(value)
+    if os.path.exists(value):
+        loadenv(value)
+    else:
+        logging.info("env file does not exist: %s", value)
+    return value
 
 
 def deactivate_prompts(ctx: click.Context, _param: click.Parameter, value: Any):
@@ -109,9 +113,9 @@ def validate_token(ctx: click.Context, _param, value) -> Any:
     if not value or ctx.resilient_parsing:
         return None
 
-    hostname = ctx.params.get("hostname")
+    host = ctx.params.get("host")
 
-    if not hostname:
+    if not host:
         return value
 
     if not value:
@@ -120,7 +124,7 @@ def validate_token(ctx: click.Context, _param, value) -> Any:
     if isinstance(value, tuple):
         return value
 
-    client = CumulocityClient(hostname=hostname, token=value)
+    client = CumulocityClient(hostname=host, token=value)
 
     try:
         client.validate_credentials()
@@ -130,7 +134,7 @@ def validate_token(ctx: click.Context, _param, value) -> Any:
         click.secho("Validating detected c8y token: ", nl=False)
         click.secho("INVALID", fg="red")
         logging.warning(
-            "Token is no longer valid for host %s. The token will be ignored", hostname
+            "Token is no longer valid for host %s. The token will be ignored", host
         )
         return ""
     return value
@@ -141,6 +145,7 @@ HOSTNAME = click.option(
     "--host",
     "host",
     is_eager=True,
+    prompt=True,
     callback=lazy_required,
     envvar=("C8Y_HOST", "C8Y_BASEURL", "C8Y_URL"),
     help="Cumulocity Hostname  [required]",
@@ -214,7 +219,7 @@ C8Y_PASSWORD = click.option(
     help="Cumulocity password",
 )
 
-C8Y_TFACODE = click.option(
+C8Y_TFA_CODE = click.option(
     "--tfa-code",
     envvar="C8Y_TFA_CODE",
     show_envvar=True,
@@ -288,6 +293,16 @@ LOGGING_VERBOSE = click.option(
     default=False,
     help="Print Debug Information into the Logs and Console when set",
 )
+
+STORE_TOKEN = click.option(
+    "--store-token",
+    "store_token",
+    envvar="C8YLP_STORE_TOKEN",
+    is_flag=True,
+    default=True,
+    help="Store the Cumulocity host, tenant and token to the env-file if a file is being used",
+)
+
 
 MODE_SCRIPT = click.option(
     "--script-mode",
@@ -366,12 +381,26 @@ ARG_SCRIPT = click.argument(
 
 ENV_FILE = click.option(
     "--env-file",
+    "env_file",
     envvar="C8YLP_ENV_FILE",
-    default=None,
     is_eager=True,
-    expose_value=False,
+    expose_value=True,
     type=click.Path(
         exists=True,
+    ),
+    callback=load_envfile,
+    help="Environment file to load. Any settings loaded via this file will control other parameters",
+)
+
+ENV_FILE_OPTIONAL_EXISTS = click.option(
+    "--env-file",
+    "env_file",
+    envvar="C8YLP_ENV_FILE",
+    is_eager=True,
+    expose_value=True,
+    required=True,
+    type=click.Path(
+        exists=False,
     ),
     callback=load_envfile,
     help="Environment file to load. Any settings loaded via this file will control other parameters",

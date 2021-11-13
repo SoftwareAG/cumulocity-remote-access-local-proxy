@@ -33,7 +33,7 @@ import time
 from datetime import timedelta
 from enum import IntEnum
 from logging.handlers import RotatingFileHandler
-from typing import Any, Dict, NoReturn, Optional, Sequence, Union
+from typing import Any, Dict, NoReturn
 
 import click
 
@@ -41,6 +41,7 @@ from c8ylp import options
 
 from c8ylp import __version__
 from c8ylp.banner import BANNER1
+from c8ylp.env import save_env
 from c8ylp.rest_client.c8yclient import CumulocityClient
 from c8ylp.tcp_socket.tcp_server import TCPProxyServer
 from c8ylp.websocket_client.ws_client import WebsocketClient
@@ -82,38 +83,13 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
     click.echo(f"Version {__version__}")
     ctx.exit(ExitCodes.OK)
 
-class CustomGroup(click.Group):
-
-    # def __init__(self, name: Optional[str] = None, commands: Optional[Union[Dict[str, click.Command], Sequence[click.Command]]] = None, **attrs: Any) -> None:
-
-    #     for cmd in commands:
-    #         for te in cmd.parameters:
-    #             logging.warning(f"Current command: {te}")
-        
-    #     super().__init__(name=name, commands=commands, **attrs)
-
-    def get_command(self, ctx, cmd_name):
-        logging.info("Getting command")
-        rv = click.Group.get_command(self, ctx, cmd_name)
-        if rv is not None:
-            return rv
-        matches = [x for x in self.list_commands(ctx)
-                   if x.startswith(cmd_name)]
-        if not matches:
-            return None
-        elif len(matches) == 1:
-            return click.Group.get_command(self, ctx, matches[0])
-        ctx.fail('Too many matches: %s' % ', '.join(sorted(matches)))
 
 @click.group(
     invoke_without_command=True,
     no_args_is_help=True,
     context_settings=dict(
         help_option_names=["-h", "--help"],
-        # Make flags case insensitive
-        # token_normalize_func=lambda x: x.lower(),
     ),
-    cls=CustomGroup,
     help="Cumulocity Remote Access Local Proxy",
 )
 @click.option(
@@ -133,6 +109,41 @@ def cli(ctx: click.Context):
 
 
 @cli.command()
+@options.HOSTNAME
+@options.C8Y_TENANT
+@options.C8Y_USER
+@options.C8Y_TOKEN
+@options.C8Y_PASSWORD
+@options.C8Y_TFA_CODE
+@options.LOGGING_VERBOSE
+@options.ENV_FILE_OPTIONAL_EXISTS
+@options.STORE_TOKEN
+@options.DISABLE_PROMPT
+@click.pass_context
+def login(
+    ctx: click.Context,
+    *_args,
+    **kwargs,
+):
+    """Login and save credentials to an environment file
+
+    You will be prompted for all of the relevant information,
+    i.e. host, username, password and TFA code (if required)
+
+    Example: Create/update an env-file by trying to login into Cumulocity
+    \b
+        c8ylp login --env-file mytenant.env
+
+    """
+    opts = ProxyOptions().fromdict(kwargs)
+
+    try:
+        create_client(ctx, opts)
+    except Exception:
+        ctx.fail("Could not login")
+
+
+@cli.command()
 @options.ARG_DEVICE
 # @options.DEVICE
 @options.HOSTNAME
@@ -142,7 +153,7 @@ def cli(ctx: click.Context):
 @options.C8Y_USER
 @options.C8Y_TOKEN
 @options.C8Y_PASSWORD
-@options.C8Y_TFACODE
+@options.C8Y_TFA_CODE
 @options.PORT
 @options.PING_INTERVAL
 @options.KILL_EXISTING
@@ -156,6 +167,7 @@ def cli(ctx: click.Context):
 @options.SERVER_RECONNECT_LIMIT
 @options.ENV_FILE
 @options.DISABLE_PROMPT
+@options.STORE_TOKEN
 @click.pass_context
 def server(
     ctx,
@@ -199,7 +211,7 @@ def server(
 @options.C8Y_USER
 @options.C8Y_TOKEN
 @options.C8Y_PASSWORD
-@options.C8Y_TFACODE
+@options.C8Y_TFA_CODE
 @options.PORT_DEFAULT_RANDOM
 @options.PING_INTERVAL
 @options.TCP_SIZE
@@ -208,6 +220,7 @@ def server(
 @options.SSL_IGNORE_VERIFY
 @options.SSH_USER
 @options.ENV_FILE
+@options.STORE_TOKEN
 @options.DISABLE_PROMPT
 @click.argument(
     "additional_args", metavar="[REMOTE_COMMANDS]...", nargs=-1, type=click.UNPROCESSED
@@ -266,7 +279,7 @@ def connect_ssh(
 @options.C8Y_USER
 @options.C8Y_TOKEN
 @options.C8Y_PASSWORD
-@options.C8Y_TFACODE
+@options.C8Y_TFA_CODE
 @options.PORT_DEFAULT_RANDOM
 @options.PING_INTERVAL
 @options.TCP_SIZE
@@ -274,6 +287,7 @@ def connect_ssh(
 @options.LOGGING_VERBOSE
 @options.SSL_IGNORE_VERIFY
 @options.ENV_FILE
+@options.STORE_TOKEN
 @options.DISABLE_PROMPT
 @click.argument(
     "additional_args", metavar="[SCRIPT_ARGS]...", nargs=-1, type=click.UNPROCESSED
@@ -352,6 +366,8 @@ class ProxyOptions:
     script = ""
     additional_args = None
     disable_prompts = False
+    env_file = None
+    store_token = False
 
     def fromdict(self, src_dict: Dict[str, Any]) -> "ProxyOptions":
         """Load proxy settings from a dictionary
@@ -415,6 +431,34 @@ def configure_logger(path: str = None, verbose: bool = False) -> logging.Logger:
     return logger
 
 
+def store_credentials(opts: ProxyOptions, client: CumulocityClient):
+    """Store credentials to the environment file. It creates
+    the file if it does not already exist.
+
+    The file will only be written to if it has changed.
+
+    Args:
+        opts (ProxyOptions): Proxy options
+        client (CumulocityClient): Cumulocity client containing valid
+            credentials
+    """
+    changed = save_env(
+        opts.env_file,
+        {
+            # Note: Don't save password!
+            "C8Y_HOST": client.url,
+            "C8Y_USER": client.user,
+            "C8Y_TENANT": client.tenant,
+            "C8Y_TOKEN": client.token,
+        },
+    )
+
+    if changed:
+        click.echo(f"Env file {opts.env_file} was updated")
+    else:
+        logging.info("Env file %s is already up to date", opts.env_file)
+
+
 def create_client(ctx: click.Context, opts: ProxyOptions) -> CumulocityClient:
     """Create Cumulocity client and prompt for missing credentials
     if necessary.
@@ -435,7 +479,9 @@ def create_client(ctx: click.Context, opts: ProxyOptions) -> CumulocityClient:
         token=opts.token,
         ignore_ssl_validate=opts.ignore_ssl_validate,
     )
+    logging.info("Checking tenant id")
     client.validate_tenant_id()
+    logging.info("Got tenant id")
 
     retries = 2
     success = False
@@ -446,24 +492,34 @@ def create_client(ctx: click.Context, opts: ProxyOptions) -> CumulocityClient:
             else:
                 client.login_oauth()
 
+            if opts.env_file and opts.store_token:
+                store_credentials(opts, client)
+
             success = True
             break
         except Exception as ex:
-            logging.info(ex)
+            logging.info("unknown exception: %s", ex)
 
             if not opts.disable_prompts:
+                if not client.user:
+                    client.user = click.prompt(
+                        text="Enter your Cumulocity Username",
+                    )
+
                 if not client.password:
                     client.password = click.prompt(
-                        text="Enter your Password", hide_input=True
+                        text="Enter your Cumulocity Password [input hidden]",
+                        hide_input=True,
                     )
 
                 if not client.tfacode:
                     client.tfacode = click.prompt(
-                        text="Enter your TFA-Token", hide_input=False
+                        text="Enter your Cumulocity TFA-Token", hide_input=False
                     )
         retries -= 1
 
     if not success:
+        logging.info("Could not crate client")
         ctx.exit(ExitCodes.NO_SESSION)
 
     return client

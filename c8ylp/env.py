@@ -1,6 +1,9 @@
 """Environment utilities"""
 
 import os
+import pathlib
+from collections import defaultdict
+from typing import Any, Dict
 
 
 def loadenv(path: str) -> None:
@@ -46,3 +49,51 @@ def loadenv(path: str) -> None:
                 value = os.path.expandvars(value)
 
             os.environ[key] = value
+
+
+def save_env(path: str, values: Dict[str, Any]) -> bool:
+    """Save a new value to an environment file. If the key already
+    exists, then it will be updated in place, otherwise it will be appended.
+
+    If the file does not exist, then it will be created.
+
+    The order of the environment variables are preserved
+
+    Args:
+        path (str): file path
+        values (Dict[str, Any]): New key/value pairs to add to env file
+
+    Returns:
+        bool: True if the file has been changed
+    """
+    env_file = pathlib.Path(path)
+    has_changed = False
+    output = [] if not env_file.exists() else env_file.read_text().splitlines()
+
+    key_indexes = defaultdict(lambda: [])
+
+    # collect line indexes of key in existing env file
+    for i, line in enumerate(output):
+        key, _, _ = line.partition("=")
+        if key:
+            key_indexes[key].append(i)
+
+    # updates values (if changed, and keep order)
+    for key, value in values.items():
+        newline = f"{key}={value}"
+
+        if key in key_indexes:
+            # existing key (update if changed)
+            for existing_index in key_indexes[key]:
+                if output[existing_index] != newline:
+                    output[existing_index] = newline
+                    has_changed = True
+        else:
+            # new key
+            output.append(newline)
+            has_changed = True
+
+    if has_changed:
+        env_file.write_text("\n".join(output).rstrip("\n") + "\n")
+
+    return has_changed

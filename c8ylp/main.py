@@ -579,11 +579,13 @@ def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
             )
 
         if opts.script:
-            exit_code = run_script(ctx, opts)
+            with CommandTimer("Duration"):
+                exit_code = run_script(ctx, opts)
             raise ExitCommand()
 
         if opts.ssh_user:
-            exit_code = start_ssh(ctx, opts)
+            with CommandTimer("SSH Session duration"):
+                exit_code = start_ssh(ctx, opts)
             raise ExitCommand()
 
         click.secho(
@@ -682,7 +684,6 @@ def run_script(_ctx: click.Context, opts: ProxyOptions) -> int:
     exit_code = subprocess.call(cmd_args, env=os.environ, shell=False)
     if exit_code != 0:
         logging.warning("Script exited with a non-zero exit code. code=%s", exit_code)
-
     return exit_code
 
 
@@ -725,16 +726,52 @@ def start_ssh(_ctx: click.Context, opts: ProxyOptions) -> int:
         )
 
     logging.info("Starting ssh session using: %s", " ".join(ssh_args))
-    session_start = time.monotonic()
     exit_code = subprocess.call(ssh_args, env=os.environ)
-    session_duration = timedelta(seconds=(int(time.monotonic() - session_start)))
     if exit_code != 0:
         logging.warning("SSH exited with a non-zero exit code. code=%s", exit_code)
-
-    msg = f"SSH Session duration: {session_duration}"
-    logging.info(msg)
-    click.echo(msg)
     return exit_code
+
+
+class CommandTimer:
+    """Command Timer which shows how long a command takes to run
+    and prints out a message to the user
+
+    Example
+
+    >>>
+    with CommandTimer():
+        print("Doing someting")
+        time.sleep(100)
+    >>>
+
+    """
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        self.start_time = 0
+
+    def start(self):
+        """Start the timer"""
+        self.start_time = time.monotonic()
+
+    def stop(self) -> float:
+        """Stop the timer and return the duration in seconds
+
+        Returns:
+            float: Duration in seconds
+        """
+        if not self.start_time:
+            return 0
+        return time.monotonic() - self.start_time
+
+    def __enter__(self) -> None:
+        self.start()
+
+    def __exit__(self, _type, _value, _traceback) -> None:
+        duration = timedelta(seconds=(int(self.stop())))
+        msg = f"{self.message}: {duration}"
+        logging.info(msg)
+        click.echo(msg)
 
 
 def get_pid_file_text(device: str, url: str, config: str, user: str) -> str:

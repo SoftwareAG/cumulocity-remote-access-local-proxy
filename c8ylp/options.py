@@ -157,15 +157,17 @@ DEVICE = click.option(
     "--device",
     "-d",
     required=False,
-    envvar="C8Y_DEVICE",
+    envvar="C8YLP_DEVICE",
+    show_envvar=True,
     help="Device external identity",
 )
 
 EXTERNAL_IDENTITY_TYPE = click.option(
     "--external-type",
-    envvar="C8Y_EXTERNAL_TYPE",
+    envvar="C8YLP_EXTERNAL_TYPE",
     default="c8y_Serial",
     show_default=True,
+    show_envvar=True,
     help="external Id Type",
 )
 
@@ -173,20 +175,22 @@ REMOTE_ACCESS_TYPE = click.option(
     "--config",
     "-c",
     required=False,
-    envvar="C8Y_CONFIG",
+    envvar="C8YLP_CONFIG",
     default="Passthrough",
     show_default=True,
+    show_envvar=True,
     help="name of the C8Y Remote Access Configuration",
 )
 
 C8Y_TENANT = click.option(
-    "--tenant", "-t", envvar="C8Y_TENANT", help="Cumulocity tenant id"
+    "--tenant", "-t", envvar="C8Y_TENANT", help="Cumulocity tenant id", show_envvar=True
 )
 
 C8Y_USER = click.option(
     "--user",
     "-u",
     envvar=("C8Y_USER", "C8Y_USERNAME"),
+    show_envvar=True,
     help="Cumulocity username",
 )
 
@@ -196,6 +200,7 @@ C8Y_TOKEN = click.option(
     callback=validate_token,
     envvar="C8Y_TOKEN",
     is_eager=True,
+    show_envvar=True,
     help="Cumulocity token",
 )
 
@@ -205,69 +210,80 @@ C8Y_PASSWORD = click.option(
     envvar="C8Y_PASSWORD",
     prompt=False,
     hide_input=True,
+    show_envvar=True,
     help="Cumulocity password",
 )
 
 C8Y_TFACODE = click.option(
     "--tfa-code",
-    envvar="C8Y_TFACODE",
+    envvar="C8Y_TFA_CODE",
+    show_envvar=True,
     help="TFA Code. Required when the 'TFA enabled' is enabled for a user",
 )
 
 PORT = click.option(
     "--port",
-    envvar="C8Y_PORT",
     type=int,
     callback=lambda ctx, param, value: get_unused_port() if value < 1 else value,
     default=2222,
+    envvar="C8YLP_PORT",
+    show_envvar=True,
     show_default=True,
     help="TCP Port which should be opened. 0=Random port",
 )
 
 PORT_DEFAULT_RANDOM = click.option(
     "--port",
-    envvar="C8Y_PORT",
     type=int,
     callback=lambda ctx, param, value: get_unused_port() if value < 1 else value,
     default=0,
+    envvar="C8YLP_PORT",
     show_default=True,
+    show_envvar=True,
     help="TCP Port which should be opened. 0=Random port",
 )
 
 PING_INTERVAL = click.option(
     "--ping-interval",
-    envvar="C8Y_PING_INTERVAL",
     type=int,
     default=0,
     show_default=True,
+    show_envvar=True,
+    envvar="C8YLP_PING_INTERVAL",
     help="Websocket ping interval in seconds. 0=disabled",
 )
 
 KILL_EXISTING = click.option(
-    "--kill", "-k", help="Kills all existing processes of c8ylp"
+    "--kill",
+    "-k",
+    envvar="C8YLP_KILL",
+    show_envvar=True,
+    help="Kills all existing processes of c8ylp",
 )
 
 
 TCP_SIZE = click.option(
     "--tcp-size",
-    envvar="C8Y_TCPSIZE",
+    envvar="C8YLP_TCP_SIZE",
     default=4096,
     show_default=True,
+    show_envvar=True,
     help="TCP Package Size",
 )
 
 TCP_TIMEOUT = click.option(
     "--tcp-timeout",
-    envvar="C8Y_TCPTIMEOUT",
+    envvar="C8YLP_TCP_TIMEOUT",
     default=0,
     show_default=True,
+    show_envvar=True,
     help="Timeout in sec. for inactivity. Can be activited with values > 0",
 )
 
 LOGGING_VERBOSE = click.option(
     "--verbose",
     "-v",
-    envvar="VERBOSE",
+    envvar="C8YLP_VERBOSE",
     is_flag=True,
     default=False,
     help="Print Debug Information into the Logs and Console when set",
@@ -276,7 +292,7 @@ LOGGING_VERBOSE = click.option(
 MODE_SCRIPT = click.option(
     "--script-mode",
     "-s",
-    envvar="C8Y_SCRIPTMODE",
+    envvar="C8YLP_SCRIPT_MODE",
     is_flag=True,
     default=False,
     help="Stops the TCP Server after first connection. No automatical restart!",
@@ -286,6 +302,7 @@ DISABLE_PROMPT = click.option(
     "--disable-prompts",
     "-d",
     "disable_prompts",
+    envvar="C8YLP_DISABLE_PROMPTS",
     default=False,
     is_eager=True,
     is_flag=True,
@@ -295,6 +312,7 @@ DISABLE_PROMPT = click.option(
 
 SSL_IGNORE_VERIFY = click.option(
     "--ignore-ssl-validate",
+    envvar="C8YLP_IGNORE_SSL_VALIDATE",
     is_flag=True,
     default=False,
     help="Ignore Validation for SSL Certificates while connecting to Websocket",
@@ -302,33 +320,38 @@ SSL_IGNORE_VERIFY = click.option(
 
 PID_USE = click.option(
     "--use-pid",
+    envvar="C8YLP_USE_PID",
     is_flag=True,
     default=False,
     help="Will create a PID-File to store all Processes currently running (see --pidfile for the location)",
 )
 
 PID_FILE = click.option(
-    "--pidfile",
+    "--pid-file",
+    envvar="C8YLP_PID_FILE",
     default=lambda: pathlib.Path("~/.c8ylp/c8ylp").expanduser()
     if os.name == "nt"
     else "/var/run/c8ylp",
     show_default=True,
+    show_envvar=True,
     help="PID-File file location to store all Processes currently running",
 )
 
 SERVER_RECONNECT_LIMIT = click.option(
     "--reconnects",
+    envvar="C8YLP_RECONNECTS",
     type=int,
     default=5,
     show_default=True,
+    show_envvar=True,
     callback=lambda c, p, v: -1 if c.params["script_mode"] else 5,
     help="number of reconnects to the Cloud Remote Service. 0 for infinite reconnects",
 )
 
 SSH_USER = click.option(
     "--ssh-user",
+    envvar="C8YLP_SSH_USER",
     type=str,
-    envvar="SSH_USER",
     required=True,
     prompt=True,
     help="Start an interactive ssh session with the given user",
@@ -340,16 +363,10 @@ ARG_SCRIPT = click.argument(
     "script", type=click.Path(resolve_path=True), nargs=1, required=True
 )
 
-EXECUTE_SCRIPT = click.option(
-    "--script",
-    "script",
-    type=click.Path(resolve_path=True),
-    required=True,
-    help="Execute a script after the proxy has been started then exit",
-)
 
 ENV_FILE = click.option(
     "--env-file",
+    envvar="C8YLP_ENV_FILE",
     default=None,
     is_eager=True,
     expose_value=False,

@@ -33,7 +33,7 @@ import time
 from datetime import timedelta
 from enum import IntEnum
 from logging.handlers import RotatingFileHandler
-from typing import Any, Dict, NoReturn
+from typing import Any, Dict, NoReturn, Optional, Sequence, Union
 
 import click
 
@@ -82,11 +82,38 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
     click.echo(f"Version {__version__}")
     ctx.exit(ExitCodes.OK)
 
+class CustomGroup(click.Group):
+
+    # def __init__(self, name: Optional[str] = None, commands: Optional[Union[Dict[str, click.Command], Sequence[click.Command]]] = None, **attrs: Any) -> None:
+
+    #     for cmd in commands:
+    #         for te in cmd.parameters:
+    #             logging.warning(f"Current command: {te}")
+        
+    #     super().__init__(name=name, commands=commands, **attrs)
+
+    def get_command(self, ctx, cmd_name):
+        logging.info("Getting command")
+        rv = click.Group.get_command(self, ctx, cmd_name)
+        if rv is not None:
+            return rv
+        matches = [x for x in self.list_commands(ctx)
+                   if x.startswith(cmd_name)]
+        if not matches:
+            return None
+        elif len(matches) == 1:
+            return click.Group.get_command(self, ctx, matches[0])
+        ctx.fail('Too many matches: %s' % ', '.join(sorted(matches)))
 
 @click.group(
     invoke_without_command=True,
     no_args_is_help=True,
-    context_settings=dict(help_option_names=["-h", "--help"]),
+    context_settings=dict(
+        help_option_names=["-h", "--help"],
+        # Make flags case insensitive
+        # token_normalize_func=lambda x: x.lower(),
+    ),
+    cls=CustomGroup,
     help="Cumulocity Remote Access Local Proxy",
 )
 @click.option(
@@ -319,7 +346,7 @@ class ProxyOptions:
     script_mode = False
     ignore_ssl_validate = False
     use_pid = False
-    pidfile = ""
+    pid_file = ""
     reconnects = 0
     ssh_user = ""
     script = ""
@@ -516,13 +543,13 @@ def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
     if opts.use_pid:
         try:
             upsert_pid_file(
-                opts.pidfile, opts.device, opts.host, opts.config, opts.user
+                opts.pid_file, opts.device, opts.host, opts.config, opts.user
             )
         except PermissionError:
             ctx.exit(ExitCodes.PID_FILE_ERROR)
     if opts.kill:
         if opts.use_pid:
-            kill_existing_instances(opts.pidfile)
+            kill_existing_instances(opts.pid_file)
         else:
             logging.warning(
                 'Killing existing instances is only supported when "--use-pid" is used.'
@@ -614,7 +641,7 @@ def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
             exit_code = ExitCodes.UNKNOWN
     finally:
         if opts.use_pid:
-            clean_pid_file(opts.pidfile, os.getpid())
+            clean_pid_file(opts.pid_file, os.getpid())
 
         tcp_server.shutdown()
         background.join()

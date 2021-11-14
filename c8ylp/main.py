@@ -27,7 +27,6 @@ import platform
 import signal
 import shutil
 import subprocess
-import sys
 import threading
 import time
 from datetime import timedelta
@@ -47,6 +46,10 @@ from c8ylp.tcp_socket.tcp_server import TCPProxyServer
 from c8ylp.websocket_client.ws_client import WebsocketClient
 
 
+PASSTHROUGH = "PASSTHROUGH"
+REMOTE_ACCESS_FRAGMENT = "c8y_RemoteAccessList"
+
+
 class ExitCodes(IntEnum):
     """Exit codes"""
 
@@ -54,6 +57,11 @@ class ExitCodes(IntEnum):
     NO_SESSION = 2
     NOT_AUTHORIZED = 3
     PID_FILE_ERROR = 4
+
+    DEVICE_MISSING_REMOTE_ACCESS_FRAGMENT = 5
+    DEVICE_NO_PASSTHROUGH_CONFIG = 6
+    DEVICE_NO_MATCHING_PASSTHROUGH_CONFIG = 7
+
     UNKNOWN = 9
 
 
@@ -481,7 +489,7 @@ def create_client(ctx: click.Context, opts: ProxyOptions) -> CumulocityClient:
     )
     logging.info("Checking tenant id")
     client.validate_tenant_id()
-    logging.info("Got tenant id")
+    # logging.info("Got tenant id")
 
     retries = 2
     success = False
@@ -519,13 +527,13 @@ def create_client(ctx: click.Context, opts: ProxyOptions) -> CumulocityClient:
         retries -= 1
 
     if not success:
-        logging.info("Could not crate client")
+        logging.info("Could not create client")
         ctx.exit(ExitCodes.NO_SESSION)
 
     return client
 
 
-def get_config_id(mor: Dict[str, Any], config: str) -> str:
+def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
     """Get the remote access configuration id matching a specific type
     from a device managed object
 
@@ -536,49 +544,56 @@ def get_config_id(mor: Dict[str, Any], config: str) -> str:
     Returns:
         str: Remote access configuration id
     """
-    if "c8y_RemoteAccessList" not in mor:
-        device = mor["name"]
+    device_name = mor.get("name", "<<empty_name>>")
+    if REMOTE_ACCESS_FRAGMENT not in mor:
         logging.error(
-            'No Remote Access Configuration has been found for device "%s"', device
+            'No Remote Access Configuration has been found for device "%s"', device_name
         )
-        sys.exit(1)
-    access_list = mor["c8y_RemoteAccessList"]
-    device = mor["name"]
-    config_id = None
-    for remote_access in access_list:
-        if not remote_access["protocol"] == "PASSTHROUGH":
-            continue
-        if config and remote_access["name"] == config:
-            config_id = remote_access["id"]
-            logging.info(
-                'Using Configuration with Name "%s" and Remote Port %s',
-                config,
-                remote_access["port"],
-            )
-            break
-        if not config:
-            config_id = remote_access["id"]
-            logging.info(
-                'Using Configuration with Name "%s" and Remote Port %s',
-                config,
-                remote_access["port"],
-            )
-            break
-    if not config_id:
-        if config:
-            logging.error(
-                'Provided config name "%s" for "%s" was not found or none with protocal set to "PASSTHROUGH"',
-                config,
-                device,
-            )
-            sys.exit(1)
-        else:
-            logging.error(
-                'No config with protocal set to "PASSTHROUGH" has been found for device "%s"',
-                device,
-            )
-            sys.exit(1)
-    return config_id
+        ctx.exit(ExitCodes.DEVICE_MISSING_REMOTE_ACCESS_FRAGMENT)
+
+    valid_configs = [
+        item
+        for item in mor.get(REMOTE_ACCESS_FRAGMENT, [])
+        if item.get("protocol") == PASSTHROUGH
+    ]
+
+    if not valid_configs:
+        logging.error(
+            'No config with protocol set to "%s" has been found for device "%s"',
+            PASSTHROUGH,
+            device_name,
+        )
+        ctx.exit(ExitCodes.DEVICE_NO_PASSTHROUGH_CONFIG)
+
+    def extract_config_id(matching_config):
+        logging.info(
+            'Using Configuration with Name "%s" and Remote Port %s',
+            matching_config.get("name"),
+            matching_config.get("port"),
+        )
+        return matching_config.get("id")
+
+    if not config:
+        # use first config
+        return extract_config_id(valid_configs[0])
+
+    # find config matching name
+    matches = [
+        item
+        for item in valid_configs
+        if item.get("name", "").casefold() == config.casefold()
+    ]
+
+    if not matches:
+        logging.error(
+            'Provided config name "%s" for "%s" was not found or none with protocal set to "%s"',
+            config,
+            device_name,
+            PASSTHROUGH,
+        )
+        ctx.exit(ExitCodes.DEVICE_NO_MATCHING_PASSTHROUGH_CONFIG)
+
+    return extract_config_id(matches[0])
 
 
 def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
@@ -614,7 +629,7 @@ def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
     try:
         client = create_client(ctx, opts)
         mor = client.get_managed_object(opts.device, opts.external_type)
-        config_id = get_config_id(mor, opts.config)
+        config_id = get_config_id(ctx, mor, opts.config)
         device_id = mor.get("id")
 
         is_authorized = client.validate_remote_access_role()

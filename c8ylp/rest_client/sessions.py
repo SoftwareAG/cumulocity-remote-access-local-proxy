@@ -14,12 +14,11 @@ class BaseUrlSession(requests.Session):
         * https://github.com/psf/requests/issues/2554
     """
 
-    def __init__(self, prefix_url: str, reuse_session: bool = False):
+    def __init__(self, prefix_url: str):
         if not prefix_url.startswith("http"):
             # default to https!
             prefix_url = f"https://{prefix_url}"
         self.prefix_url = prefix_url
-        self.reuse_session = reuse_session
         self.default_timeout = 30.0
         super().__init__()
 
@@ -54,28 +53,6 @@ class BaseUrlSession(requests.Session):
         # pylint: disable=arguments-differ
         url = self.expand_url(url)
 
-        if self.reuse_session:
-            send_kwargs = {
-                "timeout": kwargs.pop("timeout", self.default_timeout),
-                "proxies": kwargs.pop("proxies", self.proxies),
-                "allow_redirects": kwargs.pop("allow_redirects", True),
-                "stream": kwargs.pop("stream", self.stream),
-                "verify": kwargs.pop("verify", self.verify),
-                "cert": kwargs.pop("cert", self.cert),
-            }
-
-            prepped = super().prepare_request(
-                requests.Request(method, url, *args, **kwargs)
-            )
-            logging.debug("Sending requests to %s", url)
-            response = super().send(prepped, **send_kwargs)
-            return response
-
-        #
-        # Use new session (to avoid read timeout errors due to stale connections)
-        #
-
-        # Extract send arguments
         send_kwargs = {
             "timeout": kwargs.pop("timeout", self.default_timeout),
             "proxies": kwargs.pop("proxies", self.proxies),
@@ -85,11 +62,9 @@ class BaseUrlSession(requests.Session):
             "cert": kwargs.pop("cert", self.cert),
         }
 
-        # prepare request
-        prep = super().prepare_request(requests.Request(method, url, *args, **kwargs))
-
+        prepped = super().prepare_request(
+            requests.Request(method, url, *args, **kwargs)
+        )
         logging.debug("Sending requests to %s", url)
-
-        # Send the request
-        with requests.Session() as session:
-            return session.send(prep, **send_kwargs)
+        response = super().send(prepped, **send_kwargs)
+        return response

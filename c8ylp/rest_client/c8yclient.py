@@ -54,11 +54,11 @@ class CumulocityClient:
     def __init__(
         self,
         hostname: str,
-        tenant: str = None,
-        user: str = None,
-        password: str = None,
-        tfacode: str = None,
-        token: str = None,
+        tenant: str = "",
+        user: str = "",
+        password: str = "",
+        tfacode: str = "",
+        token: str = "",
         ignore_ssl_validate: bool = False,
     ):
         hostname = hostname or ""
@@ -68,7 +68,7 @@ class CumulocityClient:
         else:
             self.url = f"https://{hostname}"
 
-        self.session = BaseUrlSession(prefix_url=self.url, reuse_session=True)
+        self.session = BaseUrlSession(prefix_url=self.url)
 
         if ignore_ssl_validate:
             self.session.verify = False
@@ -93,7 +93,7 @@ class CumulocityClient:
         Returns:
             str: Tenant ID
         """
-        tenant_id = None
+        tenant_id = ""
         response = self.session.get("/tenant/loginOptions")
         if response.status_code == 200:
             login_options_body = json.loads(response.content.decode("utf-8"))
@@ -111,7 +111,7 @@ class CumulocityClient:
                             )
                         self.tenant = tenant_id
                     else:
-                        tenant_id = None
+                        tenant_id = ""
                     break
 
         else:
@@ -131,7 +131,7 @@ class CumulocityClient:
             user = json.loads(response.content.decode("utf-8"))
             effective_roles = user["effectiveRoles"]
             for role in effective_roles:
-                if role["id"] == "ROLE_REMOTE_ACCESS_ADMIN":
+                if role.get("id") == "ROLE_REMOTE_ACCESS_ADMIN":
                     self.logger.debug(
                         "Remote Access Role assigned to User %s", self.user
                     )
@@ -157,7 +157,7 @@ class CumulocityClient:
             username (str): Cumulocity username
             password (str): Cumulocity password
         """
-        self.session.auth = HTTPBasicAuth(username, password)
+        self.session.auth = HTTPBasicAuth(username or "", password or "")
 
     def validate_credentials(self) -> bool:
         """Validate client's credentials by sending a request
@@ -176,8 +176,8 @@ class CumulocityClient:
             return True
 
         # clear token/password (as they maybe invalid)
-        self.token = None
-        self.password = None
+        self.token = ""
+        self.password = ""
 
         message = PermissionError(
             f"Error validating Token {response.status_code}. Please provide Tenant, User and Password"

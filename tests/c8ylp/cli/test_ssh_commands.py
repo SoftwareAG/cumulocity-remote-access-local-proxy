@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 import pytest
 import responses
 from click.testing import CliRunner
-from c8ylp.main import ProxyOptions, cli
+from c8ylp.main import PASSTHROUGH, REMOTE_ACCESS_FRAGMENT, ExitCodes, ProxyOptions, cli
 from tests.env import Environment
 from tests.fixtures import FixtureCumulocityAPI
 
@@ -31,6 +31,72 @@ def test_single_ssh_command_then_exit(
         mock_start_ssh.assert_called_once()
         assert result.exit_code == 0
         assert result.stdout
+
+    run()
+
+
+@patch("c8ylp.main.shutil", autospec=True)
+def test_single_ssh_command_with_missing_ssh_binary(
+    mock_shutil: Mock, c8yserver: FixtureCumulocityAPI, env: Environment
+):
+    """Execute command via ssh then exit"""
+
+    @responses.activate
+    def run():
+        mock_shutil.which.return_value = None
+        serial = "ext-device-01"
+        c8yserver.simulate_pre_authenticated(serial)
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["connect-ssh", serial, "--ssh-user", "example", "ls -la"],
+            env=env.create_authenticated(),
+        )
+
+        assert result.exit_code == ExitCodes.SSH_NOT_FOUND
+
+    run()
+
+
+@patch("c8ylp.main.subprocess", autospec=True)
+def test_launching_ssh_with_fixed_port(
+    mock_subprocess: Mock, c8yserver: FixtureCumulocityAPI, env: Environment
+):
+    """Execute command via ssh client using a specific port"""
+
+    @responses.activate
+    def run():
+        mock_subprocess.call.return_value = 0
+        serial = "ext-device-01"
+        port = "1234"
+        username = "admin"
+        c8yserver.simulate_pre_authenticated(serial)
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["connect-ssh", serial, "--ssh-user", username, "--port", port, "ls -la"],
+            env=env.create_authenticated(),
+        )
+
+        mock_subprocess.call.assert_called_once()
+        ssh_cmd = mock_subprocess.call.call_args[0][0]
+
+        assert ssh_cmd == [
+            "ssh",
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "UserKnownHostsFile=/dev/null",
+            "-p",
+            port,
+            f"{username}@localhost",
+            "ls -la",
+        ]
+
+        assert mock_subprocess.call.call_args[1]["env"]
+        assert result.exit_code == ExitCodes.OK
 
     run()
 
@@ -173,13 +239,112 @@ def test_prompt_for_tfa(inputs, c8yserver: FixtureCumulocityAPI, tmpdir):
     run()
 
 
-def test_missing_role(c8yserver: FixtureCumulocityAPI, env: Environment, tmpdir):
+def test_missing_role(c8yserver: FixtureCumulocityAPI, env: Environment):
     """Test: Command should fail if the user does not have the correct ROLE"""
 
+    @responses.activate
+    def run():
+        serial = "ext-device-01"
+        c8yserver.simulate_pre_authenticated(serial_number=serial, roles=[])
 
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "connect-ssh",
+                serial,
+                "--ssh-user",
+                "admin",
+            ],
+            env=env.create_username_password(),
+        )
+
+        assert result.exit_code == ExitCodes.MISSING_ROLE_REMOTE_ACCESS_ADMIN
+
+    run()
+
+
+@pytest.mark.parametrize(
+    "case",
+    (
+        {
+            "fragments": {},
+            "exit_code": ExitCodes.DEVICE_MISSING_REMOTE_ACCESS_FRAGMENT,
+        },
+        {
+            "description": "Missing PASSTHROUGH config",
+            "fragments": {
+                REMOTE_ACCESS_FRAGMENT: [
+                    {"id": 1, "name": "example-ssh", "protocol": "ssh"}
+                ]
+            },
+            "exit_code": ExitCodes.DEVICE_NO_PASSTHROUGH_CONFIG,
+        },
+        {
+            "description": "Missing matching PASSTHROUGH name",
+            "fragments": {
+                REMOTE_ACCESS_FRAGMENT: [
+                    {"id": 1, "name": "example-ssh", "protocol": "ssh"},
+                    {"id": 2, "name": "custom-passthrough", "protocol": PASSTHROUGH},
+                ]
+            },
+            "exit_code": ExitCodes.DEVICE_NO_MATCHING_PASSTHROUGH_CONFIG,
+        },
+        {
+            "description": "Custom PASSTHROUGH name matching but still missing role",
+            "fragments": {
+                REMOTE_ACCESS_FRAGMENT: [
+                    {"id": 1, "name": "example-ssh", "protocol": "ssh"},
+                    {"id": 2, "name": "custom-passthrough", "protocol": PASSTHROUGH},
+                ]
+            },
+            "options": ["--config", "custom-passthrough"],
+            "exit_code": ExitCodes.MISSING_ROLE_REMOTE_ACCESS_ADMIN,
+        },
+        {
+            "description": "Custom PASSTHROUGH name matching but still missing role",
+            "fragments": {
+                REMOTE_ACCESS_FRAGMENT: [
+                    {"id": 1, "name": "example-ssh", "protocol": "ssh"},
+                    {"id": 2, "name": "custom-passthrough", "protocol": PASSTHROUGH},
+                ]
+            },
+            "options": ["--config", ""],
+            "exit_code": ExitCodes.MISSING_ROLE_REMOTE_ACCESS_ADMIN,
+        },
+    ),
+)
 def test_device_managed_object_permission_denied(
-    c8yserver: FixtureCumulocityAPI, env: Environment, tmpdir
+    case, c8yserver: FixtureCumulocityAPI, env: Environment
 ):
     """Test: Command should fail if the user does not have permission to read
     the device managed object
     """
+
+    @responses.activate
+    def run():
+        serial = "ext-device-01"
+        c8yserver.simulate_pre_authenticated(
+            serial_number=serial,
+            # skip roles
+            roles=[],
+            device_managed_object=case["fragments"],
+        )
+
+        runner = CliRunner()
+        args = [
+            "connect-ssh",
+            serial,
+            "--ssh-user",
+            "admin",
+        ]
+        args.extend(case.get("options", []))
+        result = runner.invoke(
+            cli,
+            args,
+            env=env.create_username_password(),
+        )
+
+        assert result.exit_code == case["exit_code"], case["description"]
+
+    run()

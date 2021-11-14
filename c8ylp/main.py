@@ -61,8 +61,11 @@ class ExitCodes(IntEnum):
     DEVICE_MISSING_REMOTE_ACCESS_FRAGMENT = 5
     DEVICE_NO_PASSTHROUGH_CONFIG = 6
     DEVICE_NO_MATCHING_PASSTHROUGH_CONFIG = 7
+    MISSING_ROLE_REMOTE_ACCESS_ADMIN = 8
 
     UNKNOWN = 9
+
+    SSH_NOT_FOUND = 10
 
 
 class ExitCommand(Exception):
@@ -638,10 +641,13 @@ def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
                 "User %s is not authorized to use Cloud Remote Access. Contact your Cumulocity Admin!",
                 opts.user,
             )
-            ctx.exit(ExitCodes.NOT_AUTHORIZED)
+            ctx.exit(ExitCodes.MISSING_ROLE_REMOTE_ACCESS_ADMIN)
     except Exception as ex:
-        logging.error("Could not retrieve device information. reason=%s", ex)
-        ctx.exit(ExitCodes.UNKNOWN)
+        if isinstance(ex, click.exceptions.Exit):
+            logging.error("Could not retrieve device information. reason=%s", ex)
+            # re-raise existing exit
+            raise
+        ctx.exit(ExitCodes.NOT_AUTHORIZED)
 
     client_opts = {
         "host": opts.host,
@@ -707,6 +713,11 @@ def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
     except ExitCommand:
         pass
     except Exception as ex:
+        if isinstance(ex, click.exceptions.Exit):
+            # propagate exit code
+            exit_code = getattr(ex, "exit_code")
+            raise
+
         if str(ex):
             logging.error("Error on TCP-Server. %s", ex)
             exit_code = ExitCodes.UNKNOWN
@@ -785,7 +796,7 @@ def run_script(_ctx: click.Context, opts: ProxyOptions) -> int:
     return exit_code
 
 
-def start_ssh(_ctx: click.Context, opts: ProxyOptions) -> int:
+def start_ssh(ctx: click.Context, opts: ProxyOptions) -> int:
     """Start interactive ssh session
 
     Args:
@@ -796,9 +807,11 @@ def start_ssh(_ctx: click.Context, opts: ProxyOptions) -> int:
         int: Exit code of ssh command
     """
     if not shutil.which("ssh"):
-        raise Exception(
+        logging.error(
             "ssh client not found. Please make sure the 'ssh' client is included in your PATH variable"
         )
+
+        ctx.exit(ExitCodes.SSH_NOT_FOUND)
 
     ssh_args = [
         "ssh",
@@ -847,6 +860,7 @@ class CommandTimer:
     def __init__(self, message: str) -> None:
         self.message = message
         self.start_time = 0
+        self.last_duration = 0
 
     def start(self):
         """Start the timer"""
@@ -860,7 +874,8 @@ class CommandTimer:
         """
         if not self.start_time:
             return 0
-        return time.monotonic() - self.start_time
+        self.last_duration = time.monotonic() - self.start_time
+        return self.last_duration
 
     def __enter__(self) -> None:
         self.start()

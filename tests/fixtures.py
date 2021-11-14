@@ -1,5 +1,5 @@
 """CLI testing fixtures"""
-from typing import List
+from typing import Any, Dict, List
 from unittest.mock import patch
 import responses
 from c8ylp.main import cli
@@ -22,13 +22,16 @@ class FixtureCumulocityAPI:
         serial_number: str = "ext-device-01",
         external_type: str = "c8y_Serial",
         tenant: str = None,
+        device_managed_object: Dict[str, Any] = None,
+        roles: List[str] = None,
     ):
+        roles = roles if roles is not None else ["ROLE_REMOTE_ACCESS_ADMIN"]
         self.simulate_loginoptions()
-        self.simulate_current_user(roles=["ROLE_REMOTE_ACCESS_ADMIN"])
+        self.simulate_current_user(roles=roles)
         self.simulate_external_identity(
             serial_number=serial_number, external_type=external_type
         )
-        self.simulate_managed_object()
+        self.simulate_managed_object(fragments=device_managed_object)
 
     def simulate_loginoptions(
         self, tenant: str = None, roles=["ROLE_REMOTE_ACCESS_ADMIN"]
@@ -67,14 +70,11 @@ class FixtureCumulocityAPI:
         self,
         id: str = "12345",
         name: str = "device01",
+        fragments: Dict[str, Any] = None,
         code=200,
     ):
-        responses.add(
-            responses.GET,
-            f"{self.base_url}/inventory/managedObjects/{id}",
-            json={
-                "id": id,
-                "name": name,
+        if fragments is None:
+            fragments = {
                 "c8y_RemoteAccessList": [
                     {
                         "id": "remote-access-id",
@@ -83,6 +83,14 @@ class FixtureCumulocityAPI:
                         "port": 2001,
                     },
                 ],
+            }
+        responses.add(
+            responses.GET,
+            f"{self.base_url}/inventory/managedObjects/{id}",
+            json={
+                "id": id,
+                "name": name,
+                **fragments,
             },
             status=code,
         )

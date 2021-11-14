@@ -93,7 +93,7 @@ def test_prompt_for_details(
 
 
 def test_repeated_login_failures(c8yserver: FixtureCumulocityAPI, env: Environment):
-    """Test repated login failues. Eventually c8ylp should give up"""
+    """Test repeated login failures. Eventually c8ylp should give up"""
 
     @responses.activate
     def run():
@@ -117,6 +117,35 @@ def test_repeated_login_failures(c8yserver: FixtureCumulocityAPI, env: Environme
                 **env.create_empty_env(),
             },
             input=stdin,
+        )
+
+        assert result.exit_code == 2
+
+    run()
+
+
+def test_disable_prompts(c8yserver: FixtureCumulocityAPI, env: Environment):
+    """Test disabling of prompts for usage in scripts"""
+
+    @responses.activate
+    def run():
+        c8yserver.simulate_loginoptions()
+        c8yserver.simulate_login_oauth(status_codes=[401, 401, 401, 401])
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "login",
+                "--host",
+                c8yserver.base_url,
+                "--user",
+                "dummy_user",
+                "--disable-prompts",
+            ],
+            env={
+                **env.create_empty_env(),
+            },
         )
 
         assert result.exit_code == 2

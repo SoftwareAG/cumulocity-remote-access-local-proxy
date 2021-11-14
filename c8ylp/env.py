@@ -80,7 +80,8 @@ def save_env(path: str, values: Dict[str, Any]) -> bool:
 
     # updates values (if changed, and keep order)
     for key, value in values.items():
-        newline = f"{key}={value}"
+        d_value = value if value is not None else ""
+        newline = f"{key}={d_value}"
 
         if key in key_indexes:
             # existing key (update if changed)

@@ -12,6 +12,7 @@ import logging
 import time
 import sys
 import socket
+import errno
 from contextlib import contextmanager
 
 
@@ -62,10 +63,10 @@ def is_port_open(port: int) -> bool:
     """
     with socketcontext() as sock:
         try:
-            sock.bind(("127.0.0.1", port))
+            sock.bind(("", port))
         except OSError as ex:
             # port already in use error
-            if ex.errno == 98:
+            if ex.errno == errno.EADDRINUSE:
                 return True
 
     return False

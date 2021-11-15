@@ -52,18 +52,19 @@ def wait_for_port(port: int, timeout: float = 30.0, silent: bool = False) -> Non
         time.sleep(0.25)
 
 
-def is_port_open(port: int) -> bool:
+def is_port_open(port: int, host: str = "127.0.0.1") -> bool:
     """Check if a port is open or not
 
     Args:
         port (int): Port number
+        host (str): Host name
 
     Returns:
         bool: True if the port is open
     """
     with socketcontext() as sock:
         try:
-            sock.bind(("", port))
+            sock.bind((host, port))
         except OSError as ex:
             # port already in use error
             if ex.errno == errno.EADDRINUSE:

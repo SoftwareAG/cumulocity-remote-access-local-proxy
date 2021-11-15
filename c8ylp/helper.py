@@ -62,7 +62,7 @@ def is_port_open(port: int) -> bool:
     """
     with socketcontext() as sock:
         try:
-            sock.bind(("", port))
+            sock.bind(("127.0.0.1", port))
         except OSError as ex:
             # port already in use error
             if ex.errno == 98:

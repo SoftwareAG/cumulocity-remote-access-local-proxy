@@ -1,11 +1,18 @@
-"""plugin class"""
+"""plugin command"""
 
 import os
+import sys
+import threading
 import subprocess
 import logging
 from pathlib import Path
 from typing import List, Optional
 import click
+
+from c8ylp.helper import wait_for_port
+from .. import options
+from .core import ProxyOptions, register_signals, start_proxy
+
 
 plugin_folder = (Path("~") / ".c8ylp" / "plugins").expanduser()
 
@@ -87,3 +94,81 @@ class PluginCLI(click.MultiCommand):
             return None
 
         return namespace["cli"]
+
+
+@click.group()
+def plugin():
+    """Plugins"""
+
+
+@plugin.command(
+    "plugin",
+    cls=PluginCLI,
+    hidden=True,  # Hide for now ;)
+    context_settings=dict(
+        ignore_unknown_options=True,
+    ),
+)
+@options.ARG_DEVICE
+@options.HOSTNAME
+@options.EXTERNAL_IDENTITY_TYPE
+@options.REMOTE_ACCESS_TYPE
+@options.C8Y_TENANT
+@options.C8Y_USER
+@options.C8Y_TOKEN
+@options.C8Y_PASSWORD
+@options.C8Y_TFA_CODE
+@options.PORT_DEFAULT_RANDOM
+@options.PING_INTERVAL
+@options.TCP_SIZE
+@options.TCP_TIMEOUT
+@options.LOGGING_VERBOSE
+@options.SSL_IGNORE_VERIFY
+@options.ENV_FILE
+@options.STORE_TOKEN
+@options.DISABLE_PROMPT
+@click.pass_context
+def run(ctx: click.Context, *_args, **kwargs):
+    """
+    Run a custom plugin (installed under ~/.c8ylp/plugins/)
+
+    Example 1:
+    \b
+        c8ylp plugin device01 copyto <src> <dst>
+    """
+
+    click.echo("Running pre-install phase")
+    opts = ProxyOptions().fromdict(kwargs)
+    opts.script_mode = True
+
+    # Skip starting server if the user just want to see the help
+    if "--help" in sys.argv or "-h" in sys.argv:
+        return
+
+    stop_signal = threading.Event()
+    opts.skip_exit = True
+
+    # Inject custom env variables for use within the script
+    os.environ["DEVICE"] = str(opts.device)
+    os.environ["PORT"] = str(opts.port)
+
+    # register signals as the proxy will be starting in a background thread
+    # to enable the proxy to run as a subcommand
+    register_signals()
+
+    # Start the proxy in a background thread so the user can
+    background = threading.Thread(
+        target=start_proxy, args=(ctx, opts, stop_signal), daemon=True
+    )
+    background.start()
+
+    # Shutdown the server once the plugin has been run
+    @ctx.call_on_close
+    def _shutdown_server_thread():
+        stop_signal.set()
+        background.join()
+
+    # Block until the port is actually open
+    wait_for_port(opts.port)
+
+    # The subcommand is called after this

@@ -69,8 +69,8 @@ def deactivate_prompts(ctx: click.Context, _param: click.Parameter, value: Any):
 
 def lazy_required(ctx: click.Context, _param: click.Parameter, value: Any):
     """Apply lazy command argument parsing so that if a parameter is marked
-    as eager, it will only raise a MissingParameter exception if --help or
-    --version has not been specified (regardless of the order)
+    as eager, it will only raise a MissingParameter exception if --help
+    has not been specified (regardless of the order)
 
     Args:
         ctx (click.Context): Click Context
@@ -86,7 +86,7 @@ def lazy_required(ctx: click.Context, _param: click.Parameter, value: Any):
     # Ignore error if help or version are being displayed
     # using original sys.argv as the other click args may not have
     # been procssed yet.
-    if "--help" in sys.argv or "-h" in sys.argv or "--version" in sys.argv:
+    if "--help" in sys.argv or "-h" in sys.argv:
         return None
 
     if ctx.resilient_parsing:
@@ -141,7 +141,16 @@ def validate_token(ctx: click.Context, _param, value) -> Any:
 
 
 HOSTNAME = click.option(
-    # "--hostname",
+    "--host",
+    "host",
+    is_eager=True,
+    prompt=False,
+    # callback=lazy_required,
+    envvar=("C8Y_HOST", "C8Y_BASEURL", "C8Y_URL"),
+    help="Cumulocity Hostname  [required]",
+)
+
+HOSTNAME_PROMPT = click.option(
     "--host",
     "host",
     is_eager=True,

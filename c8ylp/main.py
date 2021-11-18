@@ -27,6 +27,7 @@ import platform
 import signal
 import shutil
 import subprocess
+import sys
 import threading
 import time
 from datetime import timedelta
@@ -36,14 +37,15 @@ from typing import Any, Dict, NoReturn
 
 import click
 
-from c8ylp import options
+from c8ylp.helper import wait_for_port
 
-from c8ylp import __version__
-from c8ylp.banner import BANNER1
-from c8ylp.env import save_env
-from c8ylp.rest_client.c8yclient import CumulocityClient
-from c8ylp.tcp_socket.tcp_server import TCPProxyServer
-from c8ylp.websocket_client.ws_client import WebsocketClient
+from . import options, __version__
+from .banner import BANNER1
+from .env import save_env
+from .rest_client.c8yclient import CumulocityClient
+from .tcp_socket.tcp_server import TCPProxyServer
+from .websocket_client.ws_client import WebsocketClient
+from .plugin import PluginCLI
 
 
 PASSTHROUGH = "PASSTHROUGH"
@@ -77,7 +79,7 @@ def signal_handler(_signal, _frame):
     raise ExitCommand()
 
 
-def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> Any:
+def print_version(ctx: click.Context, _param: click.Parameter, _value: Any) -> Any:
     """Print command version
 
     Args:
@@ -88,9 +90,6 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
     Returns:
         Any: Parameter value
     """
-    if not value or ctx.resilient_parsing:
-        return
-
     click.echo(f"Version {__version__}")
     ctx.exit(ExitCodes.OK)
 
@@ -103,24 +102,14 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: Any) -> An
     ),
     help="Cumulocity Remote Access Local Proxy",
 )
-@click.option(
-    "--version",
-    is_flag=True,
-    default=False,
-    required=False,
-    expose_value=False,
-    is_eager=True,
-    callback=print_version,
-    help="Show version number",
-)
 @click.pass_context
-def cli(ctx: click.Context):
+def cli_core(ctx: click.Context):
     """Main cli entry point"""
     ctx.ensure_object(dict)
 
 
-@cli.command()
-@options.HOSTNAME
+@cli_core.command()
+@options.HOSTNAME_PROMPT
 @options.C8Y_TENANT
 @options.C8Y_USER
 @options.C8Y_TOKEN
@@ -154,7 +143,13 @@ def login(
         ctx.fail("Could not login")
 
 
-@cli.command()
+@cli_core.command(help="Show version number")
+@click.pass_context
+def version(ctx):
+    print_version(ctx, None, None)
+
+
+@cli_core.command()
 @options.ARG_DEVICE
 # @options.DEVICE
 @options.HOSTNAME
@@ -213,7 +208,7 @@ def server(
     start_proxy(ctx, opts)
 
 
-@cli.command()
+@cli_core.command()
 @options.ARG_DEVICE
 @options.HOSTNAME
 @options.EXTERNAL_IDENTITY_TYPE
@@ -275,8 +270,86 @@ def connect_ssh(
     start_proxy(ctx, opts)
 
 
-@cli.command(
+@click.group()
+def cli_plugin():
+    pass
+
+
+@cli_plugin.command(
     "plugin",
+    cls=PluginCLI,
+    hidden=True,  # Hide for now ;)
+    context_settings=dict(
+        ignore_unknown_options=True,
+    ),
+)
+@options.ARG_DEVICE
+@options.HOSTNAME
+@options.EXTERNAL_IDENTITY_TYPE
+@options.REMOTE_ACCESS_TYPE
+@options.C8Y_TENANT
+@options.C8Y_USER
+@options.C8Y_TOKEN
+@options.C8Y_PASSWORD
+@options.C8Y_TFA_CODE
+@options.PORT_DEFAULT_RANDOM
+@options.PING_INTERVAL
+@options.TCP_SIZE
+@options.TCP_TIMEOUT
+@options.LOGGING_VERBOSE
+@options.SSL_IGNORE_VERIFY
+@options.ENV_FILE
+@options.STORE_TOKEN
+@options.DISABLE_PROMPT
+@click.pass_context
+def cli_plugin_custom(ctx: click.Context, *_args, **kwargs):
+    """
+    Run a custom plugin (installed under ~/.c8ylp/plugins/)
+
+    Example 1:
+    \b
+        c8ylp plugin device01 copyto <src> <dst>
+    """
+
+    click.echo("Running pre-install phase")
+    opts = ProxyOptions().fromdict(kwargs)
+    opts.script_mode = True
+
+    # Skip starting server if the user just want to see the help
+    if "--help" in sys.argv or "-h" in sys.argv:
+        return
+
+    stop_signal = threading.Event()
+    opts.skip_exit = True
+
+    # Inject custom env variables for use within the script
+    os.environ["DEVICE"] = str(opts.device)
+    os.environ["PORT"] = str(opts.port)
+
+    # register signals as the proxy will be starting in a background thread
+    # to enable the proxy to run as a subcommand
+    register_signals()
+
+    # Start the proxy in a background thread so the user can
+    background = threading.Thread(
+        target=start_proxy, args=(ctx, opts, stop_signal), daemon=True
+    )
+    background.start()
+
+    # Shutdown the server once the plugin has been run
+    @ctx.call_on_close
+    def _shutdown_server_thread():
+        stop_signal.set()
+        background.join()
+
+    # Block until the port is actually open
+    wait_for_port(opts.port)
+
+    # The subcommand is called after this
+
+
+@cli_core.command(
+    "execute",
     context_settings=dict(
         ignore_unknown_options=True,
     ),
@@ -304,7 +377,7 @@ def connect_ssh(
     "additional_args", metavar="[SCRIPT_ARGS]...", nargs=-1, type=click.UNPROCESSED
 )
 @click.pass_context
-def extension(
+def cli_execute(
     ctx,
     *_args,
     **kwargs,
@@ -331,14 +404,14 @@ def extension(
     Example 1: Use scp to copy a file to a device
 
         \b
-        c8ylp extension device01 --env-file .env \\
+        c8ylp execute device01 --env-file .env \\
             -- /usr/bin/scp -P '$PORT' myfile.tar.gz admin@localhost:/tmp
 
     Example 2: Run a custom script (not included) to copy a file from the device to
     the current folder
 
         \b
-        c8ylp extension device01 --env-file .env -v ./copyfrom.sh /var/log/dpkg.log ./
+        c8ylp execute device01 --env-file .env -v ./copyfrom.sh /var/log/dpkg.log ./
     """
     opts = ProxyOptions().fromdict(kwargs)
     opts.script_mode = True
@@ -379,6 +452,7 @@ class ProxyOptions:
     disable_prompts = False
     env_file = None
     store_token = False
+    skip_exit = None
 
     def fromdict(self, src_dict: Dict[str, Any]) -> "ProxyOptions":
         """Load proxy settings from a dictionary
@@ -599,7 +673,16 @@ def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
     return extract_config_id(matches[0])
 
 
-def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
+def register_signals():
+    if platform.system() in ("Linux", "Darwin"):
+        signal.signal(signal.SIGUSR1, signal_handler)
+    else:
+        signal.signal(signal.SIGINT, signal_handler)
+
+
+def start_proxy(
+    ctx: click.Context, opts: ProxyOptions, stop_signal: threading.Event = None
+) -> NoReturn:
     """Start the local proxy
 
     Args:
@@ -607,10 +690,9 @@ def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
         opts (ProxyOptions): Proxy options
     """
     # pylint: disable=too-many-branches,too-many-statements
-    if platform.system() in ("Linux", "Darwin"):
-        signal.signal(signal.SIGUSR1, signal_handler)
-    else:
-        signal.signal(signal.SIGINT, signal_handler)
+    is_main_thread = threading.current_thread() is threading.main_thread()
+    if is_main_thread:
+        register_signals()
 
     configure_logger(verbose=opts.verbose)
 
@@ -696,7 +778,7 @@ def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
             f"\nc8ylp is listening for device (ext_id) {opts.device} ({opts.host}) on localhost:{opts.port}",
             fg="green",
         )
-        ssh_username = opts.ssh_user or "<username>"
+        ssh_username = opts.ssh_user or "<device_username>"
         click.secho(
             f"\nConnect to {opts.device} by executing the following in a new tab/console:\n\n"
             f"\tssh -p {opts.port} {ssh_username}@localhost",
@@ -704,7 +786,7 @@ def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
         )
 
         # loop, waiting for server to stop
-        while background.is_alive():
+        while background.is_alive() and (stop_signal and not stop_signal.is_set()):
             time.sleep(1)
             logging.debug(
                 "Waiting in background: alive=%s",
@@ -729,7 +811,9 @@ def start_proxy(ctx: click.Context, opts: ProxyOptions) -> NoReturn:
         background.join()
         logging.info("Exit code: %s", exit_code)
         click.echo("Exiting")
-        ctx.exit(exit_code)
+
+        if is_main_thread:
+            ctx.exit(exit_code)
 
 
 def upsert_pid_file(pidfile: str, device: str, url: str, config: str, user: str):
@@ -969,3 +1053,6 @@ def kill_existing_instances(pidfile: str):
                     logging.info("Killing other running Process with PID %s", other_pid)
                     os.kill(get_pid_from_line(line), 9)
                 clean_pid_file(pidfile, other_pid)
+
+
+cli = click.CommandCollection("cli", sources=[cli_core, cli_plugin])

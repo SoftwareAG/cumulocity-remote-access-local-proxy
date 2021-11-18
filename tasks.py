@@ -71,7 +71,7 @@ def test_performance(c, testid=2):
 
     env = {
         **os.environ,
-        "C8Y_DEVICE": "cb4-a2euccg1p22111000141",
+        "C8Y_DEVICE": "device01",
         "PYTHONPATH": ":".join(pypaths),
     }
 

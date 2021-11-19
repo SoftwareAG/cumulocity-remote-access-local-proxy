@@ -38,6 +38,8 @@ setup(
         "c8ylp.tcp_socket",
         "c8ylp.websocket_client",
         "c8ylp.rest_client",
+        "c8ylp.cli",
+        "c8ylp.plugins",
     ],
     entry_points={
         "console_scripts": ["c8ylp=c8ylp.main:cli"],

@@ -44,6 +44,7 @@ class ExitCodes(IntEnum):
     UNKNOWN = 9
 
     SSH_NOT_FOUND = 10
+    TIMEOUT_WAIT_FOR_PORT = 11
 
 
 @dataclasses.dataclass
@@ -354,7 +355,11 @@ def run_proxy_in_background(
     background.start()
 
     # Block until the port is actually open
-    wait_for_port(opts.port, timeout=5.0)
+    try:
+        wait_for_port(opts.port, timeout=5.0)
+    except TimeoutError as ex:
+        logging.error(ex)
+        ctx.exit(ExitCodes.TIMEOUT_WAIT_FOR_PORT)
 
     # The subcommand is called after this
     timer = CommandTimer("Duration", on_exit=click.echo).start()

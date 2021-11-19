@@ -21,12 +21,11 @@
 
 import click
 
-from .cli.connect_ssh import connect_ssh
-from .cli.execute import execute
 from .cli.login import login
-from .cli.plugin import plugin
+from .cli.plugin import cli_plugin
 from .cli.server import server
 from .cli.version import version
+from .cli.connect import commands as connect
 
 
 @click.group(
@@ -46,7 +45,6 @@ def cli_core(ctx: click.Context):
 cli_core.add_command(login)
 cli_core.add_command(version)
 cli_core.add_command(server)
-cli_core.add_command(execute)
-cli_core.add_command(connect_ssh)
+cli_core.add_command(connect.connect)
 
-cli = click.CommandCollection("cli", sources=[cli_core, plugin])
+cli = click.CommandCollection("cli", sources=[cli_core, cli_plugin])

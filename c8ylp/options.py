@@ -22,6 +22,7 @@ import os
 import pathlib
 import sys
 from typing import Any
+import functools
 
 import click
 
@@ -313,15 +314,6 @@ STORE_TOKEN = click.option(
 )
 
 
-MODE_SCRIPT = click.option(
-    "--script-mode",
-    "-s",
-    envvar="C8YLP_SCRIPT_MODE",
-    is_flag=True,
-    default=False,
-    help="Stops the TCP Server after first connection. No automatical restart!",
-)
-
 DISABLE_PROMPT = click.option(
     "--disable-prompts",
     "-d",
@@ -368,7 +360,7 @@ SERVER_RECONNECT_LIMIT = click.option(
     default=5,
     show_default=True,
     show_envvar=True,
-    callback=lambda c, p, v: -1 if c.params["script_mode"] else 5,
+    callback=lambda c, p, v: -1 if c.params.get("script_mode") else 5,
     help="number of reconnects to the Cloud Remote Service. 0 for infinite reconnects",
 )
 
@@ -414,3 +406,33 @@ ENV_FILE_OPTIONAL_EXISTS = click.option(
     callback=load_envfile,
     help="Environment file to load. Any settings loaded via this file will control other parameters",
 )
+
+
+def common_options(f):
+    """Common Options"""
+    options = [
+        # ARG_DEVICE,
+        # ARG_SCRIPT,
+        HOSTNAME,
+        C8Y_TENANT,
+        C8Y_USER,
+        C8Y_TOKEN,
+        C8Y_PASSWORD,
+        C8Y_TFA_CODE,
+        ENV_FILE,
+        EXTERNAL_IDENTITY_TYPE,
+        REMOTE_ACCESS_TYPE,
+        PORT_DEFAULT_RANDOM,
+        PING_INTERVAL,
+        TCP_SIZE,
+        TCP_TIMEOUT,
+        LOGGING_VERBOSE,
+        SSL_IGNORE_VERIFY,
+        STORE_TOKEN,
+        DISABLE_PROMPT,
+        SERVER_RECONNECT_LIMIT,
+    ]
+
+    # Need to reverse the order to control the list order
+    options = reversed(options)
+    return functools.reduce(lambda x, opt: opt(x), options, f)

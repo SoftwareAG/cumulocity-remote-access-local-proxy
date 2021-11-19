@@ -7,14 +7,21 @@ import subprocess
 import logging
 from pathlib import Path
 from typing import List, Optional
+from unittest.mock import Mock
 import click
 
+from ..plugins import ssh
+from c8ylp import __ROOT_DIR__
 from c8ylp.helper import wait_for_port
+from c8ylp.timer import CommandTimer
 from .. import options
-from .core import ProxyOptions, register_signals, start_proxy
+from .core import ProxyOptions, register_signals, run_proxy_in_background, start_proxy
 
 
-plugin_folder = (Path("~") / ".c8ylp" / "plugins").expanduser()
+plugin_folders = [
+    Path(__ROOT_DIR__) / "plugins",
+    (Path("~") / ".c8ylp" / "plugins").expanduser(),
+]
 
 
 class PluginCLI(click.MultiCommand):
@@ -30,14 +37,15 @@ class PluginCLI(click.MultiCommand):
             List[str]: List of sub commands
         """
         cmds = []
-        click.echo(f"Checking plugin folder: {str(plugin_folder)}")
+        click.echo(f"Checking plugin folder: {str(plugin_folders)}")
 
-        if plugin_folder.expanduser().exists():
-            for filename in os.listdir(str(plugin_folder)):
-                if filename.endswith(".py") and filename != "__init__.py":
-                    cmds.append(filename[:-3])
-                elif filename.endswith(".sh"):
-                    cmds.append(filename[:-3])
+        for plugin_folder in plugin_folders:
+            if plugin_folder.exists():
+                for filename in os.listdir(str(plugin_folder)):
+                    if filename.endswith(".py") and filename != "__init__.py":
+                        cmds.append(filename[:-3])
+                    elif filename.endswith(".sh"):
+                        cmds.append(filename[:-3])
 
         cmds.sort()
 
@@ -61,33 +69,44 @@ class PluginCLI(click.MultiCommand):
         """
         namespace = {}
 
+        if cmd_name == "ssh":
+            # namespace["cli"] = ssh.cli
+            return ssh.cli
+
         file_exts = [".py", ".sh"]
 
-        for ext in file_exts:
-            func = os.path.join(plugin_folder, cmd_name + ext)
-            if os.path.exists(func):
-                if ext == ".py":
-                    logging.debug("Detected python script: %s", func)
-                    with open(func) as file:
-                        code = compile(file.read(), func, "exec")
-                        # Eval is required to make a dynamic plugin
-                        # pylint: disable=eval-used
-                        eval(code, namespace, namespace)
+        for plugin_folder in plugin_folders:
+            for ext in file_exts:
+
+                func = plugin_folder.joinpath(cmd_name + ext)
+                if func.exists():
+                    if ext == ".py":
+                        logging.debug("Detected python script: %s", func)
+                        if __ROOT_DIR__ in func:
+                            pass
+                        else:
+                            with open(func) as file:
+                                code = compile(file.read(), str(func), "exec")
+                                # Eval is required to make a dynamic plugin
+                                # pylint: disable=eval-used
+                                eval(code, namespace, namespace)
+                                break
+                    elif ext == ".sh":
+                        logging.debug("Detected bash script: %s", func)
+
+                        def create_wrapper(script_path):
+                            @click.command()
+                            @click.pass_context
+                            def bash_wrapper(wctx):
+                                exit_code = subprocess.call(script_path, env=os.environ)
+                                wctx.exit(exit_code)
+
+                            return bash_wrapper
+
+                        namespace["cli"] = create_wrapper(str(func))
                         break
-                elif ext == ".sh":
-                    logging.debug("Detected bash script: %s", func)
 
-                    def create_wrapper(script_path):
-                        @click.command()
-                        @click.pass_context
-                        def bash_wrapper(wctx):
-                            exit_code = subprocess.call(script_path, env=os.environ)
-                            wctx.exit(exit_code)
-
-                        return bash_wrapper
-
-                    namespace["cli"] = create_wrapper(func)
-                    break
+        click.echo(f"plugin name: {cmd_name}")
 
         if "cli" not in namespace:
             logging.warning("Plugin is missing cli function. %s", namespace)
@@ -97,36 +116,20 @@ class PluginCLI(click.MultiCommand):
 
 
 @click.group()
-def plugin():
+def cli_plugin():
     """Plugins"""
 
 
-@plugin.command(
+@cli_plugin.command(
     "plugin",
     cls=PluginCLI,
-    hidden=True,  # Hide for now ;)
+    hidden=False,
     context_settings=dict(
         ignore_unknown_options=True,
     ),
 )
 @options.ARG_DEVICE
-@options.HOSTNAME
-@options.EXTERNAL_IDENTITY_TYPE
-@options.REMOTE_ACCESS_TYPE
-@options.C8Y_TENANT
-@options.C8Y_USER
-@options.C8Y_TOKEN
-@options.C8Y_PASSWORD
-@options.C8Y_TFA_CODE
-@options.PORT_DEFAULT_RANDOM
-@options.PING_INTERVAL
-@options.TCP_SIZE
-@options.TCP_TIMEOUT
-@options.LOGGING_VERBOSE
-@options.SSL_IGNORE_VERIFY
-@options.ENV_FILE
-@options.STORE_TOKEN
-@options.DISABLE_PROMPT
+@options.common_options
 @click.pass_context
 def run(ctx: click.Context, *_args, **kwargs):
     """
@@ -136,39 +139,9 @@ def run(ctx: click.Context, *_args, **kwargs):
     \b
         c8ylp plugin device01 copyto <src> <dst>
     """
+    ctx.obj["call"] = Mock
 
     click.echo("Running pre-install phase")
     opts = ProxyOptions().fromdict(kwargs)
     opts.script_mode = True
-
-    # Skip starting server if the user just want to see the help
-    if "--help" in sys.argv or "-h" in sys.argv:
-        return
-
-    stop_signal = threading.Event()
-    opts.skip_exit = True
-
-    # Inject custom env variables for use within the script
-    os.environ["DEVICE"] = str(opts.device)
-    os.environ["PORT"] = str(opts.port)
-
-    # register signals as the proxy will be starting in a background thread
-    # to enable the proxy to run as a subcommand
-    register_signals()
-
-    # Start the proxy in a background thread so the user can
-    background = threading.Thread(
-        target=start_proxy, args=(ctx, opts, stop_signal), daemon=True
-    )
-    background.start()
-
-    # Shutdown the server once the plugin has been run
-    @ctx.call_on_close
-    def _shutdown_server_thread():
-        stop_signal.set()
-        background.join()
-
-    # Block until the port is actually open
-    wait_for_port(opts.port)
-
-    # The subcommand is called after this
+    run_proxy_in_background(ctx, opts)

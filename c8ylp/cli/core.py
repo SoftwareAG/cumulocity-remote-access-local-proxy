@@ -5,9 +5,9 @@ import logging
 import os
 import pathlib
 import platform
-import shutil
 import signal
 import subprocess
+import sys
 import threading
 import time
 from enum import IntEnum
@@ -17,11 +17,12 @@ from typing import Any, Dict, NoReturn
 import click
 
 from .. import pid
+from ..helper import wait_for_port
+from ..timer import CommandTimer
 from ..banner import BANNER1
 from ..env import save_env
 from ..rest_client.c8yclient import CumulocityClient
 from ..tcp_socket import TCPProxyServer
-from ..timer import CommandTimer
 from ..websocket_client import WebsocketClient
 
 
@@ -72,7 +73,6 @@ class ProxyOptions:
     pid_file = ""
     reconnects = 0
     ssh_user = ""
-    script = ""
     additional_args = None
     disable_prompts = False
     env_file = None
@@ -314,6 +314,39 @@ def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
     return extract_config_id(matches[0])
 
 
+def run_proxy_in_background(ctx: click.Context, opts: ProxyOptions):
+
+    stop_signal = threading.Event()
+    opts.skip_exit = True
+
+    # Inject custom env variables for use within the script
+    os.environ["C8Y_HOST"] = str(opts.host)
+    os.environ["PORT"] = str(opts.port)
+    os.environ["DEVICE"] = str(opts.device)
+
+    # register signals as the proxy will be starting in a background thread
+    # to enable the proxy to run as a subcommand
+    register_signals()
+
+    # Start the proxy in a background thread so the user can
+    background = threading.Thread(
+        target=start_proxy, args=(ctx, opts, stop_signal), daemon=True
+    )
+    background.start()
+
+    # Block until the port is actually open
+    wait_for_port(opts.port)
+
+    # The subcommand is called after this
+    timer = CommandTimer("Duration", on_exit=click.echo).start()
+
+    # Shutdown the server once the plugin has been run
+    @ctx.call_on_close
+    def _shutdown_server_thread():
+        stop_signal.set()
+        background.join()
+        timer.stop_with_message()
+
 def start_proxy(
     ctx: click.Context, opts: ProxyOptions, stop_signal: threading.Event = None
 ) -> NoReturn:
@@ -398,26 +431,19 @@ def start_proxy(
                 "Server did not start up in time, but trying to proceed anyway"
             )
 
-        if opts.script:
-            with CommandTimer("Duration", on_exit=click.echo):
-                exit_code = run_script(ctx, opts)
-            raise ExitCommand()
-
-        if opts.ssh_user:
-            with CommandTimer("SSH Session duration", on_exit=click.echo):
-                exit_code = start_ssh(ctx, opts)
-            raise ExitCommand()
-
-        click.secho(
-            f"\nc8ylp is listening for device (ext_id) {opts.device} ({opts.host}) on localhost:{opts.port}",
-            fg="green",
-        )
-        ssh_username = opts.ssh_user or "<device_username>"
-        click.secho(
-            f"\nConnect to {opts.device} by executing the following in a new tab/console:\n\n"
-            f"\tssh -p {opts.port} {ssh_username}@localhost",
-            color=True,
-        )
+        # Plugins start in a background thread so don't display it
+        # as the plugins should do their own thing
+        if is_main_thread:
+            click.secho(
+                f"\nc8ylp is listening for device (ext_id) {opts.device} ({opts.host}) on localhost:{opts.port}",
+                fg="green",
+            )
+            ssh_username = opts.ssh_user or "<device_username>"
+            click.secho(
+                f"\nConnect to {opts.device} by executing the following in a new tab/console:\n\n"
+                f"\tssh -p {opts.port} {ssh_username}@localhost",
+                color=True,
+            )
 
         # loop, waiting for server to stop
         while background.is_alive() and (stop_signal and not stop_signal.is_set()):
@@ -448,82 +474,3 @@ def start_proxy(
 
         if is_main_thread:
             ctx.exit(exit_code)
-
-
-def run_script(_ctx: click.Context, opts: ProxyOptions) -> int:
-    """Execute a script with environment variables set with information
-    about the local proxy, i.e. device, port etc.
-
-    Args:
-        ctx (click.Context): Click context
-        opts (ProxyOptions): Proxy options
-
-    Returns:
-        int: Exit code of script
-    """
-
-    cmd_args = [
-        opts.script,
-    ]
-
-    # add env variables which can be used in the extra arguments
-    os.environ["PORT"] = str(opts.port)
-    os.environ["DEVICE"] = str(opts.device)
-
-    if opts.additional_args:
-        for value in opts.additional_args:
-            logging.info("Expanding script arguments: %s", value)
-            cmd_args.append(os.path.expandvars(value))
-
-    logging.info("Executing extension: %s", " ".join(cmd_args))
-    exit_code = subprocess.call(cmd_args, env=os.environ, shell=False)
-    if exit_code != 0:
-        logging.warning("Script exited with a non-zero exit code. code=%s", exit_code)
-    return exit_code
-
-
-def start_ssh(ctx: click.Context, opts: ProxyOptions) -> int:
-    """Start interactive ssh session
-
-    Args:
-        ctx (click.Context): Click context
-        opts (ProxyOptions): Proxy options
-
-    Returns:
-        int: Exit code of ssh command
-    """
-    if not shutil.which("ssh"):
-        logging.error(
-            "ssh client not found. Please make sure the 'ssh' client is included in your PATH variable"
-        )
-
-        ctx.exit(ExitCodes.SSH_NOT_FOUND)
-
-    ssh_args = [
-        "ssh",
-        "-o",
-        "StrictHostKeyChecking=no",
-        "-o",
-        "UserKnownHostsFile=/dev/null",
-        "-p",
-        str(opts.port),
-        f"{opts.ssh_user}@localhost",
-    ]
-
-    if opts.additional_args:
-        logging.info("Executing a once-off command then exiting")
-        ssh_args.extend(opts.additional_args)
-        click.secho(
-            f"Executing command via ssh on {opts.device} ({opts.host})", fg="green"
-        )
-    else:
-        click.secho(
-            f"Starting interactive ssh session with {opts.device} ({opts.host})",
-            fg="green",
-        )
-
-    logging.info("Starting ssh session using: %s", " ".join(ssh_args))
-    exit_code = subprocess.call(ssh_args, env=os.environ)
-    if exit_code != 0:
-        logging.warning("SSH exited with a non-zero exit code. code=%s", exit_code)
-    return exit_code

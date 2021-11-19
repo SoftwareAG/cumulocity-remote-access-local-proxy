@@ -29,6 +29,7 @@ class CommandTimer:
     def start(self):
         """Start the timer"""
         self.start_time = time.monotonic()
+        return self
 
     def stop(self) -> float:
         """Stop the timer and return the duration in seconds
@@ -41,12 +42,16 @@ class CommandTimer:
         self.last_duration = time.monotonic() - self.start_time
         return self.last_duration
 
-    def __enter__(self) -> None:
-        self.start()
-
-    def __exit__(self, _type, _value, _traceback) -> None:
+    def stop_with_message(self):
+        """Stop timer and print out a message about the duration"""
         duration = timedelta(seconds=(int(self.stop())))
         msg = f"{self.message}: {duration}"
         logging.info(msg)
         if callable(self._on_exit):
             self._on_exit(msg)
+
+    def __enter__(self) -> None:
+        self.start()
+
+    def __exit__(self, _type, _value, _traceback) -> None:
+        self.stop_with_message()

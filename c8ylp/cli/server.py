@@ -8,28 +8,10 @@ from .core import ProxyOptions, start_proxy
 
 @click.command()
 @options.ARG_DEVICE
-@options.HOSTNAME
-@options.EXTERNAL_IDENTITY_TYPE
-@options.REMOTE_ACCESS_TYPE
-@options.C8Y_TENANT
-@options.C8Y_USER
-@options.C8Y_TOKEN
-@options.C8Y_PASSWORD
-@options.C8Y_TFA_CODE
-@options.PORT
-@options.PING_INTERVAL
+@options.common_options
 @options.KILL_EXISTING
-@options.TCP_SIZE
-@options.TCP_TIMEOUT
-@options.LOGGING_VERBOSE
-@options.MODE_SCRIPT
-@options.SSL_IGNORE_VERIFY
 @options.PID_USE
 @options.PID_FILE
-@options.SERVER_RECONNECT_LIMIT
-@options.ENV_FILE
-@options.DISABLE_PROMPT
-@options.STORE_TOKEN
 @click.pass_context
 def server(
     ctx,

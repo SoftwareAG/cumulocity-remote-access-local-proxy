@@ -48,8 +48,8 @@ class ExitCodes(IntEnum):
 
 
 @dataclasses.dataclass
-class ProxyOptions:
-    """Local proxy options"""
+class ProxyContext:
+    """Local proxy context"""
 
     host = ""
     device = ""
@@ -66,7 +66,7 @@ class ProxyOptions:
     tcp_size = 0
     tcp_timeout = 0
     verbose = False
-    script_mode = False
+    script_mode = True
     ignore_ssl_validate = False
     use_pid = False
     pid_file = ""
@@ -78,14 +78,21 @@ class ProxyOptions:
     store_token = False
     skip_exit = None
 
-    def fromdict(self, src_dict: Dict[str, Any]) -> "ProxyOptions":
+    def __init__(self, ctx: click.Context, src_dict: Dict[str, Any] = None) -> None:
+        self._ctx = ctx
+        if src_dict is not None:
+            self.fromdict(src_dict)
+
+            configure_logger(None, self.verbose)
+
+    def fromdict(self, src_dict: Dict[str, Any]) -> "ProxyContext":
         """Load proxy settings from a dictionary
 
         Args:
             src_dict (Dict[str, Any]): [description]
 
         Returns:
-            ProxyOptions: Proxy options after the values have been set
+            ProxyContext: Proxy options after the values have been set
                 via the dictionary
         """
         logging.info("Loading from dictionary")
@@ -95,6 +102,62 @@ class ProxyOptions:
             if hasattr(self, key):
                 setattr(self, key, value)
         return self
+
+    def start_background(self, ctx: click.Context = None) -> "ProxyContext":
+        """Start the local proxy in the background
+
+        Returns:
+            ProxyContext: Reference to the proxy context so it can be chained
+                with other commands or used after the initialization of the class.
+        """
+        cur_ctx = ctx or self._ctx
+        connection_data = pre_start_checks(cur_ctx, self)
+        run_proxy_in_background(cur_ctx, self, connection_data=connection_data)
+        return self
+
+    # def log(self, msg: str, level=None, *args, **kwargs):
+    #     """Display a message and log it
+
+    #     Args:
+    #         msg (str): [description]
+    #         level ([type], optional): [description]. Defaults to None.
+    #     """
+    #     level = level or logging.INFO
+
+    #     if level >= logging.ERROR:
+    #         click.secho(msg, fg="red")
+    #     elif level >= logging.WARNING:
+    #         click.secho(msg, fg="yellow")
+
+    #     logging.log(level, msg, *args, **kwargs)
+
+    @classmethod
+    def show_message(cls, msg: str, *args, **kwargs):
+        """Show an message to the user and log it
+
+        Args:
+            msg (str): User message to print on the console
+        """
+        click.secho(msg, fg="green")
+        logging.info(msg, *args, **kwargs)
+
+    @classmethod
+    def show_error(cls, msg: str, *args, **kwargs):
+        """Show an error to the user and log it
+
+        Args:
+            msg (str): User message to print on the console
+        """
+        click.secho(msg, fg="red")
+        logging.warning(msg, *args, **kwargs)
+
+    def set_env(self):
+        """Set environment variables so information about the proxy can
+        be access by plugins
+        """
+        os.environ["C8Y_HOST"] = str(self.host)
+        os.environ["PORT"] = str(self.port)
+        os.environ["DEVICE"] = self.device
 
 
 @dataclasses.dataclass
@@ -124,30 +187,39 @@ def configure_logger(path: str = None, verbose: bool = False) -> logging.Logger:
         path = pathlib.Path.home() / ".c8ylp"
         path.mkdir(parents=True, exist_ok=True)
 
-    loglevel = logging.INFO if verbose else logging.WARNING
     logger = logging.getLogger()
-    logger.setLevel(loglevel)
+    logger.setLevel(logging.INFO)
     log_file_formatter = logging.Formatter(
         "%(asctime)s %(threadName)s %(levelname)s %(name)s %(message)s"
     )
-    log_console_formatter = logging.Formatter("[c8ylp]  %(levelname)-5s %(message)s")
 
     # Set default log format
-    if len(logger.handlers) == 0:
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(log_console_formatter)
-        console_handler.setLevel(loglevel)
-        logger.addHandler(console_handler)
+    if verbose:
+        log_console_formatter = logging.Formatter(
+            "[c8ylp]  %(levelname)-5s %(message)s"
+        )
+        console_loglevel = logging.INFO
+        if len(logger.handlers) == 0:
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(log_console_formatter)
+            console_handler.setLevel(console_loglevel)
+            logger.addHandler(console_handler)
+        else:
+            handler = logger.handlers[0]
+            # ignore console log messages
+            handler.setLevel(console_loglevel)
+            handler.setFormatter(log_console_formatter)
     else:
-        handler = logger.handlers[0]
-        handler.setFormatter(log_console_formatter)
+        # Remove default console logging and only use file logging
+        logger.handlers = []
 
     # Max 5 log files each 10 MB.
     rotate_handler = RotatingFileHandler(
         filename=path / "localproxy.log", maxBytes=10000000, backupCount=5
     )
     rotate_handler.setFormatter(log_file_formatter)
-    rotate_handler.setLevel(loglevel)
+    rotate_handler.setLevel(logging.INFO)
+
     # Log to Rotating File
     logger.addHandler(rotate_handler)
     return logger
@@ -166,13 +238,13 @@ def register_signals():
         signal.signal(signal.SIGINT, signal_handler)
 
 
-def create_client(ctx: click.Context, opts: ProxyOptions) -> CumulocityClient:
+def create_client(ctx: click.Context, opts: ProxyContext) -> CumulocityClient:
     """Create Cumulocity client and prompt for missing credentials
     if necessary.
 
     Args:
         ctx (click.Context): Click context
-        opts (ProxyOptions): Proxy options
+        opts (ProxyContext): Proxy options
 
     Returns:
         CumulocityClient: Configured Cumulocity client
@@ -231,14 +303,14 @@ def create_client(ctx: click.Context, opts: ProxyOptions) -> CumulocityClient:
     return client
 
 
-def store_credentials(opts: ProxyOptions, client: CumulocityClient):
+def store_credentials(opts: ProxyContext, client: CumulocityClient):
     """Store credentials to the environment file. It creates
     the file if it does not already exist.
 
     The file will only be written to if it has changed.
 
     Args:
-        opts (ProxyOptions): Proxy options
+        opts (ProxyContext): Proxy options
         client (CumulocityClient): Cumulocity client containing valid
             credentials
     """
@@ -254,9 +326,9 @@ def store_credentials(opts: ProxyOptions, client: CumulocityClient):
     )
 
     if changed:
-        click.echo(f"Env file {opts.env_file} was updated")
+        click.echo(f"Env file was updated: {opts.env_file}")
     else:
-        logging.info("Env file %s is already up to date", opts.env_file)
+        logging.info("Env file is already up to date: %s", opts.env_file)
 
 
 def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
@@ -323,13 +395,13 @@ def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
 
 
 def run_proxy_in_background(
-    ctx: click.Context, opts: ProxyOptions, connection_data: RemoteAccessConnectionData
+    ctx: click.Context, opts: ProxyContext, connection_data: RemoteAccessConnectionData
 ):
     """Run the proxy in a background thread
 
     Args:
         ctx (click.Context): Click context
-        opts (ProxyOptions): Proxy options
+        opts (ProxyContext): Proxy options
         connection_data (RemoteAccessConnectionData): Remote access connection data
     """
 
@@ -337,9 +409,7 @@ def run_proxy_in_background(
     opts.skip_exit = True
 
     # Inject custom env variables for use within the script
-    os.environ["C8Y_HOST"] = str(opts.host)
-    os.environ["PORT"] = str(opts.port)
-    os.environ["DEVICE"] = str(opts.device)
+    opts.set_env()
 
     # register signals as the proxy will be starting in a background thread
     # to enable the proxy to run as a subcommand
@@ -373,18 +443,17 @@ def run_proxy_in_background(
 
 
 def pre_start_checks(
-    ctx: click.Context, opts: ProxyOptions
+    ctx: click.Context, opts: ProxyContext
 ) -> Optional[RemoteAccessConnectionData]:
     """Run prestart checks before starting the local proxy
 
     Args:
         ctx (click.Context): Click context
-        opts (ProxyOptions): Proxy options
+        opts (ProxyContext): Proxy options
 
     Returns:
         Optional[RemoteAccessConnectionData]: Remote access connection data
     """
-    configure_logger(verbose=opts.verbose)
 
     if opts.use_pid:
         try:
@@ -429,7 +498,7 @@ def pre_start_checks(
 
 def start_proxy(
     ctx: click.Context,
-    opts: ProxyOptions,
+    opts: ProxyContext,
     connection_data: RemoteAccessConnectionData,
     stop_signal: threading.Event = None,
 ) -> NoReturn:
@@ -437,7 +506,7 @@ def start_proxy(
 
     Args:
         ctx (click.Context): Click context
-        opts (ProxyOptions): Proxy options
+        opts (ProxyContext): Proxy options
     """
     # pylint: disable=too-many-branches,too-many-statements
     is_main_thread = threading.current_thread() is threading.main_thread()
@@ -522,7 +591,7 @@ def start_proxy(
         if background:
             background.join()
 
-        logging.info("Exit code: %s", exit_code)
+        logging.info("Exit code: %s (%d)", exit_code, int(exit_code))
         click.echo("Exiting")
 
         if is_main_thread:

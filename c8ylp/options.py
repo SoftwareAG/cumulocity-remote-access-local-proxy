@@ -43,10 +43,10 @@ def load_envfile(ctx: click.Context, _param: click.Parameter, value: Any):
         return value
 
     click.echo(f"Loading env-file: {value}")
-    if os.path.exists(value):
+    if os.path.exists(value) and os.path.isfile(value):
         loadenv(value)
     else:
-        logging.info("env file does not exist: %s", value)
+        logging.info("env file does not exist or is not a file: %s", value)
     return value
 
 
@@ -129,11 +129,11 @@ def validate_token(ctx: click.Context, _param, value) -> Any:
 
     try:
         client.validate_credentials()
-        click.secho("Validating detected c8y token: ", nl=False)
+        click.secho("Validating c8y token: ", nl=False)
         click.secho("OK", fg="green")
     except Exception:
-        click.secho("Validating detected c8y token: ", nl=False)
-        click.secho("INVALID", fg="red")
+        click.secho("Validating c8y token: ", nl=False)
+        click.secho("EXPIRED/INVALID", fg="red")
         logging.warning(
             "Token is no longer valid for host %s. The token will be ignored", host
         )
@@ -411,8 +411,7 @@ ENV_FILE_OPTIONAL_EXISTS = click.option(
 def common_options(f):
     """Common Options"""
     options = [
-        # ARG_DEVICE,
-        # ARG_SCRIPT,
+        ARG_DEVICE,
         HOSTNAME,
         C8Y_TENANT,
         C8Y_USER,

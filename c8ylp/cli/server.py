@@ -3,11 +3,10 @@
 import click
 
 from .. import options
-from .core import ProxyOptions, pre_start_checks, start_proxy
+from .core import ProxyContext
 
 
 @click.command()
-@options.ARG_DEVICE
 @options.common_options
 @options.KILL_EXISTING
 @options.PID_USE
@@ -30,7 +29,7 @@ def server(
     Example 1: Start the local proxy, prompt for credentials (if not set via env variables)
 
         \b
-        c8ylp server --host https://example.c8y.io device01
+        c8ylp server device01 --host https://example.c8y.io
 
     Example 2: Start the local proxy using environment file
 
@@ -40,8 +39,6 @@ def server(
     Example 3: Start the local proxy with randomized port
 
         \b
-        c8ylp server --env-file .env device01 --port 0
+        c8ylp server --env-file .env --port 0 device01
     """
-    opts = ProxyOptions().fromdict(kwargs)
-    conection_data = pre_start_checks(ctx, opts)
-    start_proxy(ctx, opts, conection_data)
+    ProxyContext(ctx, kwargs).start_background()

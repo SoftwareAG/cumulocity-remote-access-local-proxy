@@ -9,10 +9,12 @@ import subprocess
 from typing import List
 
 import click
-from c8ylp.cli.core import ExitCodes
+from c8ylp import options
+from c8ylp.cli.core import ExitCodes, ProxyContext
 
 
 @click.command()
+@options.common_options
 @click.option(
     "--ssh-user",
     required=True,
@@ -23,7 +25,7 @@ from c8ylp.cli.core import ExitCodes
     "additional_args", metavar="[REMOTE_COMMANDS]...", nargs=-1, type=click.UNPROCESSED
 )
 @click.pass_context
-def cli(ctx: click.Context, ssh_user: str, additional_args: List[str]):
+def cli(ctx: click.Context, ssh_user: str, additional_args: List[str], **kwargs):
     """Start once-off proxy and connect via ssh
 
     An interactive ssh is opened if a remote command is not provided.
@@ -39,31 +41,29 @@ def cli(ctx: click.Context, ssh_user: str, additional_args: List[str]):
     Example 1: Start an interactive SSH connection
 
     \b
-        c8ylp connect --env-file .env ssh device01 --ssh-user admin
+        c8ylp connect ssh device01 --env-file .env --ssh-user admin
 
     Example 2: Execute a command via SSH
 
     \b
-        c8ylp connect --env-file .env ssh device01 --ssh-user admin -- systemctl status ssh
+        c8ylp connect ssh device01 --env-file .env --ssh-user admin -- systemctl status ssh
 
     Example 3: Execute a complex command via SSH (use quotes to ensure command is sent to the device)
 
     \b
-        c8ylp plugin --env-file .env device01 ssh --ssh-user admin -- "systemctl status ssh; dpkg --list | grep ssh"
+        c8ylp connect ssh device01 --env-file .env --ssh-user admin -- "systemctl status ssh; dpkg --list | grep ssh"
 
     """
+    proxy = ProxyContext(ctx, kwargs).start_background()
 
-    logging.info("Parent context: %s", ctx.parent.params)
     if not shutil.which("ssh"):
-        logging.error(
+        proxy.show_error(
             "ssh client not found. Please make sure the 'ssh' client is included in your PATH variable"
         )
-
         ctx.exit(ExitCodes.SSH_NOT_FOUND)
 
-    port = os.getenv("PORT")
-    device = os.getenv("DEVICE")
-    host = os.getenv("C8Y_HOST")
+    device = proxy.device
+    host = proxy.host
 
     ssh_args = [
         "ssh",
@@ -72,24 +72,20 @@ def cli(ctx: click.Context, ssh_user: str, additional_args: List[str]):
         "-o",
         "UserKnownHostsFile=/dev/null",
         "-p",
-        port,
+        str(proxy.port),
         f"{ssh_user}@localhost",
     ]
 
     if additional_args:
-        logging.info("Executing a once-off command then exiting")
         ssh_args.extend(additional_args)
-        click.secho(f"Executing command via ssh on {device} ({host})", fg="green")
+        proxy.show_message(f"Executing command via ssh on {device} ({host})")
     else:
-        click.secho(
-            f"Starting interactive ssh session with {device} ({host})",
-            fg="green",
-        )
+        proxy.show_message(f"Starting interactive ssh session with {device} ({host})")
 
     logging.info("Starting ssh session using: %s", " ".join(ssh_args))
     exit_code = subprocess.call(ssh_args, env=os.environ)
     if exit_code != 0:
-        logging.warning("SSH exited with a non-zero exit code. code=%s", exit_code)
+        proxy.show_error(f"SSH exited with a non-zero exit code. code={exit_code}")
     ctx.exit(exit_code)
 
 

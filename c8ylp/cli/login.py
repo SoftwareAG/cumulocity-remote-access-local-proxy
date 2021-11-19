@@ -3,7 +3,7 @@
 import click
 
 from .. import options
-from .core import ProxyOptions, create_client
+from .core import ProxyContext, create_client
 
 
 @click.command()
@@ -28,12 +28,12 @@ def login(
     You will be prompted for all of the relevant information,
     i.e. host, username, password and TFA code (if required)
 
-    Example: Create/update an env-file by trying to login into Cumulocity
+    Example 1: Create/update an env-file by trying to login into Cumulocity
     \b
         c8ylp login --env-file mytenant.env
 
     """
-    opts = ProxyOptions().fromdict(kwargs)
+    opts = ProxyContext(ctx, kwargs)
 
     try:
         create_client(ctx, opts)

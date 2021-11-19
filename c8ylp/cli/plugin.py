@@ -9,7 +9,7 @@ import click
 
 from c8ylp import __ROOT_DIR__
 from .. import options
-from .core import ProxyOptions, pre_start_checks, run_proxy_in_background
+from .core import ProxyContext
 
 
 plugin_folders = [
@@ -31,7 +31,7 @@ class PluginCLI(click.MultiCommand):
             List[str]: List of sub commands
         """
         cmds = []
-        click.echo(f"Checking plugin folder: {str(plugin_folders)}")
+        click.echo(f"Checking plugin folder: {[str(path) for path in plugin_folders]}")
 
         for plugin_folder in plugin_folders:
             if plugin_folder.exists():
@@ -45,9 +45,6 @@ class PluginCLI(click.MultiCommand):
 
         logging.debug("Detected plugins: %s", cmds)
         return cmds
-
-    # def get_command(self, ctx: Context, cmd_name: str) -> t.Optional[Command]:
-    #     return super().get_command(ctx, cmd_name)
 
     def get_command(self, ctx: click.Context, cmd_name: str) -> Optional[click.Command]:
         """Get a command via its name. It will dynamically execute the
@@ -66,29 +63,38 @@ class PluginCLI(click.MultiCommand):
         file_exts = [".py", ".sh"]
 
         for plugin_folder in plugin_folders:
+
             for ext in file_exts:
 
                 func = plugin_folder.joinpath(cmd_name + ext)
                 if func.exists():
                     if ext == ".py":
                         logging.debug("Detected python script: %s", func)
-                        if __ROOT_DIR__ in str(func):
-                            pass
-                        else:
-                            with open(func) as file:
-                                code = compile(file.read(), str(func), "exec")
-                                # Eval is required to make a dynamic plugin
-                                # pylint: disable=eval-used
-                                eval(code, namespace, namespace)
-                                break
+                        with open(func) as file:
+                            code = compile(file.read(), str(func), "exec")
+                            # Eval is required to make a dynamic plugin
+                            # pylint: disable=eval-used
+                            eval(code, namespace, namespace)
+                            break
                     elif ext == ".sh":
                         logging.debug("Detected bash script: %s", func)
 
                         def create_wrapper(script_path):
                             @click.command()
+                            @options.common_options
+                            @click.argument(
+                                "additional_args",
+                                metavar="[ARGS]...",
+                                nargs=-1,
+                                type=click.UNPROCESSED,
+                            )
                             @click.pass_context
-                            def bash_wrapper(wctx):
-                                exit_code = subprocess.call(script_path, env=os.environ)
+                            def bash_wrapper(wctx, additional_args, **kwargs):
+                                proxy = ProxyContext(wctx, kwargs).start_background()
+                                proxy.set_env()
+
+                                plugin_args = [script_path, *additional_args]
+                                exit_code = subprocess.call(plugin_args, env=os.environ)
                                 wctx.exit(exit_code)
 
                             return bash_wrapper
@@ -97,16 +103,22 @@ class PluginCLI(click.MultiCommand):
                         break
 
         if cmd_name:
-            click.echo(f"plugin name: {cmd_name}")
+            logging.info("plugin found: name=%s, path=%s", cmd_name, func)
 
         if "cli" not in namespace:
-            logging.warning("Plugin is missing cli function. %s", namespace)
-            return {}
+            if cmd_name != ctx.parent.command.name:
+                logging.warning(
+                    "Plugin is missing cli function. %s, parent=%s",
+                    cmd_name,
+                    ctx.parent.command.name,
+                )
+            return None
 
         return namespace["cli"]
 
 
 @click.group()
+@options.LOGGING_VERBOSE
 def cli_plugin():
     """Plugins"""
 
@@ -115,23 +127,17 @@ def cli_plugin():
     "plugin",
     cls=PluginCLI,
     hidden=False,
+    options_metavar="",
     context_settings=dict(
         ignore_unknown_options=True,
     ),
 )
-@options.ARG_DEVICE
-@options.common_options
-@click.pass_context
-def run(ctx: click.Context, *_args, **kwargs):
+def run():
     """
     Run a custom plugin (installed under ~/.c8ylp/plugins/)
 
     Example 1:
-    \b
-        c8ylp plugin device01 copyto <src> <dst>
-    """
 
-    opts = ProxyOptions().fromdict(kwargs)
-    opts.script_mode = True
-    connection_data = pre_start_checks(ctx, opts)
-    run_proxy_in_background(ctx, opts, connection_data=connection_data)
+    \b
+        c8ylp plugin copyto device01 <src> <dst>
+    """

@@ -2,7 +2,6 @@
 
 import logging
 import os
-import shutil
 import subprocess
 from typing import List
 
@@ -62,4 +61,5 @@ def cli(ctx: click.Context, additional_args: List[str]):
 
 
 if __name__ == "__main__":
+    # pylint: disable=no-value-for-parameter
     cli()

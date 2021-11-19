@@ -302,7 +302,8 @@ class CumulocityClient:
             return json.loads(response.content.decode("utf-8"))
 
         error = Exception(
-            f"Error retrieving device. Status Code {response.status_code}, device (external id)={serial_number}, host={self.url}, user={self.user}"
+            f"Error retrieving device. Status Code {response.status_code}, "
+            f"device (external id)={serial_number}, host={self.url}, user={self.user}"
         )
         if response.status_code == 401:
             error = CumulocityPermissionDeviceError(self.user, serial_number, self.url)

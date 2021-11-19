@@ -1,21 +1,15 @@
 """plugin command"""
 
 import os
-import sys
-import threading
 import subprocess
 import logging
 from pathlib import Path
 from typing import List, Optional
-from unittest.mock import Mock
 import click
 
-from ..plugins import ssh
 from c8ylp import __ROOT_DIR__
-from c8ylp.helper import wait_for_port
-from c8ylp.timer import CommandTimer
 from .. import options
-from .core import ProxyOptions, pre_start_checks, register_signals, run_proxy_in_background, start_proxy
+from .core import ProxyOptions, pre_start_checks, run_proxy_in_background
 
 
 plugin_folders = [
@@ -69,10 +63,6 @@ class PluginCLI(click.MultiCommand):
         """
         namespace = {}
 
-        if cmd_name == "ssh":
-            # namespace["cli"] = ssh.cli
-            return ssh.cli
-
         file_exts = [".py", ".sh"]
 
         for plugin_folder in plugin_folders:
@@ -106,7 +96,8 @@ class PluginCLI(click.MultiCommand):
                         namespace["cli"] = create_wrapper(str(func))
                         break
 
-        click.echo(f"plugin name: {cmd_name}")
+        if cmd_name:
+            click.echo(f"plugin name: {cmd_name}")
 
         if "cli" not in namespace:
             logging.warning("Plugin is missing cli function. %s", namespace)

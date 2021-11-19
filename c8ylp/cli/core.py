@@ -6,8 +6,6 @@ import os
 import pathlib
 import platform
 import signal
-import subprocess
-import sys
 import threading
 import time
 from enum import IntEnum
@@ -100,6 +98,8 @@ class ProxyOptions:
 
 @dataclasses.dataclass
 class RemoteAccessConnectionData:
+    """Remote access connection data"""
+
     client: CumulocityClient
     managed_object_id: str
     remote_config_id: str
@@ -324,6 +324,13 @@ def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
 def run_proxy_in_background(
     ctx: click.Context, opts: ProxyOptions, connection_data: RemoteAccessConnectionData
 ):
+    """Run the proxy in a background thread
+
+    Args:
+        ctx (click.Context): Click context
+        opts (ProxyOptions): Proxy options
+        connection_data (RemoteAccessConnectionData): Remote access connection data
+    """
 
     stop_signal = threading.Event()
     opts.skip_exit = True
@@ -363,6 +370,15 @@ def run_proxy_in_background(
 def pre_start_checks(
     ctx: click.Context, opts: ProxyOptions
 ) -> Optional[RemoteAccessConnectionData]:
+    """Run prestart checks before starting the local proxy
+
+    Args:
+        ctx (click.Context): Click context
+        opts (ProxyOptions): Proxy options
+
+    Returns:
+        Optional[RemoteAccessConnectionData]: Remote access connection data
+    """
     configure_logger(verbose=opts.verbose)
 
     if opts.use_pid:
@@ -394,15 +410,16 @@ def pre_start_checks(
             )
             ctx.exit(ExitCodes.MISSING_ROLE_REMOTE_ACCESS_ADMIN)
 
-        return RemoteAccessConnectionData(
-            client=client, managed_object_id=device_id, remote_config_id=config_id
-        )
     except Exception as ex:
         if isinstance(ex, click.exceptions.Exit):
             logging.error("Could not retrieve device information. reason=%s", ex)
             # re-raise existing exit
             raise
         ctx.exit(ExitCodes.NOT_AUTHORIZED)
+
+    return RemoteAccessConnectionData(
+        client=client, managed_object_id=device_id, remote_config_id=config_id
+    )
 
 
 def start_proxy(

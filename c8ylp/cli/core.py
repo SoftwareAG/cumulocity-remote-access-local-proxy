@@ -450,6 +450,7 @@ def start_proxy(
     }
 
     tcp_server = None
+    background = None
 
     try:
         tcp_server = TCPProxyServer(
@@ -513,7 +514,9 @@ def start_proxy(
         if tcp_server:
             tcp_server.shutdown()
 
-        background.join()
+        if background:
+            background.join()
+
         logging.info("Exit code: %s", exit_code)
         click.echo("Exiting")
 

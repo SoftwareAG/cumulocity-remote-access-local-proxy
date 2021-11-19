@@ -39,12 +39,12 @@ def cli(ctx: click.Context, ssh_user: str, additional_args: List[str]):
     Example 1: Start an interactive SSH connection
 
     \b
-        c8ylp plugin ssh --env-file .env device01 --ssh-user admin
+        c8ylp connect --env-file .env ssh device01 --ssh-user admin
 
     Example 2: Execute a command via SSH
 
     \b
-        c8ylp plugin ssh --env-file .env device01 --ssh-user admin -- systemctl status ssh
+        c8ylp connect --env-file .env ssh device01 --ssh-user admin -- systemctl status ssh
 
     Example 3: Execute a complex command via SSH (use quotes to ensure command is sent to the device)
 

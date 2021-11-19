@@ -82,7 +82,7 @@ class PluginCLI(click.MultiCommand):
                 if func.exists():
                     if ext == ".py":
                         logging.debug("Detected python script: %s", func)
-                        if __ROOT_DIR__ in func:
+                        if __ROOT_DIR__ in str(func):
                             pass
                         else:
                             with open(func) as file:

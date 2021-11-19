@@ -30,17 +30,17 @@ def server(
     Example 1: Start the local proxy, prompt for credentials (if not set via env variables)
 
         \b
-        c8ylp start --host https://example.c8y.io device01
+        c8ylp server --host https://example.c8y.io device01
 
     Example 2: Start the local proxy using environment file
 
         \b
-        c8ylp start --env-file .env device01
+        c8ylp server --env-file .env device01
 
     Example 3: Start the local proxy with randomized port
 
         \b
-        c8ylp start --env-file .env device01 --port 0
+        c8ylp server --env-file .env device01 --port 0
     """
     opts = ProxyOptions().fromdict(kwargs)
     start_proxy(ctx, opts)

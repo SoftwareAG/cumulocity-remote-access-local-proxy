@@ -27,12 +27,18 @@ from c8ylp.rest_client.sessions import BaseUrlSession
 
 
 class CumulocityPermissionDeviceError(Exception):
-    """Cumulocity Device Permission error"""
+    """Cumulocity device permission error"""
 
-    def __init__(self, user: str, device: str) -> None:
-        message = (
-            f"User {user} is not authorized to read Device Data of Device {device}"
-        )
+    def __init__(self, user: str, device: str, host: str) -> None:
+        message = f"User {user} is not authorized to read Device Data of Device {device} on {host}"
+        super().__init__(message)
+
+
+class CumulocityDeviceNotFound(Exception):
+    """Cumulocity device not found error"""
+
+    def __init__(self, device: str, host: str) -> None:
+        message = f"A device with the external id '{device}' was not found in Cumulocity host: {host}"
         super().__init__(message)
 
 
@@ -261,9 +267,9 @@ class CumulocityClient:
             f"Error retrieving device. Status Code {response.status_code}"
         )
         if response.status_code == 401:
-            error = CumulocityPermissionDeviceError(self.user, serial_number)
+            error = CumulocityPermissionDeviceError(self.user, serial_number, self.url)
         elif response.status_code == 404:
-            error = Exception(f"Device {serial_number} not found")
+            error = CumulocityDeviceNotFound(serial_number, self.url)
 
         self.logger.error(error)
         raise error
@@ -296,12 +302,12 @@ class CumulocityClient:
             return json.loads(response.content.decode("utf-8"))
 
         error = Exception(
-            f"Error retrieving device. Status Code {response.status_code}"
+            f"Error retrieving device. Status Code {response.status_code}, device (external id)={serial_number}, host={self.url}, user={self.user}"
         )
         if response.status_code == 401:
-            error = CumulocityPermissionDeviceError(self.user, serial_number)
+            error = CumulocityPermissionDeviceError(self.user, serial_number, self.url)
         elif response.status_code == 404:
-            error = Exception(f"Device {serial_number} not found")
+            error = CumulocityDeviceNotFound(serial_number, self.url)
 
         self.logger.error(error)
         raise error

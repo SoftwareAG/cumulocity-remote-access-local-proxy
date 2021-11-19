@@ -128,8 +128,7 @@ class TCPServer:
     def stop_connection(self):
         # Close Client connection...
         if self.connection and not self.conn_is_closed:
-            self.logger.info(
-                f'Stopping TCP Connection {self.connection.getpeername()}')
+            # self.logger.info(f'Stopping TCP Connection {self.connection.getpeername()}')
             self.connection.close()
             # self.connection.shutdown(socket.SHUT_RDWR)
             self.connection = None

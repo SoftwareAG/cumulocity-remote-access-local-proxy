@@ -300,6 +300,25 @@ class C8yRestClient(object):
         return my_operation
 
 
+if __name__ == '__main__':
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    # my_device_address = 'cb1-2102351HNDDMK2000759'.lower()
+    my_device_address = 'cb4-a1eucpg1qa2121000025'
+    # _tenant = 't2700'
+    rest_user_name = 'service_schindler-jenkins',
+    rest_user_password = '2txFLPmgE5xwWRovG7nW7e4Y94XhwOB3'
+    # my_url = 'https://main.dm-zz-q.ioee10-cloud.com/'
+    client = C8yRestClient(c8y_serial_number=my_device_address, user=rest_user_name,
+                           password=rest_user_password)
+    fw = client.get_available_firmwares(client.cy8_device.type)
+    my_firmware_list = CubeImage(fw)
+    my_firmware = my_firmware_list.get_middle()
+    # my_firmware = my_firmware_list.get_by_date('4.0.0_2021-08-25-1352')
+    client.update_cube_firmware(my_firmware)
+    operation = client.get_device_operation()
+    print(f'operation status {operation.status}')
+    # client.wait_for_operation_state(operation_id, C8YOperationStatus.EXECUTING)
+    client.wait_for_operation_state(operation.id, C8YOperationStatus.SUCCESSFUL, 1800, 30)
 
 
 

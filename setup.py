@@ -15,6 +15,7 @@
 #  limitations under the License.
 #
 
+
 from setuptools import setup
 
 setup(name='c8yrc',
@@ -36,3 +37,4 @@ setup(name='c8yrc',
         'websocket_client>=1.2.1'
       ],
       zip_safe=False)
+

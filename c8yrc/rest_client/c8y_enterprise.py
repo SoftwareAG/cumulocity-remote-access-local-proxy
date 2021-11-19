@@ -64,7 +64,6 @@ class CubeImage(object):
         return sw[0]
 
 
-
 class CubeOperation(object):
 
     def __init__(self, j):

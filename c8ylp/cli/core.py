@@ -449,6 +449,8 @@ def start_proxy(
         "ping_interval": opts.ping_interval,
     }
 
+    tcp_server = None
+
     try:
         tcp_server = TCPProxyServer(
             opts.port,

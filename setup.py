@@ -33,7 +33,7 @@ setup(
     author="Stefan Witschel",
     url="https://github.com/SoftwareAG/cumulocity-remote-access-local-proxy",
     license="Apache v2",
-    packages=find_packages("c8ylp"),
+    packages=find_packages(),
     entry_points={
         "console_scripts": ["c8ylp=c8ylp.main:cli"],
     },

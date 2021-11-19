@@ -354,7 +354,7 @@ def run_proxy_in_background(
     background.start()
 
     # Block until the port is actually open
-    wait_for_port(opts.port)
+    wait_for_port(opts.port, timeout=5.0)
 
     # The subcommand is called after this
     timer = CommandTimer("Duration", on_exit=click.echo).start()

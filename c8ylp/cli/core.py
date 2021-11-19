@@ -12,7 +12,7 @@ import threading
 import time
 from enum import IntEnum
 from logging.handlers import RotatingFileHandler
-from typing import Any, Dict, NoReturn
+from typing import Any, Dict, NoReturn, Optional
 
 import click
 
@@ -96,6 +96,13 @@ class ProxyOptions:
             if hasattr(self, key):
                 setattr(self, key, value)
         return self
+
+
+@dataclasses.dataclass
+class RemoteAccessConnectionData:
+    client: CumulocityClient
+    managed_object_id: str
+    remote_config_id: str
 
 
 PASSTHROUGH = "PASSTHROUGH"
@@ -314,7 +321,9 @@ def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
     return extract_config_id(matches[0])
 
 
-def run_proxy_in_background(ctx: click.Context, opts: ProxyOptions):
+def run_proxy_in_background(
+    ctx: click.Context, opts: ProxyOptions, connection_data: RemoteAccessConnectionData
+):
 
     stop_signal = threading.Event()
     opts.skip_exit = True
@@ -330,7 +339,10 @@ def run_proxy_in_background(ctx: click.Context, opts: ProxyOptions):
 
     # Start the proxy in a background thread so the user can
     background = threading.Thread(
-        target=start_proxy, args=(ctx, opts, stop_signal), daemon=True
+        target=start_proxy,
+        args=(ctx, opts),
+        kwargs=dict(connection_data=connection_data, stop_signal=stop_signal),
+        daemon=True,
     )
     background.start()
 
@@ -347,20 +359,10 @@ def run_proxy_in_background(ctx: click.Context, opts: ProxyOptions):
         background.join()
         timer.stop_with_message()
 
-def start_proxy(
-    ctx: click.Context, opts: ProxyOptions, stop_signal: threading.Event = None
-) -> NoReturn:
-    """Start the local proxy
 
-    Args:
-        ctx (click.Context): Click context
-        opts (ProxyOptions): Proxy options
-    """
-    # pylint: disable=too-many-branches,too-many-statements
-    is_main_thread = threading.current_thread() is threading.main_thread()
-    if is_main_thread:
-        register_signals()
-
+def pre_start_checks(
+    ctx: click.Context, opts: ProxyOptions
+) -> Optional[RemoteAccessConnectionData]:
     configure_logger(verbose=opts.verbose)
 
     if opts.use_pid:
@@ -391,6 +393,10 @@ def start_proxy(
                 opts.user,
             )
             ctx.exit(ExitCodes.MISSING_ROLE_REMOTE_ACCESS_ADMIN)
+
+        return RemoteAccessConnectionData(
+            client=client, managed_object_id=device_id, remote_config_id=config_id
+        )
     except Exception as ex:
         if isinstance(ex, click.exceptions.Exit):
             logging.error("Could not retrieve device information. reason=%s", ex)
@@ -398,11 +404,29 @@ def start_proxy(
             raise
         ctx.exit(ExitCodes.NOT_AUTHORIZED)
 
+
+def start_proxy(
+    ctx: click.Context,
+    opts: ProxyOptions,
+    connection_data: RemoteAccessConnectionData,
+    stop_signal: threading.Event = None,
+) -> NoReturn:
+    """Start the local proxy
+
+    Args:
+        ctx (click.Context): Click context
+        opts (ProxyOptions): Proxy options
+    """
+    # pylint: disable=too-many-branches,too-many-statements
+    is_main_thread = threading.current_thread() is threading.main_thread()
+    if is_main_thread:
+        register_signals()
+
     client_opts = {
         "host": opts.host,
-        "config_id": config_id,
-        "device_id": device_id,
-        "session": client.session,
+        "config_id": connection_data.remote_config_id,
+        "device_id": connection_data.managed_object_id,
+        "session": connection_data.client.session,
         "token": opts.token,
         "ignore_ssl_validate": opts.ignore_ssl_validate,
         "ping_interval": opts.ping_interval,

@@ -3,7 +3,7 @@
 import click
 
 from .. import options
-from .core import ProxyOptions, start_proxy
+from .core import ProxyOptions, pre_start_checks, start_proxy
 
 
 @click.command()
@@ -43,4 +43,5 @@ def server(
         c8ylp server --env-file .env device01 --port 0
     """
     opts = ProxyOptions().fromdict(kwargs)
-    start_proxy(ctx, opts)
+    conection_data = pre_start_checks(ctx, opts)
+    start_proxy(ctx, opts, conection_data)

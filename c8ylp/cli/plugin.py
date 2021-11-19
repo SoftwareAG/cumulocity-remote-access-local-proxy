@@ -15,7 +15,7 @@ from c8ylp import __ROOT_DIR__
 from c8ylp.helper import wait_for_port
 from c8ylp.timer import CommandTimer
 from .. import options
-from .core import ProxyOptions, register_signals, run_proxy_in_background, start_proxy
+from .core import ProxyOptions, pre_start_checks, register_signals, run_proxy_in_background, start_proxy
 
 
 plugin_folders = [
@@ -140,7 +140,7 @@ def run(ctx: click.Context, *_args, **kwargs):
         c8ylp plugin device01 copyto <src> <dst>
     """
 
-    click.echo("Running pre-install phase")
     opts = ProxyOptions().fromdict(kwargs)
     opts.script_mode = True
-    run_proxy_in_background(ctx, opts)
+    connection_data = pre_start_checks(ctx, opts)
+    run_proxy_in_background(ctx, opts, connection_data=connection_data)

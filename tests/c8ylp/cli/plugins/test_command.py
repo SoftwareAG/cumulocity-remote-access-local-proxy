@@ -26,9 +26,10 @@ def test_plugin_run_command(
             cli,
             [
                 "plugin",
-                serial,
+                "command",
                 "--port",
                 port,
+                serial,
                 "--",
                 "/bin/bash",
                 "-c",

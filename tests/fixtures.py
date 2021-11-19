@@ -7,7 +7,7 @@ from c8ylp.main import cli
 
 def mock_cli():
 
-    with patch("c8ylp.main.start_ssh") as mock:
+    with patch("c8ylp.cli.core.start_ssh") as mock:
         yield cli
 
 

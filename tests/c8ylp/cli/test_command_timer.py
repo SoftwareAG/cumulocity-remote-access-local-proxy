@@ -1,7 +1,7 @@
 """Test command timer"""
 import time
 import pytest
-from c8ylp.main import CommandTimer
+from c8ylp.timer import CommandTimer
 
 
 def test_timer_calling_stop_before_start():
@@ -12,7 +12,7 @@ def test_timer_calling_stop_before_start():
 
 def test_timer_context(capfd: pytest.CaptureFixture):
     """Test timing using context"""
-    timer = CommandTimer("My task")
+    timer = CommandTimer("My task", on_exit=print)
 
     with timer:
         time.sleep(1)

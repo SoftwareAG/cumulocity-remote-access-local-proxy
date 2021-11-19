@@ -5,12 +5,13 @@ from unittest.mock import Mock, patch
 import pytest
 import responses
 from click.testing import CliRunner
-from c8ylp.main import PASSTHROUGH, REMOTE_ACCESS_FRAGMENT, ExitCodes, ProxyOptions, cli
+from c8ylp.cli.core import PASSTHROUGH, REMOTE_ACCESS_FRAGMENT, ExitCodes
+from c8ylp.main import cli
 from tests.env import Environment
 from tests.fixtures import FixtureCumulocityAPI
 
 
-@patch("c8ylp.main.start_ssh", return_value=0)
+@patch("subprocess.call", return_value=0)
 def test_single_ssh_command_then_exit(
     mock_start_ssh: Mock, c8yserver: FixtureCumulocityAPI, env: Environment
 ):
@@ -24,7 +25,7 @@ def test_single_ssh_command_then_exit(
         runner = CliRunner()
         result = runner.invoke(
             cli,
-            ["connect-ssh", serial, "--ssh-user", "example", "ls -la"],
+            ["connect", "ssh", serial, "--ssh-user", "example", "ls -la"],
             env=env.create_authenticated(),
         )
 
@@ -35,22 +36,21 @@ def test_single_ssh_command_then_exit(
     run()
 
 
-@patch("c8ylp.main.shutil", autospec=True)
+@patch("shutil.which", return_value=None)
 def test_single_ssh_command_with_missing_ssh_binary(
-    mock_shutil: Mock, c8yserver: FixtureCumulocityAPI, env: Environment
+    _mock_which: Mock, c8yserver: FixtureCumulocityAPI, env: Environment
 ):
     """Execute command via ssh then exit"""
 
     @responses.activate
     def run():
-        mock_shutil.which.return_value = None
         serial = "ext-device-01"
         c8yserver.simulate_pre_authenticated(serial)
 
         runner = CliRunner()
         result = runner.invoke(
             cli,
-            ["connect-ssh", serial, "--ssh-user", "example", "ls -la"],
+            ["connect", "ssh", serial, "--ssh-user", "example", "ls -la"],
             env=env.create_authenticated(),
         )
 
@@ -59,15 +59,15 @@ def test_single_ssh_command_with_missing_ssh_binary(
     run()
 
 
-@patch("c8ylp.main.subprocess", autospec=True)
+# @patch("c8ylp.plugins.ssh.subprocess.call", return_code=0)
+@patch("subprocess.call", return_value=0)
 def test_launching_ssh_with_fixed_port(
-    mock_subprocess: Mock, c8yserver: FixtureCumulocityAPI, env: Environment
+    mock_call: Mock, c8yserver: FixtureCumulocityAPI, env: Environment
 ):
     """Execute command via ssh client using a specific port"""
 
     @responses.activate
     def run():
-        mock_subprocess.call.return_value = 0
         serial = "ext-device-01"
         port = "1234"
         username = "admin"
@@ -76,12 +76,22 @@ def test_launching_ssh_with_fixed_port(
         runner = CliRunner()
         result = runner.invoke(
             cli,
-            ["connect-ssh", serial, "--ssh-user", username, "--port", port, "ls -la"],
+            [
+                "connect",
+                "ssh",
+                serial,
+                "--port",
+                port,
+                "--ssh-user",
+                username,
+                "ls -la",
+            ],
             env=env.create_authenticated(),
         )
 
-        mock_subprocess.call.assert_called_once()
-        ssh_cmd = mock_subprocess.call.call_args[0][0]
+        assert result.exit_code == ExitCodes.OK
+        mock_call.assert_called_once()
+        ssh_cmd = mock_call.call_args[0][0]
 
         assert ssh_cmd == [
             "ssh",
@@ -95,13 +105,12 @@ def test_launching_ssh_with_fixed_port(
             "ls -la",
         ]
 
-        assert mock_subprocess.call.call_args[1]["env"]
-        assert result.exit_code == ExitCodes.OK
+        assert mock_call.call_args[1]["env"]
 
     run()
 
 
-@patch("c8ylp.main.start_ssh", return_value=99)
+@patch("subprocess.call", return_value=99)
 def test_return_exit_code(
     mock_start_ssh: Mock, c8yserver: FixtureCumulocityAPI, env: Environment
 ):
@@ -116,12 +125,13 @@ def test_return_exit_code(
         result = runner.invoke(
             cli,
             [
-                "connect-ssh",
+                "connect",
+                "ssh",
                 serial,
+                "--verbose",
                 "--ssh-user",
                 "example",
                 "ls -l /etc; exit 99",
-                "--verbose",
             ],
             env=env.create_authenticated(),
         )
@@ -129,14 +139,14 @@ def test_return_exit_code(
         assert result.stdout
 
         mock_start_ssh.assert_called_once()
-        opts: ProxyOptions = mock_start_ssh.call_args[0][1]
-        assert opts.ssh_user == "example"
-        assert opts.additional_args == ("ls -l /etc; exit 99",)
+        ssh_args = mock_start_ssh.call_args[0][0]
+        assert "ls -l /etc; exit 99" in ssh_args
+        assert "example@localhost" in ssh_args
 
     run()
 
 
-@patch("c8ylp.main.start_ssh", return_value=0)
+@patch("subprocess.call", return_value=0)
 def test_prompt_for_ssh_user(
     mock_start_ssh, c8yserver: FixtureCumulocityAPI, env: Environment
 ):
@@ -153,14 +163,14 @@ def test_prompt_for_ssh_user(
             "C8YLP_SSH_USER": "",
         }
         result = runner.invoke(
-            cli, ["connect-ssh", serial, "ls -la"], env=test_env, input="admin"
+            cli, ["connect", "ssh", serial, "ls -la"], env=test_env, input="admin"
         )
 
         mock_start_ssh.assert_called_once()
         assert result.exit_code == 0
         assert result.stdout
-        opts: ProxyOptions = mock_start_ssh.call_args[0][1]
-        assert opts.ssh_user == "admin"
+        ssh_args = mock_start_ssh.call_args[0][0]
+        assert "admin@localhost" in ssh_args
 
     run()
 
@@ -198,17 +208,18 @@ def test_prompt_for_tfa(inputs, c8yserver: FixtureCumulocityAPI, tmpdir):
         pathlib.Path(env_file).touch()
         stdin = "".join(inputs["stdin"])
 
-        with patch("c8ylp.main.start_ssh", return_value=0):
+        with patch("subprocess.call", return_value=0):
             runner = CliRunner()
             result = runner.invoke(
                 cli,
                 [
-                    "connect-ssh",
+                    "connect",
+                    "ssh",
                     serial,
-                    "--ssh-user",
-                    "admin",
                     "--env-file",
                     env_file.strpath,
+                    "--ssh-user",
+                    "admin",
                 ],
                 env={
                     "C8Y_HOST": "https://example.c8y.io",
@@ -251,7 +262,8 @@ def test_missing_role(c8yserver: FixtureCumulocityAPI, env: Environment):
         result = runner.invoke(
             cli,
             [
-                "connect-ssh",
+                "connect",
+                "ssh",
                 serial,
                 "--ssh-user",
                 "admin",
@@ -333,12 +345,14 @@ def test_device_managed_object_permission_denied(
 
         runner = CliRunner()
         args = [
-            "connect-ssh",
+            "connect",
+            "ssh",
             serial,
+            *case.get("options", []),
             "--ssh-user",
             "admin",
         ]
-        args.extend(case.get("options", []))
+
         result = runner.invoke(
             cli,
             args,

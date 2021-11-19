@@ -110,7 +110,7 @@ class PluginCLI(click.MultiCommand):
 
         if "cli" not in namespace:
             logging.warning("Plugin is missing cli function. %s", namespace)
-            return None
+            return {}
 
         return namespace["cli"]
 
@@ -139,7 +139,6 @@ def run(ctx: click.Context, *_args, **kwargs):
     \b
         c8ylp plugin device01 copyto <src> <dst>
     """
-    ctx.obj["call"] = Mock
 
     click.echo("Running pre-install phase")
     opts = ProxyOptions().fromdict(kwargs)

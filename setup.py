@@ -15,7 +15,7 @@
 #  limitations under the License.
 #
 
-from setuptools import setup
+from setuptools import setup, find_packages
 from pathlib import Path
 
 import versioneer
@@ -33,14 +33,7 @@ setup(
     author="Stefan Witschel",
     url="https://github.com/SoftwareAG/cumulocity-remote-access-local-proxy",
     license="Apache v2",
-    packages=[
-        "c8ylp",
-        "c8ylp.tcp_socket",
-        "c8ylp.websocket_client",
-        "c8ylp.rest_client",
-        "c8ylp.cli",
-        "c8ylp.plugins",
-    ],
+    packages=find_packages("c8ylp"),
     entry_points={
         "console_scripts": ["c8ylp=c8ylp.main:cli"],
     },

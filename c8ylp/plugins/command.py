@@ -10,9 +10,6 @@ import click
 
 
 @click.command()
-# @click.option(
-#     "--script", required=True, help="SSH username which is configured on the device"
-# )
 @click.argument(
     "additional_args", metavar="[REMOTE_COMMANDS]...", nargs=-1, type=click.UNPROCESSED
 )
@@ -40,14 +37,14 @@ def cli(ctx: click.Context, additional_args: List[str]):
     Example 1: Use scp to copy a file to a device
 
         \b
-        c8ylp plugin command device01 --env-file .env \\
+        c8ylp plugin --env-file .env device01 command \\
             -- /usr/bin/scp -P '$PORT' myfile.tar.gz admin@localhost:/tmp
 
     Example 2: Run a custom script (not included) to copy a file from the device to
     the current folder
 
         \b
-        c8ylp plugin command device01 --env-file .env -v ./copyfrom.sh /var/log/dpkg.log ./
+        c8ylp plugin --env-file .env -v device01 command ./copyfrom.sh /var/log/dpkg.log ./
     """
 
     cmd_args = []

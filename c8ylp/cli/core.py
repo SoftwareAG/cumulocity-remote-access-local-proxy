@@ -491,7 +491,9 @@ def start_proxy(
         if opts.use_pid:
             pid.clean_pid_file(opts.pid_file, os.getpid())
 
-        tcp_server.shutdown()
+        if tcp_server:
+            tcp_server.shutdown()
+
         background.join()
         logging.info("Exit code: %s", exit_code)
         click.echo("Exiting")

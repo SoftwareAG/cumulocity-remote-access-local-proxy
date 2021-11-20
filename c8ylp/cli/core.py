@@ -74,7 +74,7 @@ class ProxyContext:
     disable_prompts = False
     env_file = None
     store_token = False
-    wait_port_timeout = 10.0
+    wait_port_timeout = 60.0
 
     def __init__(self, ctx: click.Context, src_dict: Dict[str, Any] = None) -> None:
         self._ctx = ctx

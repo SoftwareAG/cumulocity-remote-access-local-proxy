@@ -42,8 +42,30 @@ def test(c, pattern=None):
         "python3",
         "-m",
         "pytest",
+        "tests",
         "--timeout=10",
         # Note: Dont use log cli level (--log-cli-level) as it can affect click testing!
+        "--cov-config=.coveragerc",
+        "--cov-report=term",
+        "--cov-report=html:test_output/htmlcov",
+        "--cov=c8ylp",
+    ]
+
+    if pattern:
+        cmd.append(f"-k={pattern}")
+    c.run(" ".join(cmd))
+
+
+@task
+def test_integration(c, pattern=None):
+    """Run integration tests"""
+    cmd = [
+        "python3",
+        "-m",
+        "pytest",
+        "--durations=0",
+        "--timeout=3600",
+        "--log-cli-level=INFO",
         "--cov-config=.coveragerc",
         "--cov-report=term",
         "--cov-report=html:test_output/htmlcov",

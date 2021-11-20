@@ -4,10 +4,10 @@ import dataclasses
 import logging
 import os
 import pathlib
-import platform
 import signal
 import threading
 import time
+import sys
 from enum import IntEnum
 from logging.handlers import RotatingFileHandler
 from typing import Any, Dict, NoReturn, Optional
@@ -22,10 +22,6 @@ from ..env import save_env
 from ..rest_client.c8yclient import CumulocityClient
 from ..tcp_socket import TCPProxyServer
 from ..websocket_client import WebsocketClient
-
-
-class ExitCommand(Exception):
-    """ExitCommand error"""
 
 
 class ExitCodes(IntEnum):
@@ -45,6 +41,8 @@ class ExitCodes(IntEnum):
 
     SSH_NOT_FOUND = 10
     TIMEOUT_WAIT_FOR_PORT = 11
+    COMMAND_NOT_FOUND = 12
+    TERMINATE = 100
 
 
 @dataclasses.dataclass
@@ -76,7 +74,7 @@ class ProxyContext:
     disable_prompts = False
     env_file = None
     store_token = False
-    skip_exit = None
+    wait_port_timeout = 10.0
 
     def __init__(self, ctx: click.Context, src_dict: Dict[str, Any] = None) -> None:
         self._ctx = ctx
@@ -115,21 +113,16 @@ class ProxyContext:
         run_proxy_in_background(cur_ctx, self, connection_data=connection_data)
         return self
 
-    # def log(self, msg: str, level=None, *args, **kwargs):
-    #     """Display a message and log it
+    def start(self, ctx: click.Context = None) -> None:
+        """Start the local proxy in the background
 
-    #     Args:
-    #         msg (str): [description]
-    #         level ([type], optional): [description]. Defaults to None.
-    #     """
-    #     level = level or logging.INFO
-
-    #     if level >= logging.ERROR:
-    #         click.secho(msg, fg="red")
-    #     elif level >= logging.WARNING:
-    #         click.secho(msg, fg="yellow")
-
-    #     logging.log(level, msg, *args, **kwargs)
+        Returns:
+            ProxyContext: Reference to the proxy context so it can be chained
+                with other commands or used after the initialization of the class.
+        """
+        cur_ctx = ctx or self._ctx
+        connection_data = pre_start_checks(cur_ctx, self)
+        start_proxy(cur_ctx, self, connection_data=connection_data)
 
     @classmethod
     def show_message(cls, msg: str, *args, **kwargs):
@@ -149,6 +142,26 @@ class ProxyContext:
             msg (str): User message to print on the console
         """
         click.secho(msg, fg="red")
+        logging.warning(msg, *args, **kwargs)
+
+    @classmethod
+    def show_info(cls, msg: str, *args, **kwargs):
+        """Show an info message to the user and log it
+
+        Args:
+            msg (str): User message to print on the console
+        """
+        click.secho(msg)
+        logging.warning(msg, *args, **kwargs)
+
+    @classmethod
+    def show_warning(cls, msg: str, *args, **kwargs):
+        """Show a warning to the user and log it
+
+        Args:
+            msg (str): User message to print on the console
+        """
+        click.secho(msg, fg="yellow")
         logging.warning(msg, *args, **kwargs)
 
     def set_env(self):
@@ -227,15 +240,12 @@ def configure_logger(path: str = None, verbose: bool = False) -> logging.Logger:
 
 def signal_handler(_signal, _frame):
     """Signal handler"""
-    raise ExitCommand()
+    sys.exit(ExitCodes.TERMINATE)
 
 
 def register_signals():
     """Register signal handlers"""
-    if platform.system() in ("Linux", "Darwin"):
-        signal.signal(signal.SIGUSR1, signal_handler)
-    else:
-        signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
 
 
 def create_client(ctx: click.Context, opts: ProxyContext) -> CumulocityClient:
@@ -249,6 +259,11 @@ def create_client(ctx: click.Context, opts: ProxyContext) -> CumulocityClient:
     Returns:
         CumulocityClient: Configured Cumulocity client
     """
+    if not opts.disable_prompts and not opts.host:
+        opts.host = click.prompt(
+            text="Enter the Cumulocity Host/URL",
+        )
+
     client = CumulocityClient(
         hostname=opts.host,
         tenant=opts.tenant,
@@ -258,6 +273,14 @@ def create_client(ctx: click.Context, opts: ProxyContext) -> CumulocityClient:
         token=opts.token,
         ignore_ssl_validate=opts.ignore_ssl_validate,
     )
+
+    if not client.url:
+        opts.show_error(
+            "No Cumulocity host was provided. The host can be set via"
+            "environment variables, arguments or the env-file"
+        )
+        ctx.exit(ExitCodes.NO_SESSION)
+
     logging.info("Checking tenant id")
     client.validate_tenant_id()
 
@@ -326,9 +349,9 @@ def store_credentials(opts: ProxyContext, client: CumulocityClient):
     )
 
     if changed:
-        click.echo(f"Env file was updated: {opts.env_file}")
+        opts.show_message(f"Env file was updated: {opts.env_file}")
     else:
-        logging.info("Env file is already up to date: %s", opts.env_file)
+        opts.show_info(f"Env file is already up to date: {opts.env_file}")
 
 
 def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
@@ -406,7 +429,6 @@ def run_proxy_in_background(
     """
 
     stop_signal = threading.Event()
-    opts.skip_exit = True
 
     # Inject custom env variables for use within the script
     opts.set_env()
@@ -426,9 +448,12 @@ def run_proxy_in_background(
 
     # Block until the port is actually open
     try:
-        wait_for_port(opts.port, timeout=5.0)
-    except TimeoutError as ex:
-        logging.error(ex)
+        wait_for_port(opts.port, timeout=opts.wait_port_timeout)
+    except TimeoutError:
+        opts.show_error(
+            "Timed out waiting for local port to open: "
+            f"port={opts.port}, timeout={opts.wait_port_timeout}s"
+        )
         ctx.exit(ExitCodes.TIMEOUT_WAIT_FOR_PORT)
 
     # The subcommand is called after this
@@ -461,13 +486,16 @@ def pre_start_checks(
                 opts.pid_file, opts.device, opts.host, opts.config, opts.user
             )
         except PermissionError:
+            opts.show_error(
+                f"Error creating PID file (Permission denied). file={opts.pid_file}"
+            )
             ctx.exit(ExitCodes.PID_FILE_ERROR)
     if opts.kill:
         if opts.use_pid:
             pid.kill_existing_instances(opts.pid_file)
         else:
-            logging.warning(
-                'Killing existing instances is only supported when "--use-pid" is used.'
+            opts.show_warning(
+                "Killing existing instances is only supported when '--use-pid' is used"
             )
 
     try:
@@ -478,17 +506,21 @@ def pre_start_checks(
 
         is_authorized = client.validate_remote_access_role()
         if not is_authorized:
-            logging.error(
-                "User %s is not authorized to use Cloud Remote Access. Contact your Cumulocity Admin!",
-                opts.user,
+            opts.show_error(
+                "The user is not authorized to use Cloud Remote Access. "
+                f"Contact your Cumulocity Admin. user={opts.user}",
             )
             ctx.exit(ExitCodes.MISSING_ROLE_REMOTE_ACCESS_ADMIN)
 
     except Exception as ex:
         if isinstance(ex, click.exceptions.Exit):
-            logging.error("Could not retrieve device information. reason=%s", ex)
+            opts.show_error(f"Could not retrieve device information. reason={ex}")
             # re-raise existing exit
             raise
+        opts.show_error(
+            "Unexpected error when retrieving device information from Cumulocity. "
+            f"host={opts.host or ''}, user={opts.user or ''}, error_details={ex}"
+        )
         ctx.exit(ExitCodes.NOT_AUTHORIZED)
 
     return RemoteAccessConnectionData(
@@ -552,26 +584,26 @@ def start_proxy(
         # Plugins start in a background thread so don't display it
         # as the plugins should do their own thing
         if is_main_thread:
-            click.secho(
+            opts.show_info(
                 f"\nc8ylp is listening for device (ext_id) {opts.device} ({opts.host}) on localhost:{opts.port}",
-                fg="green",
             )
             ssh_username = opts.ssh_user or "<device_username>"
-            click.secho(
+            opts.show_message(
                 f"\nConnect to {opts.device} by executing the following in a new tab/console:\n\n"
                 f"\tssh -p {opts.port} {ssh_username}@localhost",
-                color=True,
             )
 
+            opts.show_info("\nPress ctrl-c to shutdown the server")
+
         # loop, waiting for server to stop
-        while background.is_alive() and (stop_signal and not stop_signal.is_set()):
+        while background.is_alive():
+            if stop_signal and stop_signal.is_set():
+                break
             time.sleep(1)
             logging.debug(
                 "Waiting in background: alive=%s",
                 background.is_alive(),
             )
-    except ExitCommand:
-        pass
     except Exception as ex:
         if isinstance(ex, click.exceptions.Exit):
             # propagate exit code
@@ -579,7 +611,10 @@ def start_proxy(
             raise
 
         if str(ex):
-            logging.error("Error on TCP-Server. %s", ex)
+            opts.show_error(
+                "The local proxy TCP Server experienced an unexpected error. "
+                f"port={opts.port}, error={ex}"
+            )
             exit_code = ExitCodes.UNKNOWN
     finally:
         if opts.use_pid:
@@ -591,8 +626,16 @@ def start_proxy(
         if background:
             background.join()
 
-        logging.info("Exit code: %s (%d)", exit_code, int(exit_code))
-        click.echo("Exiting")
-
         if is_main_thread:
+            if int(exit_code) == 0:
+                opts.show_message(
+                    f"Exiting with code: {str(exit_code)} ({int(exit_code)})"
+                )
+            else:
+                opts.show_error(
+                    f"Exiting with code: {str(exit_code)} ({int(exit_code)})"
+                )
+
             ctx.exit(exit_code)
+        else:
+            opts.show_info("Exiting")

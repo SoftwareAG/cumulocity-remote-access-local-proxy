@@ -7,10 +7,13 @@ from .ssh import cli as ssh
 
 @click.group(options_metavar="")
 def connect():
-    """Connect commands
+    """Connect to a device via different protocols (i.e. via ssh)
 
-    Connect to a device via SSH by starting a local proxy and then
-    launching a ssh client
+    A local proxy instance is started automatically (defaults to a random port)
+    and the a client of the selected protocol (i.e. ssh) is called to connect
+    to it.
+
+    The local proxy instance is shutdown after the client disconnects.
     """
 
 

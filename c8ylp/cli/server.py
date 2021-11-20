@@ -41,4 +41,6 @@ def server(
         \b
         c8ylp server --env-file .env --port 0 device01
     """
-    ProxyContext(ctx, kwargs).start_background()
+    proxy = ProxyContext(ctx, kwargs)
+    proxy.script_mode = False
+    proxy.start()

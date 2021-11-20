@@ -134,8 +134,9 @@ def validate_token(ctx: click.Context, _param, value) -> Any:
     except Exception:
         click.secho("Validating c8y token: ", nl=False)
         click.secho("EXPIRED/INVALID", fg="red")
-        logging.warning(
-            "Token is no longer valid for host %s. The token will be ignored", host
+        logging.info(
+            "Token is no longer valid for host. The token will be ignored. host=%s",
+            host,
         )
         return ""
     return value

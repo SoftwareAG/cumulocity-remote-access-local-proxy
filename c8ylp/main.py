@@ -36,10 +36,8 @@ from .cli.connect import commands as connect
     ),
     help="Cumulocity Remote Access Local Proxy",
 )
-@click.pass_context
-def cli_core(ctx: click.Context):
+def cli_core():
     """Main cli entry point"""
-    ctx.ensure_object(dict)
 
 
 cli_core.add_command(login)

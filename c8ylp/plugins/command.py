@@ -2,13 +2,14 @@
 
 import logging
 import os
+import shutil
 import subprocess
 from typing import List
 
 import click
 from c8ylp import options
 
-from c8ylp.cli.core import ProxyContext
+from c8ylp.cli.core import ExitCodes, ProxyContext
 
 
 @click.command()
@@ -56,9 +57,7 @@ def cli(ctx: click.Context, additional_args: List[str], **kwargs):
     cmd_args = []
 
     if not additional_args:
-        raise click.BadParameter(
-            "At least one command as a positional argument needs to be provided"
-        )
+        raise click.BadParameter("At least one argument needs to be provided")
 
     proxy = ProxyContext(ctx, kwargs).start_background()
 
@@ -67,6 +66,14 @@ def cli(ctx: click.Context, additional_args: List[str], **kwargs):
             expanded_value = os.path.expandvars(value)
             logging.info("Expanded script arguments: %s => %s", value, expanded_value)
             cmd_args.append(expanded_value)
+
+    if not shutil.which(cmd_args[0]):
+        if not shutil.which("/bin/bash"):
+            proxy.show_error(f"Command does not exist. cmd={cmd_args}")
+            ctx.exit(ExitCodes.COMMAND_NOT_FOUND)
+
+        proxy.show_info("Using bash to execute the command")
+        cmd_args = ["/bin/bash", "-c"] + [" ".join(cmd_args)]
 
     proxy.show_message(f"Running custom command: {' '.join(cmd_args)}")
 

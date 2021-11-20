@@ -1,31 +1,19 @@
-"""Server ssh tests"""
+"""Server tests"""
 
-import pytest
-import responses
+from unittest.mock import patch
+
 from click.testing import CliRunner
 from c8ylp.main import cli
-from tests.env import Environment
-from tests.fixtures import FixtureCumulocityAPI
 
 
-@pytest.mark.skip
-def test_server_mode(c8yserver: FixtureCumulocityAPI, env: Environment):
-    """Execute command via ssh then exit"""
+@patch("c8ylp.cli.server.ProxyContext", autospec=True)
+def test_server_mode(mock_context):
+    """Start a mocked server"""
+    mock_context.start.return_value = 0
 
-    @responses.activate
-    def run():
-        serial = "ext-device-01"
-        c8yserver.simulate_pre_authenticated(serial)
-
-        # with subprocess.Popen(["python3", "-m", "server", ])
-        runner = CliRunner()
-        result = runner.invoke(
-            cli,
-            ["server", serial],
-            env=env.create_authenticated(),
-        )
-
-        assert result.exit_code == 0
-        assert result.stdout
-
-    run()
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        ["server", "ext-device-01"],
+    )
+    assert result.exit_code == 0

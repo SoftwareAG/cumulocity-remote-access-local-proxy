@@ -63,7 +63,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
                     request.send(data)
             except OSError as ex:
                 request_error = True
-                if ex.errno == errno.EBADFD:
+                if ex.errno == errno.EBADF:
                     # TODO: Check what is sending messages after it has been closed
                     logging.info("Ignoring Bad file descriptor")
                 else:

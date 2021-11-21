@@ -27,15 +27,15 @@ def build(c):
 @task
 def lint(c):
     """Lint"""
-    c.run("python3 -m pylint c8ylp")
-    c.run("python3 -m pylint tests/")
+    c.run("pylint c8ylp")
+    c.run("pylint tests/")
 
 
 @task
 def format(c, check=False):
     """Format code (using black)"""
     if check:
-        c.run("python3 -m black --check --target-version=py37 .")
+        c.run("black --check --target-version=py37 .")
     else:
         c.run("python3 -m black --target-version=py37 .")
 
@@ -44,8 +44,6 @@ def format(c, check=False):
 def test(c, pattern=None):
     """Run unit tests and coverage report"""
     cmd = [
-        "python",
-        "-m",
         "pytest",
         "tests",
         "--timeout=10",
@@ -65,8 +63,6 @@ def test(c, pattern=None):
 def test_integration(c, pattern=None):
     """Run integration tests"""
     cmd = [
-        "python",
-        "-m",
         "pytest",
         "--durations=0",
         "--timeout=3600",

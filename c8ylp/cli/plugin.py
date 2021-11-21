@@ -23,7 +23,7 @@ def plugin_folders() -> List[Path]:
     ]
 
     # optional add custom plugins location
-    user_path = os.getenv("C8YLP_PLUGINS", "~")
+    user_path = os.getenv("C8YLP_PLUGINS", "~/.c8ylp/plugins")
     if user_path:
         for path in user_path.split(":"):
             if path:

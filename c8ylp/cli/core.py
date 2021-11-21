@@ -556,7 +556,7 @@ def start_proxy(
         "token": opts.token,
         "ignore_ssl_validate": opts.ignore_ssl_validate,
         "ping_interval": opts.ping_interval,
-        "reconnects_max": 2,
+        "max_retries": 2,
     }
 
     tcp_server = None
@@ -568,8 +568,6 @@ def start_proxy(
             WebsocketClient(**client_opts),
             opts.tcp_size,
             opts.tcp_timeout,
-            opts.script_mode,
-            max_reconnects=opts.reconnects,
         )
 
         exit_code = ExitCodes.OK

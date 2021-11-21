@@ -20,7 +20,6 @@
 import logging
 import os
 import pathlib
-import sys
 from typing import Any
 import functools
 
@@ -65,37 +64,6 @@ def deactivate_prompts(ctx: click.Context, _param: click.Parameter, value: Any):
         for i_param in ctx.command.params:
             if isinstance(i_param, click.Option) and i_param.prompt is not None:
                 i_param.prompt = None
-    return value
-
-
-def lazy_required(ctx: click.Context, _param: click.Parameter, value: Any):
-    """Apply lazy command argument parsing so that if a parameter is marked
-    as eager, it will only raise a MissingParameter exception if --help
-    has not been specified (regardless of the order)
-
-    Args:
-        ctx (click.Context): Click Context
-        param (click.Parameter): Click Parameter
-        value (Any): Parameter value
-
-    Raises:
-        click.MissingParameter: Missing parameter exception
-
-    Returns:
-        Any: Parameter value
-    """
-    # Ignore error if help or version are being displayed
-    # using original sys.argv as the other click args may not have
-    # been procssed yet.
-    if "--help" in sys.argv or "-h" in sys.argv:
-        return None
-
-    if ctx.resilient_parsing:
-        return None
-
-    if not value:
-        raise click.MissingParameter()
-
     return value
 
 
@@ -147,7 +115,6 @@ HOSTNAME = click.option(
     "host",
     is_eager=True,
     prompt=False,
-    # callback=lazy_required,
     envvar=("C8Y_HOST", "C8Y_BASEURL", "C8Y_URL"),
     help="Cumulocity Hostname  [required]",
 )
@@ -157,7 +124,6 @@ HOSTNAME_PROMPT = click.option(
     "host",
     is_eager=True,
     prompt=True,
-    # callback=lazy_required,
     envvar=("C8Y_HOST", "C8Y_BASEURL", "C8Y_URL"),
     help="Cumulocity Hostname  [required]",
 )

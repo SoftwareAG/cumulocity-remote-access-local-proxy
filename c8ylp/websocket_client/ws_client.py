@@ -20,7 +20,6 @@ import logging
 import threading
 import ssl
 from typing import Any, Callable
-import sys
 
 import websocket
 import certifi
@@ -72,8 +71,8 @@ class WebsocketClient(threading.Thread):
         token,
         ignore_ssl_validate=False,
         ping_interval=0,
-        reconnects_max=0,
-        shutdown_request = None
+        max_retries=0,
+        shutdown_request=None,
     ):
         self.host = host
         self.config_id = config_id
@@ -91,8 +90,8 @@ class WebsocketClient(threading.Thread):
         self.token = token
         self.ws_handshake_error = False
         self.ignore_ssl_validate = ignore_ssl_validate
-        self.reconnects_max = reconnects_max
-        self.reconnect_count = 0
+        self.max_retries = max_retries
+        self.connection_attempts = 0
         self.shutdown_request = shutdown_request
 
         self.proxy_send_message: Callable = None
@@ -101,6 +100,9 @@ class WebsocketClient(threading.Thread):
     def connect(self):
         """Connect websocket"""
         self._ws_open_event.clear()
+
+        # increment before logic as when reconnect is called, then it
+        self.connection_attempts += 1
 
         # websocket.enableTrace(True) # Enable this for Debug Purpose only
         if self.host.startswith("https"):
@@ -170,10 +172,7 @@ class WebsocketClient(threading.Thread):
         if self.web_socket:
             self.web_socket.close()
 
-        # increment before logic as when reconnect is called, then it 
-        self.reconnect_count += 1
-
-        if self.reconnects_max > -1 and self.reconnect_count >= self.reconnects_max:
+        if self.max_retries > -1 and self.connection_attempts >= self.max_retries:
             if callable(self.shutdown_request):
                 self.logger.debug("Websocket is requesting the server to stop")
                 self.shutdown_request()
@@ -181,9 +180,11 @@ class WebsocketClient(threading.Thread):
             return
 
         self.logger.info(
-            f"Reconnecting to WebSocket: reconnects={self.reconnect_count}, max={self.reconnects_max}"
+            "Reconnecting to WebSocket: reconnects=%d, max=%d",
+            self.connection_attempts,
+            self.max_retries,
         )
-        
+
         self.web_socket = None
         self.connect()
 
@@ -271,4 +272,5 @@ class WebsocketClient(threading.Thread):
 
     def _on_ws_open(self, _ws):
         self.logger.info("WebSocket Connection opened")
+        self.connection_attempts = 0
         self._ws_open_event.set()

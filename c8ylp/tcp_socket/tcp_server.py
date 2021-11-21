@@ -21,7 +21,6 @@ import logging
 import socket
 import socketserver
 import threading
-import sys
 
 
 class TCPHandler(socketserver.BaseRequestHandler):
@@ -47,6 +46,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
         def handle_shutdown():
             # Force shutdown of any socket reads or writes
             request.shutdown(socket.SHUT_RDWR)
+
         self.server.web_socket_client.shutdown_request = handle_shutdown
 
         # connect websocket
@@ -124,11 +124,8 @@ class TCPProxyServer:
         web_socket_client,
         tcp_buffer_size,
         tcp_timeout,
-        script_mode,
-        max_reconnects=5,
     ):
         self.web_socket_client = web_socket_client
-        self.script_mode = script_mode
         self._running = threading.Event()
         self.logger = logging.getLogger(__name__)
 
@@ -143,23 +140,6 @@ class TCPProxyServer:
             buffer_size=tcp_buffer_size,
             tcp_timeout=tcp_timeout,
         )
-
-        self.max_reconnects = max_reconnects
-        self.reconnect_counter = 0
-
-    def handle_reconnect(self):
-        """Handle auto reconnect should the websocket connection be lost"""
-        if not self.script_mode and (
-            self.max_reconnects == 0 or self.reconnect_counter < self.max_reconnects
-        ):
-            self.logger.info("Reconnect with counter %s", self.reconnect_counter)
-            self.reconnect_counter += 1
-        else:
-            # Force shutdown
-            # Exit rather than shutting down as it is
-            # running in a background thread, calling .shutdown()
-            # will cause a deadlock
-            sys.exit(0)
 
     def serve_forever(self):
         """Server tcp server forever. Only returns once .shutdown has been called"""

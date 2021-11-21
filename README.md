@@ -1,4 +1,5 @@
 # Local Proxy for Cumulocity Cloud Remote Access
+
 This is a proxy implementation for the Cloud Remote Access feature of Cumulocity which allows to connect to devices using native TCP-based clients like ssh, vnc, rdp etc.
 
 Main purpose of this proxy is to bridge all TCP packets via WebSocket. The local proxy is designed to run on clients where the native client software is installed.
@@ -8,23 +9,31 @@ Main purpose of this proxy is to bridge all TCP packets via WebSocket. The local
 The proxy is written in Python3.
 
 # Installation
+
 The Local Proxy will be either provided as a Python executable or packaged as Software Bundle.
 
 ## Dependencies
+
 The Local Proxy depends on the following components which either needs to be installed via pip or via package manager like apt:
 
-* [websocket_client](https://pypi.org/project/websocket_client/)
+* [certifi](https://pypi.org/project/certifi/)
+* [click](https://pypi.org/project/click/)
 * [requests](https://pypi.org/project/requests/)
 * [setuptools](https://pypi.org/project/setuptools/)
+* [websocket_client](https://pypi.org/project/websocket_client/)
 
 ### PIP
+
 To install the dependencies via pip, navigate to the project folder and execute:
+
 ```console
 pip install -r requirements.txt
 ```
 
 ### Package Manager
+
 Just install the dependencies via apt
+
 ```console
 sudo apt install python-requests python-websocket python-setuptools
 ```
@@ -35,32 +44,36 @@ pip install c8ylp
 ```
 
 ## Installation from Source Code
-Navigate to the root folder of the Local Proxy and run 
+
+Navigate to the root folder of the project and run:
+
 ```console
 pip install .
 ```
-afterwards.
 
 ## Installation as a Software Bundle
 
-The Local Proxy can be installed by the Package Manager.
+The Local Proxy can be installed by the Debian/Ubuntu Package Manager (apt).
 Make sure that the package is available in your configured repositories and execute
+
 ```
 sudo apt install c8ylp
 ```
 
 If you don't have a repo available but just the *.deb file you can install it locally with
+
 ```
 sudo apt install /path/to/package/c8ylp.deb
 ```
 
 Test if it is installed successfully by entering `c8ylp` in the terminal.
 
-## Required Permissions in PID-Mode only
+## TODO: Update required?: Required Permissions in PID-Mode only (linux only)
 
 When using the `--use-pid` parameter the Local Proxy will try to create a PID file in <strong>/var/run/c8ylp</strong> folder. Before starting the Local Proxy with that parameter you must make sure that the user who executes it has write permissions for that folder. For example for the user "proxyuser" part of group "proxyuser" use the following commands before initially starting the Proxy:
 
-```
+```sh
+# linux only
 sudo mkdir /var/run/c8ylp
 sudo chown -R proxyuser:proxyuser /var/run/c8ylp
 ```
@@ -75,40 +88,70 @@ Alternatively you can run the agent as "root" user so the folder and file will b
 >This also includes that the provided TCP Port should be not in use by other Proxies or Services.
 
 In a terminal session execute:
-```
-c8ylp [params]
 
-# or launching directly via python
-python3 -m c8ylp.main
-```
-Available Parameter:
+c8ylp supports different commands depending on your use case. The commands are organized in a multi-level command structure. The list of available commands and subcommands can be shown by using the --help option.
 
-| Short  | Long          | Environemt Variables | Required | Description
-| -------|:-------------:|:--------------------:|:--------:|:-----------        
-| -h     | --hostname    | C8Y_HOST             | x        | The Cumulocity Hostname.
-| -d     | --device      | C8Y_DEVICE           | x        | The Device Name (ext. Id of Cumulocity).
-|        | --extype      | C8Y_EXTYPE           |          | The external Id Type. Default: "c8y_Serial"
-| -c     | --config      | C8Y_CONFIG           |          | The name of the C8Y Remote Access Configuration. Default: "Passthrough"
-| -t     | --tenant      | C8Y_TENANT           | x        | The tenant Id of Cumulocity
-| -u     | --user        | C8Y_USER             | x        | The username of Cumulocity
-| -p     | --password    | C8Y_PASSWORD         | x        | The password of Cumulocity
-|        | --tfacode     |                      |          | The TFA Code when an user with the Option "TFA enabled" is used
-|        | --port        | C8Y_PORT             |          | The TCP Port which should be opened. Default: 2222
-| -k     | --kill        |                      |          | Kills all existing processes of c8ylp. Only availavle when 'use-pid' parameter is set.
-|        | --tcpsize     | C8Y_TCPSIZE          |          | The TCP Package Size. Default: 32768
-|        | --tcptimeout  | C8Y_TCPTIMEOUT       |          | Timeout in sec. for inactivity. Can be activited with values > 0. Default deactivated.
-| -v     | --verbose     |                      |          | Print Debug Information into the Logs and Console when set.
-| -s     | --scriptmode  |                      |          | Stops the TCP Server after first connection. No automatical restart! No WebSocket Reconnects!
-|        |               | C8Y_TOKEN            |          | When set and valid no user, password, tenant, tfacode must be provided.
-|        | --ignore-ssl-validate |              |          | Ignore Validation for SSL Certificates while connecting to Websocket.
-|        | --use-pid     |                      |          | Will create a PID-File in /var/run/c8ylp to store all Processes currently running.
-|        | --reconnects  |                      |          | The number of reconnects to the Cloud Remote Service. 0 for infinite reconnects, -1 for deactivation. Default: 5
+The command can be launched by either using the `c8ylp` binary or my calling the `c8ylp` module by python.
+
+```sh
+c8ylp
+
+# or calling via python
+python3 -m c8ylp
+```
+
+The available commands can be shown using:
+
+```console
+% c8ylp --help
+Usage: c8ylp [OPTIONS] COMMAND [ARGS]...
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  connect  Connect to a device via different protocols (i.e.
+  login    Login and save credentials to an environment file
+  plugin   Run a custom plugin (installed under ~/.c8ylp/plugins/)
+  server   Start local proxy in server mode
+  version  Show the c8ylp version number
+```
+
+### Launching as local proxy server
+
+```sh
+c8ylp server <device> --env-file .env
+```
+
+### Launching as local proxy server then launching an interactive ssh session
+
+```sh
+c8ylp connect ssh <device> --ssh-user <device_username> --env-file .env
+```
+
+### Command documentation
+
+The command usage and parameters can 
+
+* [c8ylp](docs/cli/C8YLP.md)
+* [c8ylp login](docs/cli/C8YLP_LOGIN.md)
+* [c8ylp server](docs/cli/C8YLP_SERVER.md)
+* [c8ylp connect](docs/cli/C8YLP_CONNECT.md)
+* [c8ylp connect ssh](docs/cli/C8YLP_CONNECT_SSH.md)
+* [c8ylp plugin](docs/cli/C8YLP_PLUGIN.md)
+* [c8ylp plugin command](docs/cli/C8YLP_PLUGIN_COMMAND.md)
+
+### Configuration
+
+* Environment variables
+* Dot env file (set via `--env-file <file>`)
 
 You can execute `c8ylp --help` to get help about the parameters and execution.
 
 Example Usage: 
+
 ```console
-c8ylp  -h examples.cumulocity.com -d test-device -c "SSH Passthrough" -t t1111 -u admin -p verysecret
+c8ylp server test-device --env-file .env
 ```
 
 Additional the parameters can be set by using Environment Variables (see column "Enviroment Variables in the table above)
@@ -122,25 +165,52 @@ If no TCP Client is connected but Web Socket Connection is open it might get be 
 
 If a TCP Client has been connected and the Web Socket Connection gets terminated, the TCP Client Connection will be terminated which results in that the Local Proxy terminates and needs to be restarted manually.
 
+## Auto completion / tab completion
 
-# Build
+c8ylp (version >= 2.0.0) supports auto completion for bash, zsh and fish shells.
 
-In order to build the .deb yourself first install python-stdeb via apt. Afterwards run:
+To add the completion, you will need to add the correspnding line to your shell profile, and reload your shell afterwards.
 
-    python3 setup.py --command-packages=stdeb.command bdist_deb
+**Note**
 
-on the level of the setup.py.
+Completion is not currently supported in cygwin.
+
+```sh
+# bash (profile: ~/.bashrc)
+eval "$(_C8YLP_COMPLETE=bash_source c8ylp)"
+
+# zsh (profile: ~/.zshrc)
+eval "$(_C8YLP_COMPLETE=zsh_source c8ylp)"
+
+# fish (profile: ~/.config/fish/config.fish)
+_C8YLP_COMPLETE=fish_source c8ylp | source
+```
+
+# Plugins
+
+`c8ylp` can be extended by the use of plugins (either via python or bash script). Checkout the [plugins](docs/PLUGINS.md) page for information about how to create a plugin.
+
+Plugins are loaded at runtime and can be listed by running the following command:
+
+```console
+c8ylp plugin
+```
+
 
 # Log
+
 The logfile can be found in the following directory. 
 
-~ = Your user-folder.
+  ```console
+  ~/.c8ylp/
+  ```
 
-    ~/.c8ylp/
+Where `~` is your user folder.
 
-To increase the detail of log use the paramter -v / --verbose. If set the log will be written on debug level.
+To increase the detail of log use the paramter `--verbose or -v`. If set the log will be written on debug level.
 
 All relevant information will be sent to the console AND to the log file. So when running in background you can just ignore the console output: 
+
 ```
 c8ylp [params] > /dev/null 2>&1
 ```

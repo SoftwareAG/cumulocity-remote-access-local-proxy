@@ -32,9 +32,12 @@ def lint(c):
 
 
 @task
-def format(c):
+def format(c, check=False):
     """Format code (using black)"""
-    c.run("python3 -m black --target-version=py37 .")
+    if check:
+        c.run("python3 -m black --check --target-version=py37 .")
+    else:
+        c.run("python3 -m black --target-version=py37 .")
 
 
 @task

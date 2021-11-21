@@ -34,7 +34,8 @@ Options:
   --tfa-code TEXT          TFA Code. Required when the 'TFA enabled' is
                            enabled for a user  [env var: C8Y_TFA_CODE]
   --env-file PATH          Environment file to load. Any settings loaded via
-                           this file will control other parameters
+                           this file will control other parameters  [env var:
+                           C8YLP_ENV_FILE]
   --external-type TEXT     external Id Type  [env var: C8YLP_EXTERNAL_TYPE;
                            default: c8y_Serial]
   -c, --config TEXT        name of the C8Y Remote Access Configuration  [env
@@ -49,12 +50,14 @@ Options:
                            with values > 0  [env var: C8YLP_TCP_TIMEOUT;
                            default: 0]
   -v, --verbose            Print Debug Information into the Logs and Console
-                           when set
+                           when set  [env var: C8YLP_VERBOSE]
   --ignore-ssl-validate    Ignore Validation for SSL Certificates while
-                           connecting to Websocket
+                           connecting to Websocket  [env var:
+                           C8YLP_IGNORE_SSL_VALIDATE]
   --store-token            Store the Cumulocity host, tenant and token to the
-                           env-file if a file is being used
-  -d, --disable-prompts
+                           env-file if a file is being used  [env var:
+                           C8YLP_STORE_TOKEN]
+  -d, --disable-prompts    [env var: C8YLP_DISABLE_PROMPTS]
   --reconnects INTEGER     number of reconnects to the Cloud Remote Service. 0
                            for infinite reconnects  [env var:
                            C8YLP_RECONNECTS; default: 5]
@@ -62,6 +65,7 @@ Options:
                            C8YLP_KILL]
   --use-pid                Will create a PID-File to store all Processes
                            currently running (see --pidfile for the location)
+                           [env var: C8YLP_USE_PID]
   --pid-file TEXT          PID-File file location to store all Processes
                            currently running  [env var: C8YLP_PID_FILE;
                            default: (dynamic)]

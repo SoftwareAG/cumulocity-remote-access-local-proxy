@@ -265,6 +265,7 @@ LOGGING_VERBOSE = click.option(
     envvar="C8YLP_VERBOSE",
     is_flag=True,
     default=False,
+    show_envvar=True,
     help="Print Debug Information into the Logs and Console when set",
 )
 
@@ -274,6 +275,7 @@ STORE_TOKEN = click.option(
     envvar="C8YLP_STORE_TOKEN",
     is_flag=True,
     default=True,
+    show_envvar=True,
     help="Store the Cumulocity host, tenant and token to the env-file if a file is being used",
 )
 
@@ -287,6 +289,7 @@ DISABLE_PROMPT = click.option(
     is_eager=True,
     is_flag=True,
     expose_value=True,
+    show_envvar=True,
     callback=deactivate_prompts,
 )
 
@@ -295,6 +298,7 @@ SSL_IGNORE_VERIFY = click.option(
     envvar="C8YLP_IGNORE_SSL_VALIDATE",
     is_flag=True,
     default=False,
+    show_envvar=True,
     help="Ignore Validation for SSL Certificates while connecting to Websocket",
 )
 
@@ -303,6 +307,7 @@ PID_USE = click.option(
     envvar="C8YLP_USE_PID",
     is_flag=True,
     default=False,
+    show_envvar=True,
     help="Will create a PID-File to store all Processes currently running (see --pidfile for the location)",
 )
 
@@ -334,6 +339,7 @@ SSH_USER = click.option(
     type=str,
     required=True,
     prompt=True,
+    show_envvar=True,
     help="Start an interactive ssh session with the given user",
 )
 
@@ -350,6 +356,7 @@ ENV_FILE = click.option(
     envvar="C8YLP_ENV_FILE",
     is_eager=True,
     expose_value=True,
+    show_envvar=True,
     type=click.Path(
         exists=True,
     ),
@@ -363,6 +370,7 @@ ENV_FILE_OPTIONAL_EXISTS = click.option(
     envvar="C8YLP_ENV_FILE",
     is_eager=True,
     expose_value=True,
+    show_envvar=True,
     required=False,
     type=click.Path(
         exists=False,

@@ -77,6 +77,10 @@ def test_integration(c, pattern=None):
         "--cov=c8ylp",
     ]
 
+    assert os.path.exists(".env") or os.environ.get(
+        "C8Y_HOST"
+    ), "Missing Cumulocity configuration required for integration tests"
+
     if pattern:
         cmd.append(f"-k={pattern}")
     c.run(" ".join(cmd))

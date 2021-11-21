@@ -8,7 +8,7 @@ Usage: c8ylp plugin COMMAND [ARGS]...
 
   Example 1:
 
-      c8ylp plugin copyto device01 <src> <dst>
+      c8ylp plugin command device01 -- ssh -p \$PORT myuser@localhost
 
 Options:
   -h, --help  Show this message and exit.

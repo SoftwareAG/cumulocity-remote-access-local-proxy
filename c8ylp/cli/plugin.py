@@ -196,5 +196,5 @@ def run():
     Example 1:
 
     \b
-        c8ylp plugin copyto device01 <src> <dst>
+        c8ylp plugin command device01 -- ssh -p \$PORT myuser@localhost
     """

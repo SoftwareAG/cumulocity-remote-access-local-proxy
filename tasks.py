@@ -44,7 +44,7 @@ def format(c, check=False):
 def test(c, pattern=None):
     """Run unit tests and coverage report"""
     cmd = [
-        "python3",
+        "python",
         "-m",
         "pytest",
         "tests",
@@ -65,7 +65,7 @@ def test(c, pattern=None):
 def test_integration(c, pattern=None):
     """Run integration tests"""
     cmd = [
-        "python3",
+        "python",
         "-m",
         "pytest",
         "--durations=0",
@@ -154,7 +154,7 @@ def generate_docs(c):
         name = "_".join(cmd).upper() + ".md"
         doc_file = doc_dir / name
         print(f"Updating cli doc: {str(doc_file)}")
-        proc = subprocess.run(["python3", "-m", *cmd, "--help"], stdout=subprocess.PIPE)
+        proc = subprocess.run(["python", "-m", *cmd, "--help"], stdout=subprocess.PIPE)
 
         usage = proc.stdout.decode().replace("python -m ", "", -1)
         doc_template = f"""

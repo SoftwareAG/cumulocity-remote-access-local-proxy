@@ -15,7 +15,7 @@ def proxy_cli(*args) -> subprocess.CompletedProcess:
     """Execute the proxy cli command with given arguments"""
     return subprocess.run(
         [
-            "python3",
+            "python",
             "-m",
             "c8ylp",
             *args,

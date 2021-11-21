@@ -1,6 +1,8 @@
 """Tasks"""
 import os
+import subprocess
 from invoke import task
+from pathlib import Path
 
 
 @task
@@ -103,3 +105,49 @@ def test_performance(c, testid=2):
         c.run("./tests/performance/test2_file_transfer_concurrent.sh", env=env)
     elif testid == 3:
         c.run("./tests/performance/test3_concurrent_single_commands.sh", env=env)
+
+
+@task
+def generate_docs(c):
+    """Generate cli docs (markdown files)"""
+    commands = [
+        ("c8ylp",),
+        (
+            "c8ylp",
+            "login",
+        ),
+        (
+            "c8ylp",
+            "server",
+        ),
+        (
+            "c8ylp",
+            "connect",
+            "ssh",
+        ),
+        (
+            "c8ylp",
+            "plugin",
+            "command",
+        ),
+    ]
+
+    doc_dir = Path("docs") / "cli"
+    doc_dir.mkdir(parents=True, exist_ok=True)
+
+    for cmd in commands:
+        name = "_".join(cmd).upper() + ".md"
+        doc_file = doc_dir / name
+        print(f"Updating cli doc: {str(doc_file)}")
+        proc = subprocess.run(["python3", "-m", *cmd, "--help"], stdout=subprocess.PIPE)
+
+        usage = proc.stdout.decode().replace("python -m ", "", -1)
+        doc_template = f"""
+## {" ".join(cmd)}
+
+```
+{usage}
+```
+        """
+
+        doc_file.write_text(doc_template)

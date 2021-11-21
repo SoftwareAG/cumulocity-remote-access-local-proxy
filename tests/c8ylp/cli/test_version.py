@@ -10,4 +10,4 @@ def test_show_version(env: Environment):
     """Test show version"""
     runner = CliRunner()
     result = runner.invoke(cli, ["version"], env=env.create_empty_env())
-    assert re.match("Version \S+\n", result.output) is not None
+    assert re.match(r"Version \S+\n", result.output) is not None

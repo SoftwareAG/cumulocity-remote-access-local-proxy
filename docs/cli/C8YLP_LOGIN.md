@@ -29,7 +29,6 @@ Options:
   --store-token          Store the Cumulocity host, tenant and token to the
                          env-file if a file is being used
   -d, --disable-prompts
-  --help                 Show this message and exit.
+  -h, --help             Show this message and exit.
 
 ```
-        

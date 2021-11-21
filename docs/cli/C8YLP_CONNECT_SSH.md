@@ -65,7 +65,6 @@ Options:
                            C8YLP_RECONNECTS; default: 5]
   --ssh-user TEXT          SSH username which is configured on the device
                            [required]
-  --help                   Show this message and exit.
+  -h, --help               Show this message and exit.
 
 ```
-        

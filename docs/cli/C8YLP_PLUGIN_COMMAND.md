@@ -64,7 +64,6 @@ Options:
   --reconnects INTEGER     number of reconnects to the Cloud Remote Service. 0
                            for infinite reconnects  [env var:
                            C8YLP_RECONNECTS; default: 5]
-  --help                   Show this message and exit.
+  -h, --help               Show this message and exit.
 
 ```
-        

@@ -123,7 +123,15 @@ def generate_docs(c):
         (
             "c8ylp",
             "connect",
+        ),
+        (
+            "c8ylp",
+            "connect",
             "ssh",
+        ),
+        (
+            "c8ylp",
+            "plugin",
         ),
         (
             "c8ylp",
@@ -148,6 +156,6 @@ def generate_docs(c):
 ```
 {usage}
 ```
-        """
+"""
 
         doc_file.write_text(doc_template)

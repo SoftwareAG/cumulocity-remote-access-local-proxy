@@ -65,7 +65,6 @@ Options:
   --pid-file TEXT          PID-File file location to store all Processes
                            currently running  [env var: C8YLP_PID_FILE;
                            default: (dynamic)]
-  --help                   Show this message and exit.
+  -h, --help               Show this message and exit.
 
 ```
-        

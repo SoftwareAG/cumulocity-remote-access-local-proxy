@@ -4,8 +4,10 @@
 ```
 Usage: c8ylp [OPTIONS] COMMAND [ARGS]...
 
+  Cumulocity Remote Access Local Proxy
+
 Options:
-  --help  Show this message and exit.
+  -h, --help  Show this message and exit.
 
 Commands:
   connect  Connect to a device via different protocols (i.e.
@@ -15,4 +17,3 @@ Commands:
   version  Show the c8ylp version number
 
 ```
-        

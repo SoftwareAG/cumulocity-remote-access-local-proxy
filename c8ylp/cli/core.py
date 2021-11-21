@@ -15,7 +15,6 @@ from typing import Any, Dict, NoReturn, Optional
 import click
 
 from .. import pid
-from ..helper import wait_for_port
 from ..timer import CommandTimer
 from ..banner import BANNER1
 from ..env import save_env
@@ -86,6 +85,40 @@ class ProxyContext:
 
             configure_logger(None, self.verbose)
 
+    @property
+    def _root_context(self) -> click.Context:
+        return self._ctx.find_root().ensure_object(dict)
+
+    @property
+    def used_port(self) -> int:
+        """Get the port used by the local proxy
+
+        Returns:
+            int: Port number
+        """
+        return self._root_context.get("used_port", self.port)
+
+    @used_port.setter
+    def used_port(self, value: int):
+        """Store the port used by the local proxy for later reference
+
+        Args:
+            value (int): Port number
+        """
+        self._root_context["used_port"] = value
+
+    def exit_server_not_ready(self) -> NoReturn:
+        """Exit with a server not ready error
+
+        Returns:
+            NoReturn: The function does not return
+        """
+        self.show_error(
+            "Timed out waiting for local port to open: "
+            f"port={self.used_port}, timeout={self.wait_port_timeout}s"
+        )
+        self._ctx.exit(ExitCodes.TIMEOUT_WAIT_FOR_PORT)
+
     def fromdict(self, src_dict: Dict[str, Any]) -> "ProxyContext":
         """Load proxy settings from a dictionary
 
@@ -113,7 +146,12 @@ class ProxyContext:
         """
         cur_ctx = ctx or self._ctx
         connection_data = pre_start_checks(cur_ctx, self)
-        run_proxy_in_background(cur_ctx, self, connection_data=connection_data)
+        ready_signal = threading.Event()
+        run_proxy_in_background(
+            cur_ctx, self, connection_data=connection_data, ready_signal=ready_signal
+        )
+        if not ready_signal.wait(self.wait_port_timeout):
+            self.exit_server_not_ready()
         return self
 
     def start(self, ctx: click.Context = None) -> None:
@@ -172,7 +210,7 @@ class ProxyContext:
         be access by plugins
         """
         os.environ["C8Y_HOST"] = str(self.host)
-        os.environ["PORT"] = str(self.port)
+        os.environ["PORT"] = str(self.used_port)
         os.environ["DEVICE"] = self.device
 
 
@@ -421,7 +459,10 @@ def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
 
 
 def run_proxy_in_background(
-    ctx: click.Context, opts: ProxyContext, connection_data: RemoteAccessConnectionData
+    ctx: click.Context,
+    opts: ProxyContext,
+    connection_data: RemoteAccessConnectionData,
+    ready_signal: threading.Event = None,
 ):
     """Run the proxy in a background thread
 
@@ -432,9 +473,7 @@ def run_proxy_in_background(
     """
 
     stop_signal = threading.Event()
-
-    # Inject custom env variables for use within the script
-    opts.set_env()
+    ready_signal = ready_signal or threading.Event()
 
     # register signals as the proxy will be starting in a background thread
     # to enable the proxy to run as a subcommand
@@ -444,20 +483,21 @@ def run_proxy_in_background(
     background = threading.Thread(
         target=start_proxy,
         args=(ctx, opts),
-        kwargs=dict(connection_data=connection_data, stop_signal=stop_signal),
+        kwargs=dict(
+            connection_data=connection_data,
+            stop_signal=stop_signal,
+            ready_signal=ready_signal,
+        ),
         daemon=True,
     )
     background.start()
 
-    # Block until the port is actually open
-    try:
-        wait_for_port(opts.port, timeout=opts.wait_port_timeout)
-    except TimeoutError:
-        opts.show_error(
-            "Timed out waiting for local port to open: "
-            f"port={opts.port}, timeout={opts.wait_port_timeout}s"
-        )
-        ctx.exit(ExitCodes.TIMEOUT_WAIT_FOR_PORT)
+    # Block until the local proxy is ready to accept connections
+    if not ready_signal.wait(opts.wait_port_timeout):
+        opts.exit_server_not_ready()
+
+    # Inject custom env variables for use within the script
+    opts.set_env()
 
     # The subcommand is called after this
     timer = CommandTimer("Duration", on_exit=click.echo).start()
@@ -536,6 +576,7 @@ def start_proxy(
     opts: ProxyContext,
     connection_data: RemoteAccessConnectionData,
     stop_signal: threading.Event = None,
+    ready_signal: threading.Event = None,
 ) -> NoReturn:
     """Start the local proxy
 
@@ -578,21 +619,27 @@ def start_proxy(
         background = threading.Thread(target=tcp_server.serve_forever, daemon=True)
         background.start()
 
-        if not tcp_server.wait_for_running(30.0):
-            logging.warning(
-                "Server did not start up in time, but trying to proceed anyway"
-            )
+        # Block until the local proxy is ready to accept connections
+        if not tcp_server.wait_for_running(opts.wait_port_timeout):
+            opts.exit_server_not_ready()
+
+        if ready_signal:
+            ready_signal.set()
+
+        # store the used port for reference to later
+        if tcp_server.server.socket:
+            opts.used_port = tcp_server.server.socket.getsockname()[1]
 
         # Plugins start in a background thread so don't display it
         # as the plugins should do their own thing
         if is_main_thread:
             opts.show_info(
-                f"\nc8ylp is listening for device (ext_id) {opts.device} ({opts.host}) on localhost:{opts.port}",
+                f"\nc8ylp is listening for device (ext_id) {opts.device} ({opts.host}) on localhost:{opts.used_port}",
             )
             ssh_username = opts.ssh_user or "<device_username>"
             opts.show_message(
                 f"\nConnect to {opts.device} by executing the following in a new tab/console:\n\n"
-                f"\tssh -p {opts.port} {ssh_username}@localhost",
+                f"\tssh -p {opts.used_port} {ssh_username}@localhost",
             )
 
             opts.show_info("\nPress ctrl-c to shutdown the server")
@@ -630,13 +677,9 @@ def start_proxy(
 
         if is_main_thread:
             if int(exit_code) == 0:
-                opts.show_message(
-                    f"Exiting with code: {str(exit_code)} ({int(exit_code)})"
-                )
+                opts.show_message(f"Exiting: {str(exit_code)} ({int(exit_code)})")
             else:
-                opts.show_error(
-                    f"Exiting with code: {str(exit_code)} ({int(exit_code)})"
-                )
+                opts.show_error(f"Exiting: {str(exit_code)} ({int(exit_code)})")
 
             ctx.exit(exit_code)
         else:

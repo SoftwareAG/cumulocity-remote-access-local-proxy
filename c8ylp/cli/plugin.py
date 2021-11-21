@@ -12,10 +12,24 @@ from .. import options
 from .core import ExitCodes, ProxyContext
 
 
-plugin_folders = [
-    Path(__ROOT_DIR__) / "plugins",
-    (Path("~") / ".c8ylp" / "plugins"),
-]
+def plugin_folders() -> List[Path]:
+    """Plugin folders
+
+    Returns:
+        List[Path]: List of paths to search for plugins in
+    """
+    paths = [
+        Path(__ROOT_DIR__) / "plugins",
+    ]
+
+    # optional add custom plugins location
+    user_path = os.getenv("C8YLP_PLUGINS", "~")
+    if user_path:
+        for path in user_path.split(":"):
+            if path:
+                paths.append(Path(path))
+
+    return paths
 
 
 def load_python_plugin(path: str) -> Dict[Any, Any]:
@@ -64,7 +78,7 @@ def create_bash_plugin(script_path: str) -> click.Command:
             exit_code = subprocess.call(plugin_args, env=os.environ)
         except Exception as ex:
             proxy.show_error(
-                "Failed to execute plugin. Did you set a shebang in the first line?. "
+                "Failed to execute plugin. Is the plugin executable and contain a shebang on the first line?. "
                 f"plugin={script_path}, error={ex}"
             )
             exit_code = ExitCodes.PLUGIN_EXECUTION_ERROR
@@ -87,7 +101,7 @@ class PluginCLI(click.MultiCommand):
         """
         cmds = []
 
-        for plugin_folder in plugin_folders:
+        for plugin_folder in plugin_folders():
             click.echo(f"Checking plugin folder: {plugin_folder}")
             plugin_folder = plugin_folder.expanduser()
             if plugin_folder.exists():
@@ -119,7 +133,7 @@ class PluginCLI(click.MultiCommand):
         file_exts = [".py", ".sh"]
 
         plugins = []
-        for plugin_folder in plugin_folders:
+        for plugin_folder in plugin_folders():
             plugin_folder = plugin_folder.expanduser()
 
             for ext in file_exts:
@@ -145,7 +159,7 @@ class PluginCLI(click.MultiCommand):
                 break
 
             if path.suffix == ".sh":
-                namespace["cli"] = create_bash_plugin(path)
+                namespace["cli"] = create_bash_plugin(str(path))
                 break
 
         if "cli" not in namespace:

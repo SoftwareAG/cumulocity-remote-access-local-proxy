@@ -28,8 +28,8 @@ def proxy_cli(*args) -> subprocess.CompletedProcess:
 @pytest.mark.parametrize(
     "case",
     (
-        dict(clients=1, delay=5, command="sleep 10s"),
-        dict(clients=2, delay=5, command="sleep 10s"),
+        dict(clients=1, delay=10, command="sleep 10s"),
+        dict(clients=2, delay=10, command="sleep 10s"),
         dict(clients=5, delay=7, command="sleep 10s"),
     ),
     ids=lambda x: str(x),
@@ -66,7 +66,8 @@ def test_concurrent_commands(case, c8ydevice: Device):
         thread.start()
         threads.append(thread)
 
-        time.sleep(delay)
+        if i < clients - 1:
+            time.sleep(delay)
 
     # wait for threads to finish
     for thread in threads:

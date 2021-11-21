@@ -27,7 +27,7 @@ def cli(ctx: click.Context, additional_args: List[str], **kwargs):
 
         \b
         DEVICE is the device's external identity
-        SCRIPT is the script or command to run after the proxy has been started
+        REMOTE_COMMANDS is the script or command to run after the proxy has been started
 
         All additional arguments will be passed to the script/command. Use "--" before
         the additional arguments to prevent the arguments from being interpreted by
@@ -39,6 +39,7 @@ def cli(ctx: click.Context, additional_args: List[str], **kwargs):
       \b
       DEVICE - external device identity
       PORT   - port number of the local proxy
+      C8Y_HOST - Cumulocity host/url
 
     \b
     Example 1: Use scp to copy a file to a device

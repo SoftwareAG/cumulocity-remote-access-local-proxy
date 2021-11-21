@@ -34,6 +34,7 @@ def proxy_cli(*args) -> subprocess.CompletedProcess:
             "size_mb": 1,
         },
     ),
+    ids=lambda x: str(x),
 )
 def test_scp_file_transfer_roundtrip(
     case, c8ydevice: Device, file_factory: FileFactory
@@ -90,8 +91,8 @@ def test_scp_file_transfer_roundtrip(
     "case",
     (
         dict(clients=1, delay=5, size_mb=10),
-        dict(clients=2, delay=5, size_mb=10),
-        dict(clients=2, delay=5, size_mb=100),
+        dict(clients=2, delay=10, size_mb=10),
+        dict(clients=2, delay=10, size_mb=100),
     ),
     ids=lambda x: str(x),
 )
@@ -138,7 +139,8 @@ def test_concurrent_scp_commands(case, c8ydevice: Device, file_factory: FileFact
         thread.start()
         threads.append(thread)
 
-        time.sleep(delay)
+        if i < clients - 1:
+            time.sleep(delay)
 
     # wait for threads to finish
     for thread in threads:

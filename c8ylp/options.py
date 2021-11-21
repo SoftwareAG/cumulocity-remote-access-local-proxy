@@ -26,7 +26,6 @@ import functools
 import click
 
 from c8ylp.env import loadenv
-from c8ylp.helper import get_unused_port
 from c8ylp.rest_client.c8yclient import CumulocityClient
 
 
@@ -205,8 +204,7 @@ C8Y_TFA_CODE = click.option(
 
 PORT = click.option(
     "--port",
-    type=int,
-    callback=lambda ctx, param, value: get_unused_port() if value < 1 else value,
+    type=click.IntRange(0, 65535),
     default=2222,
     envvar="C8YLP_PORT",
     show_envvar=True,
@@ -216,8 +214,7 @@ PORT = click.option(
 
 PORT_DEFAULT_RANDOM = click.option(
     "--port",
-    type=int,
-    callback=lambda ctx, param, value: get_unused_port() if value < 1 else value,
+    type=click.IntRange(0, 65535),
     default=0,
     envvar="C8YLP_PORT",
     show_default=True,

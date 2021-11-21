@@ -72,7 +72,7 @@ def cli(ctx: click.Context, ssh_user: str, additional_args: List[str], **kwargs)
         "-o",
         "UserKnownHostsFile=/dev/null",
         "-p",
-        str(proxy.port),
+        str(proxy.used_port),
         f"{ssh_user}@localhost",
     ]
 

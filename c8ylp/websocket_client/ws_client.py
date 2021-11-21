@@ -20,6 +20,7 @@ import logging
 import threading
 import ssl
 from typing import Any, Callable
+import sys
 
 import websocket
 import certifi
@@ -71,6 +72,8 @@ class WebsocketClient(threading.Thread):
         token,
         ignore_ssl_validate=False,
         ping_interval=0,
+        reconnects_max=0,
+        shutdown_request = None
     ):
         self.host = host
         self.config_id = config_id
@@ -88,6 +91,9 @@ class WebsocketClient(threading.Thread):
         self.token = token
         self.ws_handshake_error = False
         self.ignore_ssl_validate = ignore_ssl_validate
+        self.reconnects_max = reconnects_max
+        self.reconnect_count = 0
+        self.shutdown_request = shutdown_request
 
         self.proxy_send_message: Callable = None
         super().__init__()
@@ -161,9 +167,23 @@ class WebsocketClient(threading.Thread):
 
     def reconnect(self):
         """Reconnect websocket"""
-        self.logger.info("Reconnecting to WebSocket")
         if self.web_socket:
             self.web_socket.close()
+
+        # increment before logic as when reconnect is called, then it 
+        self.reconnect_count += 1
+
+        if self.reconnects_max > -1 and self.reconnect_count >= self.reconnects_max:
+            if callable(self.shutdown_request):
+                self.logger.debug("Websocket is requesting the server to stop")
+                self.shutdown_request()
+
+            return
+
+        self.logger.info(
+            f"Reconnecting to WebSocket: reconnects={self.reconnect_count}, max={self.reconnects_max}"
+        )
+        
         self.web_socket = None
         self.connect()
 
@@ -246,6 +266,8 @@ class WebsocketClient(threading.Thread):
             reason,
         )
         self._ws_open_event.clear()
+
+        self.reconnect()
 
     def _on_ws_open(self, _ws):
         self.logger.info("WebSocket Connection opened")

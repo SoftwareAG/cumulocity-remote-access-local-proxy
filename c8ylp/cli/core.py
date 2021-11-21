@@ -556,6 +556,7 @@ def start_proxy(
         "token": opts.token,
         "ignore_ssl_validate": opts.ignore_ssl_validate,
         "ping_interval": opts.ping_interval,
+        "reconnects_max": 2,
     }
 
     tcp_server = None

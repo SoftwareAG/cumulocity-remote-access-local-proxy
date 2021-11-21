@@ -44,6 +44,11 @@ class TCPHandler(socketserver.BaseRequestHandler):
             raddr,
         )
 
+        def handle_shutdown():
+            # Force shutdown of any socket reads or writes
+            request.shutdown(socket.SHUT_RDWR)
+        self.server.web_socket_client.shutdown_request = handle_shutdown
+
         # connect websocket
         if not self.server.web_socket_client.is_open():
             self.server.web_socket_client.connect()
@@ -68,6 +73,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
 
         while True:
             try:
+                logging.debug("Reading from tcp port")
                 data = request.recv(1024)
                 logging.debug("%s wrote: %s", self.client_address, data)
 
@@ -78,6 +84,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
 
                 logging.debug("Writing data to ws: %s", data)
                 self.server.web_socket_client.send_binary(data)
+                logging.debug("Wrote data to ws: %s", data)
             except ConnectionResetError as ex:
                 logging.info("Connection was reset. %s", ex)
                 break

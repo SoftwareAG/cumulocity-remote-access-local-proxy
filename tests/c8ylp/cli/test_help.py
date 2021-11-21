@@ -1,6 +1,7 @@
 """Help tests"""
-import subprocess
 import re
+import subprocess
+import sys
 import pytest
 from click.testing import CliRunner
 from c8ylp.main import cli
@@ -10,7 +11,7 @@ def test_calling_root_module(capfd: pytest.CaptureFixture):
     """Test calling root module using python3 -m syntax"""
 
     with subprocess.Popen(
-        ["python", "-m", "c8ylp"],
+        [sys.executable, "-m", "c8ylp"],
         env={},
     ) as proc:
         exit_code = proc.wait()

@@ -2,22 +2,22 @@
 import re
 import subprocess
 import sys
-import pytest
 from click.testing import CliRunner
 from c8ylp.main import cli
 
 
-def test_calling_root_module(capfd: pytest.CaptureFixture):
+def test_calling_root_module():
     """Test calling root module using python3 -m syntax"""
 
-    with subprocess.Popen(
+    # pylint: disable=subprocess-run-check
+    proc = subprocess.run(
         [sys.executable, "-m", "c8ylp"],
-        env={},
-    ) as proc:
-        exit_code = proc.wait()
-    assert exit_code == 0
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert proc.returncode == 0
 
-    output, _stderr = capfd.readouterr()
+    output = proc.stdout.decode()
     assert re.search("Usage: python3? -m c8ylp ", output)
     assert "Options:" in output
 

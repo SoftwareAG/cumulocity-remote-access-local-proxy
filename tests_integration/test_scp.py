@@ -2,8 +2,8 @@
 
 import filecmp
 import logging
-from pathlib import Path
 import subprocess
+import sys
 import time
 import threading
 from typing import List
@@ -17,7 +17,7 @@ def proxy_cli(*args) -> subprocess.CompletedProcess:
     """Execute the proxy cli command with given arguments"""
     return subprocess.run(
         [
-            "python",
+            sys.executable,
             "-m",
             "c8ylp",
             *args,

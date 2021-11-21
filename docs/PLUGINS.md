@@ -35,9 +35,9 @@ $env:C8YLP_PLUGINS = "C:\common\c8ylp\plugins"
 
 ## Plugin runtime environement
 
-When plugins are executed, c8ylp injects some environment variables into the process so that they can be easily referenced.
+When plugins are executed, c8ylp injects some environment variables into the process so that information about the running local proxy (i.e. device name and port) can be easily referenced.
 
-The following environment variables are can be referenced from inside the plugin.
+The following environment variables are can be used inside the plugin.
 
 |Environment Variable|Description|
 |--------|-----------|
@@ -50,13 +50,15 @@ The following environment variables are can be referenced from inside the plugin
 
 ## Python plugin
 
-A python plugin can created using the Python [click](https://click.palletsprojects.com/) package. This options provides the better user experience as `click` provides a rich interface such as user prompts, environment binding, help descriptions etc.
+A python plugin can be created using the Python [click](https://click.palletsprojects.com/) package. This options provides the better user experience as `click` provides a rich interface such as user prompts, environment binding, help descriptions etc.
 
-The following example show how to create a plugin which can be called by using:
+The following example show how to create a plugin which can be called using:
 
 ```sh
 c8ylp plugin python_ssh
 ```
+
+This example provies a custom way to launch an interactive ssh session using special business logic to automatically select the ssh user based on the name of the device.
 
 Firstly create a blank file in the following location (create the folder if it does not already exist):
 

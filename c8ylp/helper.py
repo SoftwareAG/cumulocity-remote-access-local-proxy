@@ -1,19 +1,12 @@
 """Provides cli helpers that can be used for usage with the local proxy in scripts.
-
-CLI Examples
-
-#> python3 -m c8ylp.helper port
-Get unused port number
-
-#> python3 -m c8ylp.helper wait <port> <timeout_sec>
-Wait for the given port to be opened
 """
 import logging
 import time
-import sys
 import socket
 import errno
 from contextlib import contextmanager
+
+import click
 
 
 @contextmanager
@@ -80,52 +73,57 @@ def get_unused_port() -> int:
         return sock.getsockname()[1]
 
 
-def show_usage() -> None:
-    """Show usage"""
-    print(
-        """
-Usage:
+CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
-    python3 -m c8ylp.helper <port|wait> [...options]
 
-Examples:
+@click.group(context_settings=CONTEXT_SETTINGS)
+def cli():
+    """Helper commands"""
 
-    #> python3 -m c8ylp.helper port
-    # Get unused port
 
-    #> python3 -m c8ylp.helper wait <port> <timeout_sec>
-    # Wait for a port to be open
-        """
-    )
+@cli.command(name="wait")
+@click.argument("port", type=click.IntRange(0, 65535))
+@click.argument("timeout", type=click.FloatRange(0.0, 300.0))
+@click.option("--silent", is_flag=True, help="Don't print out any error messages")
+@click.pass_context
+def cli_wait(ctx: click.Context, port, timeout, silent):
+    """
+    Wait for a port to be open
+
+        \b
+        PORT Port number to wait for
+        TIMEOUT Timeout in seconds
+
+    \b
+    Example 1: Wait for port 2222 be open, but give up after 30 seconds
+
+        \b
+        python3 -m c8ylp.helper wait 2222 30
+
+    """
+    try:
+        wait_for_port(port, timeout, silent)
+    except TimeoutError:
+        if not silent:
+            click.secho(f"Port is not open after {timeout}s", fg="red")
+        ctx.exit(1)
+
+
+@cli.command(name="port")
+def cli_port():
+    """Get an unused port number
+
+    Please note it does not guarantee that the port will not be taken by another application
+
+    \b
+    Example 1: Get a random unused port
+
+        \b
+        python3 -m c8ylp.helper port
+
+    """
+    click.echo(get_unused_port())
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        subcommand = sys.argv[1]
-
-    if "--help" in sys.argv or "-h" in sys.argv:
-        show_usage()
-        sys.exit(0)
-
-    if subcommand.lower() == "port":
-        print(get_unused_port())
-    elif subcommand.lower() == "wait":
-        PORT = 2222
-        TIMEOUT = 30.0
-
-        if len(sys.argv) > 2:
-            PORT = int(sys.argv[2])
-
-        if len(sys.argv) > 3:
-            TIMEOUT = float(sys.argv[3])
-
-        try:
-            wait_for_port(PORT, TIMEOUT)
-            sys.exit(0)
-        except TimeoutError as ex:
-            print(ex)
-            sys.exit(1)
-    else:
-        print("Error: Unknown command")
-        show_usage()
-        sys.exit(2)
+    cli()

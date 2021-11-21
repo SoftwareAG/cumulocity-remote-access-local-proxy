@@ -7,7 +7,8 @@ from c8ylp.env import loadenv
 
 class Environment:
     def __init__(self, file=".env") -> None:
-        loadenv(file)
+        if os.path.exists(file):
+            loadenv(file)
 
         self.data = os.environ
 

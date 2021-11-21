@@ -268,7 +268,7 @@ def test_missing_role(c8yserver: FixtureCumulocityAPI, env: Environment):
                 "--ssh-user",
                 "admin",
             ],
-            env=env.create_username_password(),
+            env=env.create_authenticated(),
         )
 
         assert result.exit_code == ExitCodes.MISSING_ROLE_REMOTE_ACCESS_ADMIN
@@ -356,7 +356,7 @@ def test_device_managed_object_permission_denied(
         result = runner.invoke(
             cli,
             args,
-            env=env.create_username_password(),
+            env=env.create_authenticated(),
         )
 
         assert result.exit_code == case["exit_code"], case["description"]

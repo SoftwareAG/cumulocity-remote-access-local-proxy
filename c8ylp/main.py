@@ -27,15 +27,10 @@ from .cli.server import server
 from .cli.version import version
 from .cli.connect import commands as connect
 
+CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
-@click.group(
-    invoke_without_command=True,
-    no_args_is_help=True,
-    context_settings=dict(
-        help_option_names=["-h", "--help"],
-    ),
-    help="Cumulocity Remote Access Local Proxy",
-)
+
+@click.group()
 def cli_core():
     """Main cli entry point"""
 
@@ -45,4 +40,11 @@ cli_core.add_command(version)
 cli_core.add_command(server)
 cli_core.add_command(connect.connect)
 
-cli = click.CommandCollection("cli", sources=[cli_core, cli_plugin])
+cli = click.CommandCollection(
+    "cli",
+    sources=[cli_core, cli_plugin],
+    context_settings=CONTEXT_SETTINGS,
+    invoke_without_command=True,
+    no_args_is_help=True,
+    help="Cumulocity Remote Access Local Proxy",
+)

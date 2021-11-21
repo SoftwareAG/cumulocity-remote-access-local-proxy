@@ -20,7 +20,7 @@ def test_wait():
     """Test wait for port"""
 
     with socketcontext() as sock:
-        sock.bind(("", 0))
+        sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
 
         runner = CliRunner()

@@ -69,7 +69,7 @@ def is_port_open(port: int, host: str = "127.0.0.1") -> bool:
 def get_unused_port() -> int:
     """Get a port which is currently unused"""
     with socketcontext() as sock:
-        sock.bind(("", 0))
+        sock.bind(("127.0.0.1", 0))
         return sock.getsockname()[1]
 
 

@@ -213,6 +213,9 @@ class ProxyContext:
         os.environ["PORT"] = str(self.used_port)
         os.environ["DEVICE"] = self.device
 
+        # Support WSL environments and expose variables to be explosed to WSL
+        os.environ["WSLENV"] = "PORT/u:DEVICE/u:C8Y_HOST/u"
+
 
 @dataclasses.dataclass
 class RemoteAccessConnectionData:
@@ -623,9 +626,6 @@ def start_proxy(
         if not tcp_server.wait_for_running(opts.wait_port_timeout):
             opts.exit_server_not_ready()
 
-        if ready_signal:
-            ready_signal.set()
-
         # store the used port for reference to later
         if tcp_server.server.socket:
             opts.used_port = tcp_server.server.socket.getsockname()[1]
@@ -643,6 +643,9 @@ def start_proxy(
             )
 
             opts.show_info("\nPress ctrl-c to shutdown the server")
+
+        if ready_signal:
+            ready_signal.set()
 
         # loop, waiting for server to stop
         while background.is_alive():

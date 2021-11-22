@@ -1,6 +1,7 @@
 """Tasks"""
 import os
 import subprocess
+import sys
 from invoke import task
 from pathlib import Path
 
@@ -150,7 +151,9 @@ def generate_docs(c):
         name = "_".join(cmd).upper() + ".md"
         doc_file = doc_dir / name
         print(f"Updating cli doc: {str(doc_file)}")
-        proc = subprocess.run(["python", "-m", *cmd, "--help"], stdout=subprocess.PIPE)
+        proc = subprocess.run(
+            [sys.executable, "-m", *cmd, "--help"], stdout=subprocess.PIPE
+        )
 
         usage = proc.stdout.decode().replace("python -m ", "", -1)
         doc_template = f"""

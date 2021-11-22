@@ -27,7 +27,7 @@ def create_plugin(path: Path, code: str) -> str:
     Returns:
         str: Unix friendly code
     """
-    with path.open('w', newline="\n") as file:
+    with path.open("w", newline="\n") as file:
         file.write(code.replace("\r", "", -1))
 
 
@@ -110,11 +110,12 @@ def test_bash_plugin(
 
         bash_plugin_1 = Path(plugin / "launch.sh")
 
-        create_plugin(bash_plugin_1,
+        create_plugin(
+            bash_plugin_1,
             """
         #!/bin/bash
         echo "Running my custom launcher: PORT=$PORT, DEVICE=$DEVICE"
-        """.lstrip()
+        """.lstrip(),
         )
 
         # make plugin executable
@@ -145,7 +146,9 @@ def test_bash_plugin(
     run()
 
 
-@pytest.mark.skipif(platform.system() == "Windows", reason="Windows does not throw an error")
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="Windows does not throw an error"
+)
 def test_invalid_bash_plugin(
     plugin: Path,
     c8yserver: FixtureCumulocityAPI,
@@ -161,12 +164,13 @@ def test_invalid_bash_plugin(
 
         bash_plugin_1 = Path(plugin / "launch.sh")
 
-        create_plugin(bash_plugin_1,
+        create_plugin(
+            bash_plugin_1,
             """
 
         # Plugin which is missing the shebang!
         echo "Running my customer launcher: PORT=$PORT"
-        """
+        """,
         )
 
         # make plugin executable
@@ -188,7 +192,6 @@ def test_invalid_bash_plugin(
                 "C8YLP_PLUGINS": str(plugin),
             },
         )
-        print(f"stdout: {result.output}")
         assert result.exit_code == ExitCodes.PLUGIN_EXECUTION_ERROR
 
     run()

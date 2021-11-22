@@ -1,7 +1,6 @@
 """Plugin run"""
 
 from unittest.mock import patch
-import logging
 
 import pytest
 import responses

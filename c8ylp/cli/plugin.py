@@ -52,6 +52,7 @@ def load_python_plugin(path: str) -> Dict[Any, Any]:
         eval(code, namespace, namespace)
     return namespace
 
+
 def format_wsl_path(path: str) -> str:
     """Format windows path to the WSL equivalent
 
@@ -68,6 +69,7 @@ def format_wsl_path(path: str) -> str:
         out_path = f"/mnt/{drive.lower()}{rest}"
 
     return out_path
+
 
 def build_cmd_args(cmd_args: List[str]) -> List[str]:
     """Build the command arguments to launch the plugin
@@ -110,7 +112,10 @@ def build_cmd_args(cmd_args: List[str]) -> List[str]:
 
     shell = [shutil.which(shell)]
 
-    if "wsl".casefold() in shell[0].casefold() or "\\windows\\system32\\bash.exe".casefold() in shell[0].casefold():
+    if (
+        "wsl".casefold() in shell[0].casefold()
+        or "\\windows\\system32\\bash.exe".casefold() in shell[0].casefold()
+    ):
         #
         # WSL is going to be used, therefore the path needs to be reformatted
         # otherwise the path will not be found due to windows/linux differences

@@ -69,12 +69,13 @@ def cli(ctx: click.Context, additional_args: List[str], **kwargs):
             cmd_args.append(expanded_value)
 
     if not shutil.which(cmd_args[0]):
-        if not shutil.which("/bin/bash"):
+        bash_path = shutil.which("bash")
+        if not bash_path:
             proxy.show_error(f"Command does not exist. cmd={cmd_args}")
             ctx.exit(ExitCodes.COMMAND_NOT_FOUND)
 
         proxy.show_info("Using bash to execute the command")
-        cmd_args = ["/bin/bash", "-c"] + [" ".join(cmd_args)]
+        cmd_args = [bash_path, "-c"] + [" ".join(cmd_args)]
 
     proxy.show_message(f"Running custom command: {' '.join(cmd_args)}")
 

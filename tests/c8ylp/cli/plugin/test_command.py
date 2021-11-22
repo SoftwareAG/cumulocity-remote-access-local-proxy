@@ -27,7 +27,7 @@ from tests.fixtures import FixtureCumulocityAPI
         {
             "commands": [
                 "--",
-                "/bin/bash",
+                "bash",
                 "-c",
                 "echo 'DEVICE=$DEVICE,PORT=$PORT'; exit 99",
             ],

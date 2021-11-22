@@ -15,12 +15,12 @@ from tests.fixtures import FixtureCumulocityAPI
     "case",
     (
         {
-            "commands": ["--", "echo 'DEVICE=$DEVICE,PORT=$PORT'; exit 101"],
+            "commands": ["--", 'echo "DEVICE=$DEVICE,PORT=$PORT"; exit 101'],
             "exit_code": 101,
             "stdout": "DEVICE=ext-device-01,PORT=2223",
         },
         {
-            "commands": ["echo 'DEVICE=$DEVICE,PORT=$PORT'; exit 101"],
+            "commands": ['echo "DEVICE=$DEVICE,PORT=$PORT"; exit 101'],
             "exit_code": 101,
             "stdout": "DEVICE=ext-device-01,PORT=2223",
         },
@@ -29,7 +29,7 @@ from tests.fixtures import FixtureCumulocityAPI
                 "--",
                 "bash",
                 "-c",
-                "echo 'DEVICE=$DEVICE,PORT=$PORT'; exit 99",
+                'echo "DEVICE=$DEVICE,PORT=$PORT"; exit 99',
             ],
             "exit_code": 99,
             "stdout": "DEVICE=ext-device-01,PORT=2223",

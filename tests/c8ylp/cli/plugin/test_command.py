@@ -1,5 +1,6 @@
 """Plugin run"""
 
+import logging
 from unittest.mock import patch
 
 import pytest
@@ -81,6 +82,10 @@ def test_plugin_run_command(
 
         # sys stdout is not captured by the CliRunner
         sys_out, _ = capfd.readouterr()
+
+        # Support debugging on CI runner
+        logging.info("cli.output: %s", result.output)
+        logging.info("system.output: %s", sys_out)
 
         if case["stdout"] is not None:
             if sys_out:

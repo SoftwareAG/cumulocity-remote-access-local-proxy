@@ -1,5 +1,6 @@
 """Plugin run"""
 
+import platform
 import os
 import stat
 from pathlib import Path
@@ -12,6 +13,22 @@ from c8ylp.main import cli
 from c8ylp.cli.core import ExitCodes
 from tests.env import Environment
 from tests.fixtures import FixtureCumulocityAPI
+
+
+def create_plugin(path: Path, code: str) -> str:
+    """Format code to be unix compatible (i.e. strip \\r characters)
+    Note: Path.write_text does not work as it does not allow to set the
+    newline character (but this seems to be fixed in Python 3.10)
+
+    Args:
+        path (Path): Path to the script to be written to
+        code (str): Code to be formatted
+
+    Returns:
+        str: Unix friendly code
+    """
+    with path.open('w', newline="\n") as file:
+        file.write(code.replace("\r", "", -1))
 
 
 @pytest.fixture(name="plugin")
@@ -42,7 +59,7 @@ def test_plugin_list(
         cli,
         ["plugin"],
         env={
-            "HOME": str(plugin.parent.parent),
+            "C8YLP_PLUGINS": str(plugin),
         },
     )
 
@@ -70,7 +87,7 @@ def test_calling_unknown_plugin(
         cli,
         ["plugin", "doesnotexist"],
         env={
-            "HOME": str(plugin.parent.parent),
+            "C8YLP_PLUGINS": str(plugin),
         },
     )
 
@@ -93,7 +110,7 @@ def test_bash_plugin(
 
         bash_plugin_1 = Path(plugin / "launch.sh")
 
-        bash_plugin_1.write_text(
+        create_plugin(bash_plugin_1,
             """
         #!/bin/bash
         echo "Running my custom launcher: PORT=$PORT, DEVICE=$DEVICE"
@@ -116,7 +133,7 @@ def test_bash_plugin(
             ],
             env={
                 **env.create_authenticated(),
-                "HOME": str(plugin.parent.parent),
+                "C8YLP_PLUGINS": str(plugin),
             },
         )
 
@@ -128,6 +145,7 @@ def test_bash_plugin(
     run()
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Windows does not throw an error")
 def test_invalid_bash_plugin(
     plugin: Path,
     c8yserver: FixtureCumulocityAPI,
@@ -143,7 +161,7 @@ def test_invalid_bash_plugin(
 
         bash_plugin_1 = Path(plugin / "launch.sh")
 
-        bash_plugin_1.write_text(
+        create_plugin(bash_plugin_1,
             """
 
         # Plugin which is missing the shebang!
@@ -167,10 +185,10 @@ def test_invalid_bash_plugin(
             ],
             env={
                 **env.create_authenticated(),
-                "HOME": str(plugin.parent.parent),
+                "C8YLP_PLUGINS": str(plugin),
             },
         )
-
+        print(f"stdout: {result.output}")
         assert result.exit_code == ExitCodes.PLUGIN_EXECUTION_ERROR
 
     run()
@@ -227,7 +245,7 @@ def test_invalid_python_plugin(
         c8yserver.simulate_pre_authenticated(serial)
 
         plugin_1 = Path(plugin / "launch.py")
-        plugin_1.write_text(code)
+        create_plugin(plugin_1, code)
 
         runner = CliRunner()
         result = runner.invoke(
@@ -239,7 +257,7 @@ def test_invalid_python_plugin(
             ],
             env={
                 **env.create_authenticated(),
-                "HOME": str(plugin.parent.parent),
+                "C8YLP_PLUGINS": str(plugin),
             },
         )
         assert result.exit_code == exit_code

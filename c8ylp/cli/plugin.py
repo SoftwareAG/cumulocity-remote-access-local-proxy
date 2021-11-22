@@ -1,8 +1,11 @@
 """plugin command"""
 
+import re
 import os
 import subprocess
 import logging
+import platform
+import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import click
@@ -25,7 +28,7 @@ def plugin_folders() -> List[Path]:
     # optional add custom plugins location
     user_path = os.getenv("C8YLP_PLUGINS", "~/.c8ylp/plugins")
     if user_path:
-        for path in user_path.split(":"):
+        for path in user_path.split(";"):
             if path:
                 paths.append(Path(path))
 
@@ -48,6 +51,73 @@ def load_python_plugin(path: str) -> Dict[Any, Any]:
         # pylint: disable=eval-used
         eval(code, namespace, namespace)
     return namespace
+
+def format_wsl_path(path: str) -> str:
+    """Format windows path to the WSL equivalent
+
+    Args:
+        path (str): Windows path to convert
+
+    Returns:
+        str: WSL path, i.e. /mnt/c/my/path.sh
+    """
+    out_path = path.replace("\\", "/", -1)
+
+    if re.search("^[a-z]:/", out_path, re.IGNORECASE):
+        drive, _, rest = out_path.partition(":")
+        out_path = f"/mnt/{drive.lower()}{rest}"
+
+    return out_path
+
+def build_cmd_args(cmd_args: List[str]) -> List[str]:
+    """Build the command arguments to launch the plugin
+
+    It allows for setting a custom shell via C8YLP_SHELL environment
+    variable.
+
+    Windows has special handling due to WSL and shell scripts not being
+    executable by default.
+
+    Args:
+        cmd_args (List[str]): List of command arguments (without the shell)
+
+    Returns:
+        List[str]: Command arguments to execute specific to the OS
+
+    """
+    custom_shell = os.getenv("C8YLP_SHELL")
+    out_args = [*cmd_args]
+
+    if platform.system() != "Windows":
+        if not custom_shell:
+            # Rely on the script's shebang
+            return out_args
+
+        if not shutil.which(custom_shell):
+            raise Exception(f"Could not find {custom_shell}")
+
+        return [shutil.which(custom_shell)] + out_args
+
+    #
+    # Windows is more tricky as it does not read the bash shebang
+    # so we have to help it out, but also being WSL friendly
+    #
+    shell = custom_shell or "bash"
+    if not shutil.which(shell):
+        # Let windows take care about executing the
+        # default app associated
+        return ["cmd.exe", "/c"] + out_args
+
+    shell = [shutil.which(shell)]
+
+    if "wsl".casefold() in shell[0].casefold() or "\\windows\\system32\\bash.exe".casefold() in shell[0].casefold():
+        #
+        # WSL is going to be used, therefore the path needs to be reformatted
+        # otherwise the path will not be found due to windows/linux differences
+        # i.e. "C:\my\script\plugin.sh" => "/mnt/c/script/plugin.sh"
+        out_args[0] = format_wsl_path(out_args[0])
+
+    return shell + out_args
 
 
 def create_bash_plugin(script_path: str) -> click.Command:
@@ -73,7 +143,8 @@ def create_bash_plugin(script_path: str) -> click.Command:
         proxy = ProxyContext(wctx, kwargs).start_background()
         proxy.set_env()
 
-        plugin_args = [script_path, *additional_args]
+        plugin_args = build_cmd_args([script_path, *additional_args])
+        proxy.show_message(f"Running plugin: {' '.join(plugin_args)}")
         try:
             exit_code = subprocess.call(plugin_args, env=os.environ)
         except Exception as ex:
@@ -152,7 +223,7 @@ class PluginCLI(click.MultiCommand):
             if path.suffix == ".py":
                 logging.debug("Detected python script: %s", path)
                 try:
-                    namespace = load_python_plugin(path)
+                    namespace = load_python_plugin(str(path))
                 except Exception as ex:
                     logging.warning("Failed to load python plugin. error=%s", ex)
                     ctx.exit(ExitCodes.PLUGIN_INVALID_FORMAT)

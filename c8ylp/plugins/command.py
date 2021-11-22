@@ -69,6 +69,7 @@ def cli(ctx: click.Context, additional_args: List[str], **kwargs):
             cmd_args.append(expanded_value)
 
     if not shutil.which(cmd_args[0]):
+        logging.info("PATH: %s", os.getenv("PATH"))
         bash_path = shutil.which("bash")
         if not bash_path:
             proxy.show_error(f"Command does not exist. cmd={cmd_args}")

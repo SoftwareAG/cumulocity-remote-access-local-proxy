@@ -84,8 +84,8 @@ def test_plugin_run_command(
         sys_out, _ = capfd.readouterr()
 
         # Support debugging on CI runner
-        logging.info("cli.output: %s", result.output)
-        logging.info("system.output: %s", sys_out)
+        print("---DEBUG---: cli.output: %s", result.output)
+        print("---DEBUG---: system.output: %s", sys_out)
 
         if case["stdout"] is not None:
             if sys_out:

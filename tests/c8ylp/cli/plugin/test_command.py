@@ -1,5 +1,7 @@
 """Plugin run"""
 
+import os
+import platform
 from unittest.mock import patch
 
 import pytest
@@ -63,6 +65,16 @@ def test_plugin_run_command(
         port = "2223"
         c8yserver.simulate_pre_authenticated(serial)
 
+        # HACK: Prefix the preferred github actions runner
+        # path where bash.exe is located so it picks up this version
+        # rather than WSL as WSL is not configured in the CI environment
+        # Otherwise the bash does not run properly.
+        env_path_override = {}
+        if platform.system() == "Windows":
+            env_path_override["PATH"] = (
+                "C:\\Program Files\\Git\\bin" + ";" + os.getenv("PATH", "")
+            )
+
         runner = CliRunner()
         result = runner.invoke(
             cli,
@@ -74,7 +86,10 @@ def test_plugin_run_command(
                 serial,
                 *case["commands"],
             ],
-            env=env.create_authenticated(),
+            env={
+                **env.create_authenticated(),
+                **env_path_override,
+            },
         )
 
         assert result.exit_code == case["exit_code"]

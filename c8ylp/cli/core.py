@@ -476,7 +476,7 @@ def run_proxy_in_background(
     """
 
     stop_signal = threading.Event()
-    ready_signal = ready_signal or threading.Event()
+    _local_ready_signal = threading.Event()
 
     # register signals as the proxy will be starting in a background thread
     # to enable the proxy to run as a subcommand
@@ -489,14 +489,14 @@ def run_proxy_in_background(
         kwargs=dict(
             connection_data=connection_data,
             stop_signal=stop_signal,
-            ready_signal=ready_signal,
+            ready_signal=_local_ready_signal,
         ),
         daemon=True,
     )
     background.start()
 
     # Block until the local proxy is ready to accept connections
-    if not ready_signal.wait(opts.wait_port_timeout):
+    if not _local_ready_signal.wait(opts.wait_port_timeout):
         opts.exit_server_not_ready()
 
     # Inject custom env variables for use within the script
@@ -511,6 +511,11 @@ def run_proxy_in_background(
         stop_signal.set()
         background.join()
         timer.stop_with_message()
+
+    # Only set ready signal once the whole env include env variables has
+    # been setup
+    if ready_signal:
+        ready_signal.set()
 
 
 def pre_start_checks(

@@ -68,8 +68,16 @@ def cli(ctx: click.Context, additional_args: List[str], **kwargs):
             logging.info("Expanded script arguments: %s => %s", value, expanded_value)
             cmd_args.append(expanded_value)
 
-    if not shutil.which(cmd_args[0]):
-        logging.info("PATH: %s", os.getenv("PATH"))
+    logging.info("PATH: %s", os.getenv("PATH"))
+    first_arg = shutil.which(cmd_args[0])
+
+    if first_arg:
+        # resolve path to its full form to prevent other execution errors
+        # on windows
+        cmd_args[0] = first_arg
+    else:
+        # Prepend a bash, as the user is probably trying to use
+        # a bash function (like echo)
         bash_path = shutil.which("bash")
         if not bash_path:
             proxy.show_error(f"Command does not exist. cmd={cmd_args}")

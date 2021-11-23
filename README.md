@@ -110,7 +110,7 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  connect  Connect to a device via different protocols (i.e.
+  connect  Connect to a device via different protocols
   login    Login and save credentials to an environment file
   plugin   Run a custom plugin (installed under ~/.c8ylp/plugins/)
   server   Start local proxy in server mode
@@ -131,7 +131,7 @@ c8ylp connect ssh <device> --ssh-user <device_username> --env-file .env
 
 ### Command documentation
 
-The command usage and parameters can 
+The command usage and all parameters can be viewed on the following pages:
 
 * [c8ylp](docs/cli/C8YLP.md)
 * [c8ylp login](docs/cli/C8YLP_LOGIN.md)
@@ -141,7 +141,7 @@ The command usage and parameters can
 * [c8ylp plugin](docs/cli/C8YLP_PLUGIN.md)
 * [c8ylp plugin command](docs/cli/C8YLP_PLUGIN_COMMAND.md)
 
-### Configuration
+### TODO: Configuration
 
 * Environment variables
 * Dot env file (set via `--env-file <file>`)
@@ -207,7 +207,7 @@ The logfile can be found in the following directory.
 
 Where `~` is your user folder.
 
-To increase the detail of log use the paramter `--verbose or -v`. If set the log will be written on debug level.
+To increase the detail of log use the paramter `--verbose or -v`. If set, the log will be written on debug level.
 
 All relevant information will be sent to the console AND to the log file. So when running in background you can just ignore the console output: 
 

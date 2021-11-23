@@ -189,13 +189,16 @@ class PluginCLI(click.MultiCommand):
 
         cmds.sort()
 
-        logging.debug("Detected plugins: %s", cmds)
+        logging.info("Detected plugins: %s", cmds)
         return cmds
 
     def get_command(self, ctx: click.Context, cmd_name: str) -> Optional[click.Command]:
         """Get a command via its name. It will dynamically execute the
         plugin (if it is a python plugin) or wrap it in a click command
         if it is a bash plugin.
+
+        When resilient parsing is activated (mostly during tab completion), then don't
+        trigger an exit as it can affect the completion results from being displayed.
 
         Args:
             ctx (Context): Click context
@@ -204,6 +207,7 @@ class PluginCLI(click.MultiCommand):
         Returns:
             Optional[click.Command]: Resolved command
         """
+        # pylint: disable=too-many-branches
         namespace = {}
 
         file_exts = [".py", ".sh"]
@@ -218,6 +222,8 @@ class PluginCLI(click.MultiCommand):
                     plugins.append(path)
 
         if not plugins:
+            if ctx.resilient_parsing:
+                return None
             logging.warning("Could not find plugin. name=%s", cmd_name)
             ctx.exit(ExitCodes.PLUGIN_NOT_FOUND)
 
@@ -231,7 +237,9 @@ class PluginCLI(click.MultiCommand):
                     namespace = load_python_plugin(str(path))
                 except Exception as ex:
                     logging.warning("Failed to load python plugin. error=%s", ex)
-                    ctx.exit(ExitCodes.PLUGIN_INVALID_FORMAT)
+                    if not ctx.resilient_parsing:
+                        ctx.exit(ExitCodes.PLUGIN_INVALID_FORMAT)
+
                 break
 
             if path.suffix == ".sh":
@@ -245,6 +253,8 @@ class PluginCLI(click.MultiCommand):
                     cmd_name,
                     ctx.parent.command.name,
                 )
+                if ctx.resilient_parsing:
+                    return None
                 ctx.exit(ExitCodes.PLUGIN_INVALID_FORMAT)
 
         return namespace.get("cli")

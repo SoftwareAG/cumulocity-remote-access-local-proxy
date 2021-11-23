@@ -144,14 +144,17 @@ class TCPProxyServer:
     def serve_forever(self):
         """Server tcp server forever. Only returns once .shutdown has been called"""
         self._running.set()
-        self.server.serve_forever()
+        try:
+            self.server.serve_forever()
+        except Exception as ex:
+            logging.error("TCP Server raised an exception. %s", ex, exc_info=True)
+            raise ex
         self._running.clear()
 
     def shutdown(self):
         """Shutdown tcp server"""
         if self._running.is_set():
             logging.info("Shutting down TCP server")
-            self.server.server_close()
             self.server.shutdown()
 
     def wait_for_running(self, timeout: float = 30.0) -> bool:

@@ -4,6 +4,7 @@ import os
 import platform
 import shutil
 import subprocess
+import sys
 from unittest.mock import patch
 
 import pytest
@@ -83,6 +84,9 @@ def test_plugin_run_command(
         # pylint: disable=subprocess-run-check
         result = subprocess.run(
             [
+                sys.executable,
+                "-m",
+                "c8ylp",
                 "plugin",
                 "command",
                 "--port",

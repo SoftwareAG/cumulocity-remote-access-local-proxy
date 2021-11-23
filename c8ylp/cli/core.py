@@ -238,7 +238,10 @@ class CliLogger:
     @classmethod
     def log_path(cls) -> pathlib.Path:
         """Get the log path"""
-        return (pathlib.Path.home() / ".c8ylp" / "localproxy.log").resolve()
+        return (
+            pathlib.Path(os.getenv("C8YLP_LOG_DIR", "~/.c8ylp/")).expanduser()
+            / "localproxy.log"
+        )
 
 
 def configure_logger(path: pathlib.Path, verbose: bool = False) -> logging.Logger:

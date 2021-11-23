@@ -1,9 +1,9 @@
 """SSH command tests"""
+import os
 from unittest.mock import Mock, patch
 
 import pytest
 from c8ylp.rest_client.c8yclient import CumulocityClient
-from c8ylp.cli.core import CliLogger
 from tests.env import Environment
 from tests.fixtures import FixtureCumulocityAPI, LocalProxyLog
 
@@ -44,10 +44,10 @@ def fixture_localproxy_log():
 
 
 @pytest.fixture(autouse=True)
-def run_before_and_after_tests(localproxy_log: LocalProxyLog):
+def run_before_and_after_tests(localproxy_log: LocalProxyLog, tmpdir):
     """Fixture to execute asserts before and after a test is run"""
     # Setup: Clear any existing logs
-    CliLogger.log_path().unlink(missing_ok=True)
+    os.environ["C8YLP_LOG_DIR"] = str(tmpdir)
 
     yield
 

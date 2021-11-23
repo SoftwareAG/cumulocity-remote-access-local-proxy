@@ -2,7 +2,6 @@
 
 import os
 import platform
-import shutil
 from unittest.mock import patch
 
 import pytest
@@ -72,11 +71,9 @@ def test_plugin_run_command(
         # Otherwise the bash does not run properly.
         env_path_override = {}
         if platform.system() == "Windows":
-            print(f"which bash (before): {shutil.which('bash')}")
             os.environ["PATH"] = (
                 "C:\\Program Files\\Git\\bin" + ";" + os.getenv("PATH", "")
             )
-            print(f"which bash (after): {shutil.which('bash')}")
             env_path_override["PATH"] = os.environ["PATH"]
 
         runner = CliRunner()
@@ -101,10 +98,6 @@ def test_plugin_run_command(
 
         # sys stdout is not captured by the CliRunner
         sys_out, _ = capfd.readouterr()
-
-        # Support debugging on CI runner
-        print("---DEBUG---: cli.output: %s", result.output)
-        print("---DEBUG---: system.output: %s", sys_out)
 
         if case["stdout"] is not None:
             if sys_out:

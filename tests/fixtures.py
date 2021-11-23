@@ -133,4 +133,6 @@ class LocalProxyLog:
 
     def print_output(self):
         """Print log output"""
-        print("--localproxy.log--\n" + CliLogger.log_path().read_text())
+        log_path = CliLogger.log_path()
+        if log_path.is_file():
+            print("--localproxy.log--\n" + CliLogger.log_path().read_text())

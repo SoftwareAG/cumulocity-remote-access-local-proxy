@@ -2,7 +2,6 @@
 ## c8ylp plugin command
 
 ```
-Validating c8y token: OK
 Usage: c8ylp plugin command [OPTIONS] DEVICE [REMOTE_COMMANDS]...
 
   Start once-off proxy and execute a (local) script/command
@@ -31,7 +30,7 @@ Usage: c8ylp plugin command [OPTIONS] DEVICE [REMOTE_COMMANDS]...
           c8ylp plugin command --env-file .env -v device01 ./copyfrom.sh /var/log/dpkg.log ./
 
 Options:
-  --host TEXT              Cumulocity Hostname  [required]
+  --host TEXT              Cumulocity Hostname  [required] [env var: C8Y_HOST]
   -t, --tenant TEXT        Cumulocity tenant id  [env var: C8Y_TENANT]
   -u, --user TEXT          Cumulocity username  [env var: C8Y_USER,
                            C8Y_USERNAME]

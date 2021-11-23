@@ -115,7 +115,7 @@ HOSTNAME = click.option(
     is_eager=True,
     prompt=False,
     envvar=("C8Y_HOST", "C8Y_BASEURL", "C8Y_URL"),
-    help="Cumulocity Hostname  [required]",
+    help="Cumulocity Hostname  [required] [env var: C8Y_HOST]",
 )
 
 HOSTNAME_PROMPT = click.option(
@@ -124,7 +124,7 @@ HOSTNAME_PROMPT = click.option(
     is_eager=True,
     prompt=True,
     envvar=("C8Y_HOST", "C8Y_BASEURL", "C8Y_URL"),
-    help="Cumulocity Hostname  [required]",
+    help="Cumulocity Hostname  [required] [env var: C8Y_HOST]",
 )
 
 

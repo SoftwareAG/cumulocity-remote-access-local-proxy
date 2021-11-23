@@ -2,7 +2,6 @@
 ## c8ylp server
 
 ```
-Validating c8y token: OK
 Usage: c8ylp server [OPTIONS] DEVICE
 
   Start local proxy in server mode
@@ -25,7 +24,7 @@ Usage: c8ylp server [OPTIONS] DEVICE
           c8ylp server --env-file .env --port 0 device01
 
 Options:
-  --host TEXT              Cumulocity Hostname  [required]
+  --host TEXT              Cumulocity Hostname  [required] [env var: C8Y_HOST]
   -t, --tenant TEXT        Cumulocity tenant id  [env var: C8Y_TENANT]
   -u, --user TEXT          Cumulocity username  [env var: C8Y_USER,
                            C8Y_USERNAME]

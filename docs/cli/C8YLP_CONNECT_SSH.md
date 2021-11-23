@@ -2,7 +2,6 @@
 ## c8ylp connect ssh
 
 ```
-Validating c8y token: OK
 Usage: c8ylp connect ssh [OPTIONS] DEVICE [REMOTE_COMMANDS]...
 
   Start once-off proxy and connect via ssh
@@ -30,7 +29,7 @@ Usage: c8ylp connect ssh [OPTIONS] DEVICE [REMOTE_COMMANDS]...
       c8ylp connect ssh device01 --env-file .env --ssh-user admin -- "systemctl status ssh; dpkg --list | grep ssh"
 
 Options:
-  --host TEXT              Cumulocity Hostname  [required]
+  --host TEXT              Cumulocity Hostname  [required] [env var: C8Y_HOST]
   -t, --tenant TEXT        Cumulocity tenant id  [env var: C8Y_TENANT]
   -u, --user TEXT          Cumulocity username  [env var: C8Y_USER,
                            C8Y_USERNAME]

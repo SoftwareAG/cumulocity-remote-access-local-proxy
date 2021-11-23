@@ -2,7 +2,6 @@
 ## c8ylp login
 
 ```
-Validating c8y token: OK
 Usage: c8ylp login [OPTIONS]
 
   Login and save credentials to an environment file
@@ -10,11 +9,12 @@ Usage: c8ylp login [OPTIONS]
   You will be prompted for all of the relevant information, i.e. host,
   username, password and TFA code (if required)
 
-  Example 1: Create/update an env-file by trying to login into Cumulocity 
-  c8ylp login --env-file mytenant.env
+  Example 1: Create/update an env-file by trying to login into Cumulocity
+
+      c8ylp login --env-file mytenant.env
 
 Options:
-  --host TEXT            Cumulocity Hostname  [required]
+  --host TEXT            Cumulocity Hostname  [required] [env var: C8Y_HOST]
   -t, --tenant TEXT      Cumulocity tenant id  [env var: C8Y_TENANT]
   -u, --user TEXT        Cumulocity username  [env var: C8Y_USER,
                          C8Y_USERNAME]

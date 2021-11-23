@@ -29,6 +29,7 @@ def login(
     i.e. host, username, password and TFA code (if required)
 
     Example 1: Create/update an env-file by trying to login into Cumulocity
+
     \b
         c8ylp login --env-file mytenant.env
 

@@ -3,8 +3,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 from c8ylp.rest_client.c8yclient import CumulocityClient
+from c8ylp.cli.core import CliLogger
 from tests.env import Environment
-from tests.fixtures import FixtureCumulocityAPI
+from tests.fixtures import FixtureCumulocityAPI, LocalProxyLog
 
 
 @pytest.fixture(name="c8yclient")
@@ -33,3 +34,22 @@ def fixture_c8yserver():
     """Cumulocity server fixture to simulate server responses"""
     api = FixtureCumulocityAPI()
     yield api
+
+
+@pytest.fixture(name="localproxy_log")
+def fixture_localproxy_log():
+    """Local proxy log fixture"""
+    log = LocalProxyLog()
+    yield log
+
+
+@pytest.fixture(autouse=True)
+def run_before_and_after_tests(localproxy_log: LocalProxyLog):
+    """Fixture to execute asserts before and after a test is run"""
+    # Setup: Clear any existing logs
+    CliLogger.log_path().unlink(missing_ok=True)
+
+    yield
+
+    # Show log log output
+    localproxy_log.print_output()

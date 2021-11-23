@@ -3,8 +3,6 @@
 import os
 import platform
 import shutil
-import subprocess
-import sys
 from unittest.mock import patch
 
 import pytest
@@ -58,7 +56,7 @@ def test_plugin_run_command(
     case,
     c8yserver: FixtureCumulocityAPI,
     env: Environment,
-    # capfd: pytest.CaptureFixture,
+    capfd: pytest.CaptureFixture,
 ):
     """Test running custom command after the proxy server starts"""
 
@@ -81,12 +79,10 @@ def test_plugin_run_command(
             print(f"which bash (after): {shutil.which('bash')}")
             env_path_override["PATH"] = os.environ["PATH"]
 
-        # pylint: disable=subprocess-run-check
-        result = subprocess.run(
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
             [
-                sys.executable,
-                "-m",
-                "c8ylp",
                 "plugin",
                 "command",
                 "--port",
@@ -99,54 +95,22 @@ def test_plugin_run_command(
                 **env.create_authenticated(),
                 **env_path_override,
             },
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
         )
 
-        sys_out = result.stdout.decode()
-        sys_err = result.stderr.decode()
+        assert result.exit_code == case["exit_code"]
+
+        # sys stdout is not captured by the CliRunner
+        sys_out, _ = capfd.readouterr()
 
         # Support debugging on CI runner
-        print("---DEBUG---: system.output: ", sys_out)
-        print("---DEBUG---: system.error: ", sys_err)
-
-        assert result.returncode == case["exit_code"]
+        print("---DEBUG---: cli.output: %s", result.output)
+        print("---DEBUG---: system.output: %s", sys_out)
 
         if case["stdout"] is not None:
-            assert case["stdout"] in sys_out
-
-        # runner = CliRunner()
-        # result = runner.invoke(
-        #     cli,
-        #     [
-        #         "plugin",
-        #         "command",
-        #         "--port",
-        #         port,
-        #         serial,
-        #         *case["commands"],
-        #     ],
-        #     env={
-        #         **os.environ,
-        #         **env.create_authenticated(),
-        #         **env_path_override,
-        #     },
-        # )
-
-        # assert result.exit_code == case["exit_code"]
-
-        # # sys stdout is not captured by the CliRunner
-        # sys_out, _ = capfd.readouterr()
-
-        # # Support debugging on CI runner
-        # print("---DEBUG---: cli.output: %s", result.output)
-        # print("---DEBUG---: system.output: %s", sys_out)
-
-        # if case["stdout"] is not None:
-        #     if sys_out:
-        #         assert case["stdout"] in sys_out
-        #     else:
-        #         assert case["stdout"] in result.output
+            if sys_out:
+                assert case["stdout"] in sys_out
+            else:
+                assert case["stdout"] in result.output
 
     run()
 

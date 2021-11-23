@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 from unittest.mock import patch
 import responses
 from c8ylp.main import cli
+from c8ylp.cli.core import CliLogger
 
 
 def mock_cli():
@@ -125,3 +126,11 @@ class FixtureCumulocityAPI:
             # )
 
         pass
+
+
+class LocalProxyLog:
+    """Local Proxy Log fixture"""
+
+    def print_output(self):
+        """Print log output"""
+        print("--localproxy.log--\n" + CliLogger.log_path().read_text())

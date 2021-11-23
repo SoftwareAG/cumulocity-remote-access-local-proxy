@@ -83,7 +83,7 @@ class ProxyContext:
         if src_dict is not None:
             self.fromdict(src_dict)
 
-            configure_logger(None, self.verbose)
+            configure_logger(CliLogger.log_path(), self.verbose)
 
     @property
     def _root_context(self) -> click.Context:
@@ -230,19 +230,28 @@ PASSTHROUGH = "PASSTHROUGH"
 REMOTE_ACCESS_FRAGMENT = "c8y_RemoteAccessList"
 
 
-def configure_logger(path: str = None, verbose: bool = False) -> logging.Logger:
+class CliLogger:
+    """CLI Logger"""
+
+    # pylint: disable=too-few-public-methods
+
+    @classmethod
+    def log_path(cls) -> pathlib.Path:
+        """Get the log path"""
+        return (pathlib.Path.home() / ".c8ylp" / "localproxy.log").resolve()
+
+
+def configure_logger(path: pathlib.Path, verbose: bool = False) -> logging.Logger:
     """Configure logger
 
     Args:
-        path (str, optional): Path where the persistent logger should write to. Defaults to None.
+        path (pathlib.Path): Path where the persistent logger should write to.
         verbose (bool, optional): Use verbose logging. Defaults to False.
 
     Returns:
         logging.Logger: Created logger
     """
-    if not path:
-        path = pathlib.Path.home() / ".c8ylp"
-        path.mkdir(parents=True, exist_ok=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
 
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
@@ -272,7 +281,7 @@ def configure_logger(path: str = None, verbose: bool = False) -> logging.Logger:
 
     # Max 5 log files each 10 MB.
     rotate_handler = RotatingFileHandler(
-        filename=path / "localproxy.log", maxBytes=10000000, backupCount=5
+        filename=str(path), maxBytes=10000000, backupCount=5
     )
     rotate_handler.setFormatter(log_file_formatter)
     rotate_handler.setLevel(logging.INFO)

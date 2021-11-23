@@ -4,7 +4,7 @@
 ```
 Usage: c8ylp login [OPTIONS]
 
-  Login and save credentials to an environment file
+  Login and save token to an environment file
 
   You will be prompted for all of the relevant information, i.e. host,
   username, password and TFA code (if required)

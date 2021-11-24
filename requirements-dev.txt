@@ -9,7 +9,8 @@ black==21.10b0
 pytest==6.2.5
 pytest-timeout==2.0.1
 pytest-cov==3.0.0
+responses==0.16.0
 
-# response=0.15.0 has a bug with setting cookies (should be fixed in > 0.15.0 when released)
-# https://github.com/getsentry/responses/issues/439
-responses==0.14.0
+# publishing
+wheel>=0.34.2
+twine>=3.6.0

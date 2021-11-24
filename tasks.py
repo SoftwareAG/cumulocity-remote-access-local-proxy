@@ -8,21 +8,16 @@ from pathlib import Path
 
 @task
 def clean(c, docs=False, bytecode=False, extra=""):
-    patterns = ["build"]
+    """Clean project (linux only)"""
+    patterns = ["build", "dist", "test_output"]
     if docs:
-        patterns.append("docs/_build")
+        patterns.append("docs/cli")
     if bytecode:
         patterns.append("**/*.pyc")
     if extra:
         patterns.append(extra)
     for pattern in patterns:
         c.run("rm -rf {}".format(pattern))
-
-
-@task
-def build(c):
-    """Build"""
-    c.run("python setup.py build")
 
 
 @task
@@ -38,7 +33,21 @@ def format(c, check=False):
     if check:
         c.run("black --check --target-version=py37 .")
     else:
-        c.run("python3 -m black --target-version=py37 .")
+        c.run(f"{sys.executable} -m black --target-version=py37 .")
+
+
+@task
+def build(c):
+    """Build"""
+    c.run(f"{sys.executable} setup.py build")
+
+
+@task(pre=[build])
+def publish(c):
+    """Publish python package to pip"""
+    assert "TWINE_USERNAME" in os.environ
+    assert "TWINE_PASSWORD" in os.environ
+    c.run("twine upload dist/*")
 
 
 @task
@@ -81,34 +90,6 @@ def test_integration(c, pattern=None):
     if pattern:
         cmd.append(f"-k={pattern}")
     c.run(" ".join(cmd))
-
-
-@task
-def test_performance(c, testid=2):
-    """
-    Run performance tests for specific scenarios
-    """
-
-    pypaths = [
-        os.getcwd(),
-        os.getenv("PYTHONPATH"),
-    ]
-    pypaths = [x for x in pypaths if x]
-
-    c.run("python3 ./tests/performance/create-file.py ./tests/performance/5.mb 5")
-
-    env = {
-        **os.environ,
-        "C8Y_DEVICE": "device01",
-        "PYTHONPATH": ":".join(pypaths),
-    }
-
-    if testid == 1:
-        c.run("./tests/performance/test1_file_transfer.sh", env=env)
-    elif testid == 2:
-        c.run("./tests/performance/test2_file_transfer_concurrent.sh", env=env)
-    elif testid == 3:
-        c.run("./tests/performance/test3_concurrent_single_commands.sh", env=env)
 
 
 @task

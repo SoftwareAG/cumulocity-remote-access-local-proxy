@@ -80,7 +80,7 @@ Running the integration test require a working client running on a device. So be
     invoke test-integration
     ```
 
-## Publishing to PyPi
+## Publishing to pypi
 
 The package can be published by running the following command. 
 

@@ -32,10 +32,10 @@ pip install -r requirements.txt -r requirements-dev.txt
 
 ### Package Manager
 
-Just install the dependencies via apt
+Install the dependencies via apt
 
 ```console
-sudo apt install python-requests python-websocket python-setuptools
+sudo apt install python3-requests python3-websocket python3-setuptools python3-certifi python3-click
 ```
 ## Installation from pypi via pip
 
@@ -51,7 +51,7 @@ Navigate to the root folder of the project and run:
 pip install .
 ```
 
-## Installation as a Software Bundle
+## TODO : OUTDATED : Installation as a Software Bundle
 
 The Local Proxy can be installed by the Debian/Ubuntu Package Manager (apt).
 Make sure that the package is available in your configured repositories and execute
@@ -141,39 +141,53 @@ The command usage and all parameters can be viewed on the following pages:
 * [c8ylp plugin](docs/cli/C8YLP_PLUGIN.md)
 * [c8ylp plugin command](docs/cli/C8YLP_PLUGIN_COMMAND.md)
 
-### TODO: Configuration
+### Configuration
 
-* Environment variables
-* Dot env file (set via `--env-file <file>`)
+c8ylp can be configured via either parameters or environment variables. The environment variables can either be set via shell, or by using a dotenv file (i.e. `.env`). When using a dotenv file then it needs to be provide to the `--env-file <file>` parameter.
 
-You can execute `c8ylp --help` to get help about the parameters and execution.
+Example Usage:
 
-Example Usage: 
+If you create a file called `.env` and add the following contents:
+
+```sh
+# Cumulocity settings
+C8Y_HOST=<cumulocity_host>
+C8Y_USER=<your_cumulocity_username>
+
+# c8ylp settings
+C8YLP_VERBOSE=true
+```
+
+Then reference the file from the command line:
 
 ```console
 c8ylp server test-device --env-file .env
 ```
 
-Additional the parameters can be set by using Environment Variables (see column "Enviroment Variables in the table above)
+The environment variables corresponding to the parameter can be viewed by using the in-built help.
+
+```sh
+c8ylp --help
+```
 
 > Please note that the Local Proxy will block the current terminal session. If you want to use it in background just use "&" and/or "nohup". As the relevant information will be stored in a log file as well you can forward the output to dev/null or to syslog if you want to do so.
 >```
->c8ylp [params] > /dev/null 2>&1
+>c8ylp server [options] > /dev/null 2>&1
 >```
 
 If no TCP Client is connected but Web Socket Connection is open it might get be terminated by a server timeout. The Local Proxy will automatically reestablish the connection in this case.
 
 If a TCP Client has been connected and the Web Socket Connection gets terminated, the TCP Client Connection will be terminated which results in that the Local Proxy terminates and needs to be restarted manually.
 
-## Auto completion / tab completion
+## Tab completion
 
-c8ylp (version >= 2.0.0) supports auto completion for bash, zsh and fish shells.
+c8ylp (version >= 2.0.0) supports tab completion for bash, zsh and fish shells.
 
-To add the completion, you will need to add the correspnding line to your shell profile, and reload your shell afterwards.
+To add the completion, you will need to add the corresponding line to your shell profile, and reload your shell afterwards.
 
 **Note**
 
-Completion is not currently supported in cygwin.
+Completion is not currently supported in Cygwin.
 
 ```sh
 # bash (profile: ~/.bashrc)
@@ -188,7 +202,7 @@ _C8YLP_COMPLETE=fish_source c8ylp | source
 
 # Plugins
 
-`c8ylp` can be extended by the use of plugins (either via python or bash script). Checkout the [plugins](docs/PLUGINS.md) page for information about how to create a plugin.
+`c8ylp` can be extended by the use of plugins (either via python or bash script). Checkout the [plugins](docs/PLUGINS.md) page for more information about how to create your own plugin, but it is intended for advanced users. For simple one liners have a look at using the in-built generic plugin [c8ylp plugin command](docs/cli/C8YLP_PLUGIN_COMMAND.md) instead.
 
 Plugins are loaded at runtime and can be listed by running the following command:
 
@@ -199,15 +213,15 @@ c8ylp plugin
 
 # Log
 
-The logfile can be found in the following directory. 
+The log file can be found in the following directory. 
 
   ```console
-  ~/.c8ylp/
+  ~/.c8ylp/*.log
   ```
 
 Where `~` is your user folder.
 
-To increase the detail of log use the paramter `--verbose or -v`. If set, the log will be written on debug level.
+To increase the detail of log use the parameter `--verbose or -v`. If set, the log will be written on debug level.
 
 All relevant information will be sent to the console AND to the log file. So when running in background you can just ignore the console output: 
 
@@ -215,7 +229,11 @@ All relevant information will be sent to the console AND to the log file. So whe
 c8ylp [params] > /dev/null 2>&1
 ```
 
-Also of course you can forward the log output to any logserver / file of your choice.
+Also of course you can forward the log output to any log server / file of your choice.
+
+# Development
+
+Checkout the [DEVELOPMENT Notes](docs/DEVELOPMENT.md) to see how to contribute to the project.
 
 _____________________
 These tools are provided as-is and without warranty or support. They do not constitute part of the Software AG product suite. Users are free to use, fork and modify them, subject to the license agreement. While Software AG welcomes contributions, we cannot guarantee to include every contribution in the master project.

@@ -1,4 +1,20 @@
 
+## Project tasks
+
+Project tasks can be run via the `invoke` command. But before the command is installed you need to install all the python dependenies by running:
+
+```sh
+pip3 install -r requirements.txt -r requirements-dev.txt
+```
+
+All of the project tasks are defined in the `tasks.py` file.
+
+If you are running zsh you can activate tab completion definitions for the tasks by adding the following in your `~/.zshrc` or running it when starting a new zsh.
+
+```sh
+eval "$(invoke --print-completion-script=zsh)"
+```
+
 ## Coding
 
 The project uses normalized code formating and linting to maintain a consistent code styling.

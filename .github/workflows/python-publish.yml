@@ -20,8 +20,8 @@ jobs:
         python-version: '3.x'
     - name: Install dependencies
       env:
-        PIP_DISABLE_PIP_VERSION_CHECK=1
-        PIP_NO_CACHE_DIR=1
+        PIP_DISABLE_PIP_VERSION_CHECK: '1'
+        PIP_NO_CACHE_DIR: '1'
       run: |
         pip install -r requirements.txt -r requirements-dev.txt
     - name: Build and publish

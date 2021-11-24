@@ -1,7 +1,7 @@
 
 ## Project tasks
 
-Project tasks can be run via the `invoke` command. But before the command is installed you need to install all the python dependenies by running:
+Project tasks can be run via the `invoke` command. But before the command is installed you need to install all the python dependencies by running:
 
 ```sh
 pip3 install -r requirements.txt -r requirements-dev.txt
@@ -17,7 +17,7 @@ eval "$(invoke --print-completion-script=zsh)"
 
 ## Coding
 
-The project uses normalized code formating and linting to maintain a consistent code styling.
+The project uses normalized code formatting and linting to maintain a consistent code styling.
 
 Before submitting a Pull Request, please run the following and fix any of the linting errors.
 
@@ -29,7 +29,7 @@ invoke format lint
 
 ## Building debian package
 
-In order to build the .deb yourself first install python-stdeb via apt. Afterwards run:
+In order to build the .deb yourself first install python3-stdeb via apt. Afterwards run:
 
     python3 setup.py --command-packages=stdeb.command bdist_deb
 
@@ -80,7 +80,7 @@ Running the integration test require a working client running on a device. So be
     invoke test-integration
     ```
 
-## Publishing to PyPy
+## Publishing to PyPi
 
 The package can be published by running the following command. 
 

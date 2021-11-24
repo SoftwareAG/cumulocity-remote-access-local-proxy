@@ -44,7 +44,7 @@ class CommandTimer:
 
     def stop_with_message(self):
         """Stop timer and print out a message about the duration"""
-        duration = timedelta(seconds=(int(self.stop())))
+        duration = timedelta(seconds=(round(self.stop(), 0)))
         msg = f"{self.message}: {duration}"
         logging.info(msg)
         if callable(self._on_exit):

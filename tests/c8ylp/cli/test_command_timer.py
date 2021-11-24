@@ -16,7 +16,9 @@ def test_timer_context(capfd: pytest.CaptureFixture):
 
     with timer:
         time.sleep(1)
-    assert timer.last_duration >= 1.0
+
+    # Use approx due to differences in precision of timers on different OS's
+    assert pytest.approx(timer.last_duration, abs=0.5) == 1.0
     out, err = capfd.readouterr()
     assert out == "My task: 0:00:01\n"
     assert not err

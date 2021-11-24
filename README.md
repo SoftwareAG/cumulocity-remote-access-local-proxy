@@ -27,7 +27,7 @@ The Local Proxy depends on the following components which either needs to be ins
 To install the dependencies via pip, navigate to the project folder and execute:
 
 ```console
-pip install -r requirements.txt
+pip install -r requirements.txt -r requirements-dev.txt
 ```
 
 ### Package Manager
@@ -96,8 +96,8 @@ The command can be launched by either using the `c8ylp` binary or my calling the
 ```sh
 c8ylp
 
-# or calling via python
-python3 -m c8ylp
+# or calling via python (or use python3)
+python -m c8ylp
 ```
 
 The available commands can be shown using:

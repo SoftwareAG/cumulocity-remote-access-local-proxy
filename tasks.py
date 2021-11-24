@@ -9,7 +9,7 @@ from pathlib import Path
 @task
 def clean(c, docs=False, bytecode=False, extra=""):
     """Clean project (linux only)"""
-    patterns = ["build", "dist", "test_output"]
+    patterns = ["build", "dist", "test_output", "deb_dist"]
     if docs:
         patterns.append("docs/cli")
     if bytecode:
@@ -39,7 +39,14 @@ def format(c, check=False):
 @task
 def build(c):
     """Build"""
-    c.run(f"{sys.executable} setup.py build")
+    c.run(f"{sys.executable} setup.py sdist bdist_wheel")
+
+
+@task
+def build_deb(c):
+    """Build debian package"""
+    print("Warning: Requires package 'python3-stdeb' to work")
+    c.run(f"{sys.executable} setup.py --command-packages=stdeb.command bdist_deb")
 
 
 @task(pre=[build])
@@ -62,7 +69,7 @@ def test(c, pattern=None):
         "pytest",
         "tests",
         "--timeout=10",
-        # Note: Dont use log cli level (--log-cli-level) as it can affect click testing!
+        # Note: Don't use log cli level (--log-cli-level) as it can affect click testing!
         "--cov-config=.coveragerc",
         "--cov-report=term",
         "--cov-report=html:test_output/htmlcov",

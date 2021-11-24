@@ -27,13 +27,19 @@ invoke format lint
 
 # Build
 
-## Building debian package
+## Building debian package (Ubuntu/Debian)
 
-In order to build the .deb yourself first install python3-stdeb via apt. Afterwards run:
+In order to build the .deb yourself first install the following dependencies:
 
-    python3 setup.py --command-packages=stdeb.command bdist_deb
+```
+sudo apt-get install -y python-all dh-python python3-stdeb
+```
 
-on the level of the setup.py.
+Then build the .deb file using:
+
+```
+invoke build_deb
+```
 
 ## Testing
 

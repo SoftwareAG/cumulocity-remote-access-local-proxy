@@ -42,11 +42,16 @@ def build(c):
     c.run(f"{sys.executable} setup.py sdist bdist_wheel")
 
 
-@task
+@task(pre=[clean])
 def build_deb(c):
-    """Build debian package"""
-    print("Warning: Requires package 'python3-stdeb' to work")
+    """Build debian package - (Debian/Ubuntu only)
+
+    apt-get install -y python-all dh-python python3-stdeb
+    """
+    print("Warning: Requires package 'python-all dh-python python3-stdeb' to work")
     c.run(f"{sys.executable} setup.py --command-packages=stdeb.command bdist_deb")
+
+    print("\nThe debian file is stored under: deb_dist/*.deb\n")
 
 
 @task(pre=[build])

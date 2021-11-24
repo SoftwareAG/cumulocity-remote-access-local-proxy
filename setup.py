@@ -32,6 +32,7 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     description="Cumulocity Local Client Proxy",
     author="Stefan Witschel",
+    author_email="Stefan.Witschel@softwareag.com",
     url="https://github.com/SoftwareAG/cumulocity-remote-access-local-proxy",
     license="Apache v2",
     packages=find_packages(),

@@ -79,3 +79,13 @@ Running the integration test require a working client running on a device. So be
     ```sh
     invoke test-integration
     ```
+
+## Publishing to PyPy
+
+The package can be published by running the following command. 
+
+```
+invoke publish
+```
+
+However normally the publishing is handled by the Github actions and does not need to be manually published.

@@ -45,8 +45,13 @@ def build(c):
 @task(pre=[build])
 def publish(c):
     """Publish python package to pip"""
-    assert "TWINE_USERNAME" in os.environ
-    assert "TWINE_PASSWORD" in os.environ
+    if "TWINE_USERNAME" not in os.environ or "TWINE_PASSWORD" not in os.environ:
+        print(
+            "'TWINE_USERNAME' and 'TWINE_PASSWORD' environment variables "
+            "are required for publishing"
+        )
+        sys.exit(1)
+
     c.run("twine upload dist/*")
 
 

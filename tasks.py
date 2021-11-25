@@ -1,5 +1,6 @@
 """Tasks"""
 import os
+import re
 import subprocess
 import sys
 from invoke import task
@@ -9,7 +10,7 @@ from pathlib import Path
 @task
 def clean(c, docs=False, bytecode=False, extra=""):
     """Clean project (linux only)"""
-    patterns = ["build", "dist", "test_output", "deb_dist"]
+    patterns = ["build", "dist", "test_output", "deb_dist", "c8ylp*tar.gz"]
     if docs:
         patterns.append("docs/cli")
     if bytecode:
@@ -151,11 +152,25 @@ def generate_docs(c):
         name = "_".join(cmd).upper() + ".md"
         doc_file = doc_dir / name
         print(f"Updating cli doc: {str(doc_file)}")
+
         proc = subprocess.run(
-            [sys.executable, "-m", *cmd, "--help"], stdout=subprocess.PIPE
+            [sys.executable, "-m", *cmd, "--help"],
+            stdout=subprocess.PIPE,
+            env={
+                **os.environ,
+                "C8Y_HOST": "dummy",
+                "C8YLP_PLUGINS": "dummy",
+            },
         )
 
-        usage = proc.stdout.decode().replace("python -m ", "", -1)
+        usage = proc.stdout.decode()
+
+        # Replace python3 module usage, to the more common c8ylp
+        usage = re.sub("python3? -m ", "", usage)
+
+        # Strip plugin folder information out of usage
+        usage = re.sub(r"Checking plugin folder.+\n", "", usage)
+
         doc_template = f"""
 ## {" ".join(cmd)}
 

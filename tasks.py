@@ -86,10 +86,12 @@ def test(c, pattern=None):
     c.run(" ".join(cmd))
 
 
-@task
+@task(pre=[clean])
 def test_integration(c, pattern=None):
     """Run integration tests"""
     cmd = [
+        sys.executable,
+        "-m",
         "pytest",
         "--durations=0",
         "--timeout=3600",

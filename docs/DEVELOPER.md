@@ -3,6 +3,8 @@
 
 Project tasks can be run via the `invoke` command. But before the command is installed you need to install all the python dependencies by running:
 
+To install the dependencies via pip, navigate to the project folder and execute:
+
 ```sh
 pip3 install -r requirements.txt -r requirements-dev.txt
 ```
@@ -25,21 +27,31 @@ Before submitting a Pull Request, please run the following and fix any of the li
 invoke format lint
 ```
 
-# Build
+## Build
 
-## Building debian package (Ubuntu/Debian)
+### Building Debian package (Ubuntu/Debian)
 
-In order to build the .deb yourself first install the following dependencies:
+In order to build the Debian package (.deb) yourself first install the following dependencies:
 
-```
+```sh
 sudo apt-get install -y python-all dh-python python3-stdeb
 ```
 
 Then build the .deb file using:
 
-```
+```sh
 invoke build_deb
 ```
+
+You can then host the Debian package in an Debian repository so it can be installed via `apt`.
+
+If you don't have a Debian repository available you can still install the .deb file manually by using:
+
+```sh
+sudo apt install /path/to/package/c8ylp.deb
+```
+
+Test if it is installed successfully by entering `c8ylp` in the terminal.
 
 ## Testing
 
@@ -53,7 +65,7 @@ invoke test
 
 ### Running Integration tests
 
-Running the integration test require a working client running on a device. So before the these tests can be run you need to add the following environment variables to the `.env` file.
+Running the integration tests require a working client running on a device. So before the these tests can be run you need to add the following environment variables to the `.env` file.
 
 1. Create a dotenv file `.env` in the project root folder and add the following:
 
@@ -62,10 +74,8 @@ Running the integration test require a working client running on a device. So be
     # User credentials
     #
     C8Y_HOST=
-    C8Y_TENANT=
-    C8Y_TOKEN=
-    C8Y_PASSWORD=
     C8Y_USER=
+    C8Y_PASSWORD=
 
     #
     # Integration testing
@@ -86,11 +96,19 @@ Running the integration test require a working client running on a device. So be
     invoke test-integration
     ```
 
+## CLI Documentation
+
+The CLI commands are also documented in the project in the form of markdown files (for online viewing). After changing any of the commands (or adding new ones), the documentation can be updated using the following:
+
+```sh
+inv generate-docs 
+```
+
 ## Publishing to pypi
 
 The package can be published by running the following command. 
 
-```
+```sh
 invoke publish
 ```
 

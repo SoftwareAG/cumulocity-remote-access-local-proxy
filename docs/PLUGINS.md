@@ -58,7 +58,7 @@ The following example show how to create a plugin which can be called using:
 c8ylp plugin python_ssh
 ```
 
-This example provies a custom way to launch an interactive ssh session using special business logic to automatically select the ssh user based on the name of the device.
+This example provides a custom way to launch an interactive ssh session using special business logic to automatically select the ssh user based on the name of the device.
 
 Firstly create a blank file in the following location (create the folder if it does not already exist):
 

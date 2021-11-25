@@ -3,24 +3,39 @@
 
 The following guide should help transitioning from version 1.x to v2.
 
-## Parameter name changes
+## Option name changes
 
-The following parameter names were changed:
+The following option names were changed:
 
 |Old name|New name|
 |--------|--------|
 |--hostname|--host|
+|--tfacode|--tfa-code|
+|--extype|--external-type|
 |--tcpsize|--tcp-size|
 |--tcptimeout|--tcp-timeout|
+|--scriptmode|(Removed)|
+|--use-pid|(Removed)|
+|--kill|(Removed)|
 
 
-## Parameter change of behaviour
+## Option change of behavior
 
-The meaning of the following paramters were changed:
+The meaning of the following options were changed:
 
-|Parameter|Old meaning|New meaning|
+|Option|Old meaning|New meaning|
 |---------|-----------|-----------|
 |-h|Cumulocity host|Show command help|
+
+## New Options
+
+The following options were added to.
+
+|Option|Meaning|
+|------|-------|
+|--disable-prompts|Disable prompts|
+|--store-token|Store the Cumulocity token into the specific env file (--env-file). It can be disabled by setting the environment variable `C8YLP_STORE_TOKEN=false`|
+
 
 
 ## Configuration

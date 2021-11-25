@@ -14,5 +14,6 @@ Options:
   -h, --help  Show this message and exit.
 
 Commands:
-  command     Start once-off proxy and execute a (local) script/command
+  command  Start once-off proxy and execute a (local) script/command
+
 ```

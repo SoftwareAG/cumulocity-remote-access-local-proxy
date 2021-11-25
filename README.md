@@ -10,42 +10,43 @@ The proxy is written in Python3.
 
 # Installation
 
-The Local Proxy will be either provided as a Python executable or packaged as Software Bundle.
+> ### Migration Notes
+>
+> If your are upgrade from <=1.x please see the [MIGRATION to V2 NOTES](docs/MIGRATION_V2.md) as there are some breaking changes. Please forgive us, but you can be sure it is worth it! Version 2.x brings a lot of great features like interactive ssh sessions and plugins to make c8ylp even more useful!
+>
 
-## Dependencies
+The Local Proxy can be installed via pip, or manually installed from the repository by clone it.
 
-The Local Proxy depends on the following components which either needs to be installed via pip or via package manager like apt:
+Additionally a Debian package (.deb) can be created by building the project yourself and hosting the package in your own Debian repository. See the [DEVELOPER Notes](docs/DEVELOPER.md) for details.
 
-* [certifi](https://pypi.org/project/certifi/)
-* [click](https://pypi.org/project/click/)
-* [requests](https://pypi.org/project/requests/)
-* [setuptools](https://pypi.org/project/setuptools/)
-* [websocket_client](https://pypi.org/project/websocket_client/)
 
-### PIP
-
-To install the dependencies via pip, navigate to the project folder and execute:
-
-```console
-pip install -r requirements.txt -r requirements-dev.txt
-```
-
-### Package Manager
-
-Install the dependencies via apt
-
-```console
-sudo apt install python3-requests python3-websocket python3-setuptools python3-certifi python3-click
-```
-## Installation from pypi via pip
+## Installation via pip (hosted in pypi)
 
 ```console
 pip install c8ylp
 ```
 
+>
+> Note: Depending on your python setup, you may need to use `pip3` instead of `pip`.
+>
+
+### Installing a specific version
+
+You can install specific version by specifying the version number when using pip.
+
+```console
+pip install c8ylp==1.5.0
+```
+
+Or if you want to install the latest v1.x version and do not want to upgrade to v2.x until you are ready, then use:
+
+```console
+pip install "c8ylp<2.0.0"
+```
+
 ## Installation from Source Code
 
-Navigate to the root folder of the project and run:
+Clone the project, then navigate to the root folder of the project and run:
 
 ```console
 pip install .
@@ -60,7 +61,7 @@ pip install .
 
 In a terminal session execute:
 
-c8ylp supports different commands depending on your use case. The commands are organized in a multi-level command structure. The list of available commands and subcommands can be shown by using the --help option.
+c8ylp supports different commands depending on your use case. The commands are organized in a multi-level command structure. The list of available commands and subcommands can be shown by using the `--help/-h` option.
 
 The command can be launched by either using the `c8ylp` binary or my calling the `c8ylp` module by python.
 
@@ -102,7 +103,7 @@ c8ylp connect ssh <device> --ssh-user <device_username> --env-file .env
 
 ### Command documentation
 
-The command usage and all parameters can be viewed on the following pages:
+The command usage and all options can be viewed on the following pages:
 
 * [c8ylp](docs/cli/C8YLP.md)
 * [c8ylp login](docs/cli/C8YLP_LOGIN.md)
@@ -114,7 +115,7 @@ The command usage and all parameters can be viewed on the following pages:
 
 ### Configuration
 
-c8ylp can be configured via either parameters or environment variables. The environment variables can either be set via shell, or by using a dotenv file (i.e. `.env`). When using a dotenv file then it needs to be provide to the `--env-file <file>` parameter.
+c8ylp can be configured via either options or environment variables. The environment variables can either be set via shell, or by using a dotenv file (i.e. `.env`). When using a dotenv file then it needs to be provide to the `--env-file <file>` option.
 
 Example Usage:
 
@@ -135,9 +136,9 @@ Then reference the file from the command line:
 c8ylp server test-device --env-file .env
 ```
 
-The environment variables corresponding to the parameter can be viewed by using the in-built help.
+The environment variables corresponding to the option can be viewed by using the in-built help.
 
-```sh
+```console
 c8ylp --help
 ```
 
@@ -173,7 +174,7 @@ _C8YLP_COMPLETE=fish_source c8ylp | source
 
 # Plugins
 
-`c8ylp` can be extended by the use of plugins (either via python or bash script). Checkout the [plugins](docs/PLUGINS.md) page for more information about how to create your own plugin, but it is intended for advanced users. For simple one liners have a look at using the in-built generic plugin [c8ylp plugin command](docs/cli/C8YLP_PLUGIN_COMMAND.md) instead.
+`c8ylp` can be extended by the use of plugins (either via python or bash script). Checkout the [plugins](docs/PLUGINS.md) documentation for more information about how to create your own plugin, but it is intended for advanced users only. For simple one liners have a look at using the in-built generic plugin [c8ylp plugin command](docs/cli/C8YLP_PLUGIN_COMMAND.md) instead.
 
 Plugins are loaded at runtime and can be listed by running the following command:
 
@@ -186,25 +187,35 @@ c8ylp plugin
 
 The log file can be found in the following directory. 
 
-  ```console
-  ~/.c8ylp/*.log
-  ```
+```console
+~/.c8ylp/*.log
+```
 
 Where `~` is your user folder.
 
-To increase the detail of log use the parameter `--verbose or -v`. If set, the log will be written on debug level.
+To increase the detail of log use the option `--verbose or -v`. If set, the log will be written on debug level.
 
 All relevant information will be sent to the console AND to the log file. So when running in background you can just ignore the console output: 
 
 ```
-c8ylp [params] > /dev/null 2>&1
+c8ylp [OPTIONS] > /dev/null 2>&1
 ```
 
-Also of course you can forward the log output to any log server / file of your choice.
+And for fancy setups, you can also forward the log output to any log server / file of your choice using standard linux mechanisms.
 
-# Development
+## Dependencies
 
-Checkout the [DEVELOPMENT Notes](docs/DEVELOPMENT.md) to see how to contribute to the project.
+The Local Proxy depends on the following components packages. The dependencies will be automatically installed when installing via pip or if you are installing c8ylp via a manually built Debian package (.deb).
+
+* [certifi](https://pypi.org/project/certifi/)
+* [click](https://pypi.org/project/click/)
+* [requests](https://pypi.org/project/requests/)
+* [setuptools](https://pypi.org/project/setuptools/)
+* [websocket_client](https://pypi.org/project/websocket_client/)
+
+# Contributing
+
+Checkout the [DEVELOPER Notes](docs/DEVELOPER.md) to see how to contribute to the project.
 
 _____________________
 These tools are provided as-is and without warranty or support. They do not constitute part of the Software AG product suite. Users are free to use, fork and modify them, subject to the license agreement. While Software AG welcomes contributions, we cannot guarantee to include every contribution in the master project.

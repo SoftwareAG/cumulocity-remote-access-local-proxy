@@ -25,7 +25,7 @@ Options:
   -v, --verbose          Print Debug Information into the Logs and Console
                          when set  [env var: C8YLP_VERBOSE]
   --env-file PATH        Environment file to load. Any settings loaded via
-                         this file will control other parameters  [env var:
+                         this file will control other options  [env var:
                          C8YLP_ENV_FILE]
   --store-token          Store the Cumulocity host, tenant and token to the
                          env-file if a file is being used  [env var:

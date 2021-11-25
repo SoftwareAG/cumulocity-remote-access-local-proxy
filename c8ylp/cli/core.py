@@ -170,34 +170,37 @@ class ProxyContext:
         click.secho(msg, fg="green")
         logging.info(msg, *args, **kwargs)
 
-    @classmethod
-    def show_error(cls, msg: str, *args, **kwargs):
+    def show_error(self, msg: str, *args, **kwargs):
         """Show an error to the user and log it
 
         Args:
             msg (str): User message to print on the console
         """
-        click.secho(msg, fg="red")
+        if not self.verbose:
+            click.secho(msg, fg="red")
+
         logging.warning(msg, *args, **kwargs)
 
-    @classmethod
-    def show_info(cls, msg: str, *args, **kwargs):
+    def show_info(self, msg: str, *args, **kwargs):
         """Show an info message to the user and log it
 
         Args:
             msg (str): User message to print on the console
         """
-        click.secho(msg)
+        if not self.verbose:
+            click.secho(msg)
+
         logging.warning(msg, *args, **kwargs)
 
-    @classmethod
-    def show_warning(cls, msg: str, *args, **kwargs):
+    def show_warning(self, msg: str, *args, **kwargs):
         """Show a warning to the user and log it
 
         Args:
             msg (str): User message to print on the console
         """
-        click.secho(msg, fg="yellow")
+        if not self.verbose:
+            click.secho(msg, fg="yellow")
+
         logging.warning(msg, *args, **kwargs)
 
     def set_env(self):
@@ -557,9 +560,21 @@ def pre_start_checks(
             opts.show_error(f"Could not retrieve device information. reason={ex}")
             # re-raise existing exit
             raise
+
+        error_context = ""
+        extra_details = []
+        if opts.host not in str(ex):
+            extra_details.append(f"host={opts.host or ''}")
+
+        if opts.user not in str(ex):
+            extra_details.append(f"user={opts.user or ''}")
+
+        if extra_details:
+            error_context = ". settings: " + ", ".join(extra_details)
+
         opts.show_error(
             "Unexpected error when retrieving device information from Cumulocity. "
-            f"host={opts.host or ''}, user={opts.user or ''}, error_details={ex}"
+            f"error_details={ex}{error_context}"
         )
         ctx.exit(ExitCodes.NOT_AUTHORIZED)
 
@@ -632,7 +647,8 @@ def start_proxy(
             )
             ssh_username = opts.ssh_user or "<device_username>"
             opts.show_message(
-                f"\nConnect to {opts.device} by executing the following in a new tab/console:\n\n"
+                f"\nFor example, if you are running a ssh proxy, you connect to {opts.device} by executing the "
+                "following in a new tab/console:\n\n"
                 f"\tssh -p {opts.used_port} {ssh_username}@localhost",
             )
 

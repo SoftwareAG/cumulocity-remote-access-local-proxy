@@ -74,7 +74,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
         while True:
             try:
                 logging.debug("Reading from tcp port")
-                data = request.recv(1024)
+                data = request.recv(self.server.buffer_size or 1024)
                 logging.debug("%s wrote: %s", self.client_address, data)
 
                 if not data:

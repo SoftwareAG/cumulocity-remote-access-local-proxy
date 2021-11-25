@@ -96,6 +96,8 @@ def test_launching_ssh_with_fixed_port(
         assert ssh_cmd == [
             "ssh",
             "-o",
+            "ServerAliveInterval=120",
+            "-o",
             "StrictHostKeyChecking=no",
             "-o",
             "UserKnownHostsFile=/dev/null",

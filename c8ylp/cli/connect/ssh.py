@@ -68,6 +68,8 @@ def cli(ctx: click.Context, ssh_user: str, additional_args: List[str], **kwargs)
     ssh_args = [
         "ssh",
         "-o",
+        "ServerAliveInterval=120",
+        "-o",
         "StrictHostKeyChecking=no",
         "-o",
         "UserKnownHostsFile=/dev/null",

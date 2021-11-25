@@ -12,12 +12,12 @@ The proxy is written in Python3.
 
 > ### Migration Notes
 >
-> If your are upgrade from <=1.x please see the [MIGRATION to V2 NOTES](docs/MIGRATION_V2.md) as there are some breaking changes. Please forgive us, but you can be sure it is worth it! Version 2.x brings a lot of great features like interactive ssh sessions and plugins to make c8ylp even more useful!
+> If your are upgrade from 1.x please see the [MIGRATION to V2 NOTES](docs/MIGRATION_V2.md) as there are some breaking changes. Please forgive us, but you can be sure it is worth it! Version 2.x brings a lot of great features like interactive ssh sessions and plugins to make c8ylp even more useful!
 >
 
-The Local Proxy can be installed via pip, or manually installed from the repository by clone it.
+The Local Proxy can be installed via pip, or manually installed from the repository by cloning it.
 
-Additionally a Debian package (.deb) can be created by building the project yourself and hosting the package in your own Debian repository. See the [DEVELOPER Notes](docs/DEVELOPER.md) for details.
+Additionally a Debian package (.deb) can be created by building the project yourself and hosting the package in your own Debian repository. See the [DEVELOPER notes](docs/DEVELOPER.md) for details.
 
 
 ## Installation via pip (hosted in pypi)
@@ -57,13 +57,12 @@ pip install .
 >The Local Proxy needs to be executed for each device tunnel you want to establish. 
 >Multiple device tunnels per single Local Proxy Instance is currently not supported due to the limitation of the SSH Protocol.
 >
->This also includes that the provided TCP Port should be not in use by other Proxies or Services.
+>By default a random port is used, however a fixed port can be used but make sure the port is not already being used by other proxy instances or Services.
 
-In a terminal session execute:
 
-c8ylp supports different commands depending on your use case. The commands are organized in a multi-level command structure. The list of available commands and subcommands can be shown by using the `--help/-h` option.
+`c8ylp` supports different commands depending on your use case. The commands are organized in a multi-level command structure. The list of available commands and subcommands can be shown by using the `--help/-h` option.
 
-The command can be launched by either using the `c8ylp` binary or my calling the `c8ylp` module by python.
+The command can be launched by either using the `c8ylp` binary or by calling the `c8ylp` module via python.
 
 ```sh
 c8ylp
@@ -89,13 +88,21 @@ Commands:
   version  Show the c8ylp version number
 ```
 
+## Common usages
+
+The following scenarios show the common use cases of `c8ylp`.
+
 ### Launching as local proxy server
 
 ```sh
 c8ylp server <device> --env-file .env
 ```
 
+The port information will be shown in the terminal so that you can connect to it via a client corresponding to the protocol currently being used on the device (i.e. ssh, vnc etc.)
+
 ### Launching as local proxy server then launching an interactive ssh session
+
+If you just want to connect via ssh using a once-off proxy instance using a random port number (to prevent conflicts with other applications), then use:
 
 ```sh
 c8ylp connect ssh <device> --ssh-user <device_username> --env-file .env
@@ -103,7 +110,7 @@ c8ylp connect ssh <device> --ssh-user <device_username> --env-file .env
 
 ### Command documentation
 
-The command usage and all options can be viewed on the following pages:
+The command usage and all options can be viewed online on the following pages:
 
 * [c8ylp](docs/cli/C8YLP.md)
 * [c8ylp login](docs/cli/C8YLP_LOGIN.md)
@@ -115,11 +122,11 @@ The command usage and all options can be viewed on the following pages:
 
 ### Configuration
 
-c8ylp can be configured via either options or environment variables. The environment variables can either be set via shell, or by using a dotenv file (i.e. `.env`). When using a dotenv file then it needs to be provide to the `--env-file <file>` option.
+`c8ylp` can be configured via command line options or environment variables. The environment variables can either be set via the shell, or by using a dotenv file (i.e. `.env`). When using a dotenv (environment) file then it needs to be provide to the `--env-file <file>` option.
 
-Example Usage:
+#### Example Usage: dotenv file
 
-If you create a file called `.env` and add the following contents:
+Create a file called `.env` and add the following contents:
 
 ```sh
 # Cumulocity settings
@@ -136,10 +143,22 @@ Then reference the file from the command line:
 c8ylp server test-device --env-file .env
 ```
 
-The environment variables corresponding to the option can be viewed by using the in-built help.
+You can also set the path the dotenv file via an environment variable to save you adding it to all your commands manually. i.e.:
 
-```console
-c8ylp --help
+```sh
+# bash/zsh
+export C8YLP_ENV_FILE=tenant1.config
+
+# Now call c8ylp, and it will read the dotenv file "tenant1.config" automatically
+c8ylp connect ssh my-device-name
+```
+
+The environment variables corresponding to each option can be viewed by using the in-built help for each command.
+
+```sh
+c8ylp server --help
+
+c8ylp connect ssh --help
 ```
 
 > Please note that the Local Proxy will block the current terminal session. If you want to use it in background just use "&" and/or "nohup". As the relevant information will be stored in a log file as well you can forward the output to dev/null or to syslog if you want to do so.
@@ -153,13 +172,13 @@ If a TCP Client has been connected and the Web Socket Connection gets terminated
 
 ## Tab completion
 
-c8ylp (version >= 2.0.0) supports tab completion for bash, zsh and fish shells.
+`c8ylp` (version >= 2.0.0) supports tab completion for bash, zsh and fish shells.
 
-To add the completion, you will need to add the corresponding line to your shell profile, and reload your shell afterwards.
+To add/activate the completions you will need to add the corresponding line to your shell profile, and reload your shell afterwards.
 
 **Note**
 
-Completion is not currently supported in Cygwin.
+Unfortunately tab completion is not supported in PowerShell or Cygwin.
 
 ```sh
 # bash (profile: ~/.bashrc)
@@ -174,7 +193,7 @@ _C8YLP_COMPLETE=fish_source c8ylp | source
 
 # Plugins
 
-`c8ylp` can be extended by the use of plugins (either via python or bash script). Checkout the [plugins](docs/PLUGINS.md) documentation for more information about how to create your own plugin, but it is intended for advanced users only. For simple one liners have a look at using the in-built generic plugin [c8ylp plugin command](docs/cli/C8YLP_PLUGIN_COMMAND.md) instead.
+`c8ylp` can be extended in the form of plugins. Both python based plugins and bash scripts are supported. Checkout the [plugins](docs/PLUGINS.md) documentation for more information about how to create your own plugin, but it is intended for advanced users only. For simple one liners have a look at using the in-built generic plugin [c8ylp plugin command](docs/cli/C8YLP_PLUGIN_COMMAND.md) instead.
 
 Plugins are loaded at runtime and can be listed by running the following command:
 
@@ -195,13 +214,14 @@ Where `~` is your user folder.
 
 To increase the detail of log use the option `--verbose or -v`. If set, the log will be written on debug level.
 
-All relevant information will be sent to the console AND to the log file. So when running in background you can just ignore the console output: 
+Log information will not be printed out to the console by default unless the `--verbose or -v` option is used. The log file however is always active to help provide a record of activities and to help diagnose any problems should they arise.
 
-```
+You can suppress all console message (i.e. stdout) by redirecting the output to `/dev/null`.
+
+```sh
+# bash/zsh
 c8ylp [OPTIONS] > /dev/null 2>&1
 ```
-
-And for fancy setups, you can also forward the log output to any log server / file of your choice using standard linux mechanisms.
 
 ## Dependencies
 

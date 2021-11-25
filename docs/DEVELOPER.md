@@ -1,7 +1,9 @@
 
+# Developer / Contribution Notes
+
 ## Project tasks
 
-Project tasks can be run via the `invoke` command. But before the command is installed you need to install all the python dependencies by running:
+Project tasks can be run via the `invoke` command. But before the command can be used you need to install all the python dependencies.
 
 To install the dependencies via pip, navigate to the project folder and execute:
 
@@ -19,9 +21,9 @@ eval "$(invoke --print-completion-script=zsh)"
 
 ## Coding
 
-The project uses normalized code formatting and linting to maintain a consistent code styling.
+The project uses normalized code formatting and linting to maintain a consistent coding styling.
 
-Before submitting a Pull Request, please run the following and fix any of the linting errors.
+Before submitting a Pull Request (PR), please run the following and fix any of the linting errors.
 
 ```sh
 invoke format lint
@@ -51,21 +53,27 @@ If you don't have a Debian repository available you can still install the .deb f
 sudo apt install /path/to/package/c8ylp.deb
 ```
 
-Test if it is installed successfully by entering `c8ylp` in the terminal.
+Test if it installed successfully by entering `c8ylp` in the terminal.
 
 ## Testing
 
 ### Running unit tests
 
-Unit test can be run without 
+Execute all unit tests using:
 
 ```sh
 invoke test
 ```
 
+**Note**
+
+The unit tests do not require Cumulocity credentials, as platform communication is mocked.
+
 ### Running Integration tests
 
-Running the integration tests require a working client running on a device. So before the these tests can be run you need to add the following environment variables to the `.env` file.
+Running the integration tests require a working proxy client/service running on a device. In addition, it requests working Cumulocity credentials.
+
+Execute the integration tests by following the procedure below:
 
 1. Create a dotenv file `.env` in the project root folder and add the following:
 
@@ -78,19 +86,19 @@ Running the integration tests require a working client running on a device. So b
     C8Y_PASSWORD=
 
     #
-    # Integration testing
+    # Integration testing (where your Remote Access Device Proxy is running)
     #
     TEST_SSH_USER=<valid_device_username>
     TEST_DEVICE=<c8y_device_external_id>
     ```
 
-2. Login to get generate a valid token (i.e. after two-factor-authentication). The .env file will be updated automatically.
+2. Login to generate a valid token (i.e. after two-factor-authentication). The .env file will be updated automatically.
 
     ```sh
     python3 -m c8ylp login --env-file .env
     ```
 
-3. Run integration tests
+3. Run the integration tests
 
     ```sh
     invoke test-integration
@@ -98,10 +106,10 @@ Running the integration tests require a working client running on a device. So b
 
 ## CLI Documentation
 
-The CLI commands are also documented in the project in the form of markdown files (for online viewing). After changing any of the commands (or adding new ones), the documentation can be updated using the following:
+The CLI commands are also documented in the project in the form of markdown files (for online viewing). After changing any of the commands (or adding new ones), the documentation should be updated using the following:
 
 ```sh
-inv generate-docs 
+inv generate-docs
 ```
 
 ## Publishing to pypi
@@ -112,4 +120,4 @@ The package can be published by running the following command.
 invoke publish
 ```
 
-However normally the publishing is handled by the Github actions and does not need to be manually published.
+Though please note, the official publishing is handled by the Github actions.

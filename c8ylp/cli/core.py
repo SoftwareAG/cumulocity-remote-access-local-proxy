@@ -14,7 +14,6 @@ from typing import Any, Dict, NoReturn, Optional
 
 import click
 
-from .. import pid
 from ..timer import CommandTimer
 from ..banner import BANNER1
 from ..env import save_env
@@ -29,7 +28,6 @@ class ExitCodes(IntEnum):
     OK = 0
     NO_SESSION = 2
     NOT_AUTHORIZED = 3
-    PID_FILE_ERROR = 4
 
     DEVICE_MISSING_REMOTE_ACCESS_FRAGMENT = 5
     DEVICE_NO_PASSTHROUGH_CONFIG = 6
@@ -61,15 +59,12 @@ class ProxyContext:
     password = ""
     tfa_code = ""
     port = 0
-    ping_interval = ""
+    ping_interval = 0
     kill = False
     tcp_size = 0
     tcp_timeout = 0
     verbose = False
-    script_mode = True
     ignore_ssl_validate = False
-    use_pid = False
-    pid_file = ""
     reconnects = 0
     ssh_user = ""
     additional_args = None
@@ -543,24 +538,6 @@ def pre_start_checks(
         Optional[RemoteAccessConnectionData]: Remote access connection data
     """
 
-    if opts.use_pid:
-        try:
-            pid.upsert_pid_file(
-                opts.pid_file, opts.device, opts.host, opts.config, opts.user
-            )
-        except PermissionError:
-            opts.show_error(
-                f"Error creating PID file (Permission denied). file={opts.pid_file}"
-            )
-            ctx.exit(ExitCodes.PID_FILE_ERROR)
-    if opts.kill:
-        if opts.use_pid:
-            pid.kill_existing_instances(opts.pid_file)
-        else:
-            opts.show_warning(
-                "Killing existing instances is only supported when '--use-pid' is used"
-            )
-
     try:
         client = create_client(ctx, opts)
         mor = client.get_managed_object(opts.device, opts.external_type)
@@ -686,9 +663,6 @@ def start_proxy(
             )
             exit_code = ExitCodes.UNKNOWN
     finally:
-        if opts.use_pid:
-            pid.clean_pid_file(opts.pid_file, os.getpid())
-
         if tcp_server:
             tcp_server.shutdown()
 

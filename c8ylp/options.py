@@ -19,7 +19,6 @@
 
 import logging
 import os
-import pathlib
 from typing import Any
 import functools
 
@@ -232,18 +231,10 @@ PING_INTERVAL = click.option(
     help="Websocket ping interval in seconds. 0=disabled",
 )
 
-KILL_EXISTING = click.option(
-    "--kill",
-    "-k",
-    envvar="C8YLP_KILL",
-    show_envvar=True,
-    help="Kills all existing processes of c8ylp",
-)
-
-
 TCP_SIZE = click.option(
     "--tcp-size",
     envvar="C8YLP_TCP_SIZE",
+    type=click.IntRange(1024, 8096 * 1024),
     default=4096,
     show_default=True,
     show_envvar=True,
@@ -302,34 +293,14 @@ SSL_IGNORE_VERIFY = click.option(
     help="Ignore Validation for SSL Certificates while connecting to Websocket",
 )
 
-PID_USE = click.option(
-    "--use-pid",
-    envvar="C8YLP_USE_PID",
-    is_flag=True,
-    default=False,
-    show_envvar=True,
-    help="Will create a PID-File to store all Processes currently running (see --pidfile for the location)",
-)
-
-PID_FILE = click.option(
-    "--pid-file",
-    envvar="C8YLP_PID_FILE",
-    default=lambda: pathlib.Path("~/.c8ylp/c8ylp").expanduser()
-    if os.name == "nt"
-    else "/var/run/c8ylp",
-    show_default=True,
-    show_envvar=True,
-    help="PID-File file location to store all Processes currently running",
-)
 
 SERVER_RECONNECT_LIMIT = click.option(
     "--reconnects",
     envvar="C8YLP_RECONNECTS",
-    type=int,
+    type=click.IntRange(-1, 10),
     default=5,
     show_default=True,
     show_envvar=True,
-    callback=lambda c, p, v: -1 if c.params.get("script_mode") else 5,
     help="number of reconnects to the Cloud Remote Service. 0 for infinite reconnects",
 )
 

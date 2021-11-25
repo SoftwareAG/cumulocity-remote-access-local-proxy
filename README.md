@@ -51,35 +51,6 @@ Navigate to the root folder of the project and run:
 pip install .
 ```
 
-## TODO : OUTDATED : Installation as a Software Bundle
-
-The Local Proxy can be installed by the Debian/Ubuntu Package Manager (apt).
-Make sure that the package is available in your configured repositories and execute
-
-```
-sudo apt install c8ylp
-```
-
-If you don't have a repo available but just the *.deb file you can install it locally with
-
-```
-sudo apt install /path/to/package/c8ylp.deb
-```
-
-Test if it is installed successfully by entering `c8ylp` in the terminal.
-
-## TODO: Update required?: Required Permissions in PID-Mode only (linux only)
-
-When using the `--use-pid` parameter the Local Proxy will try to create a PID file in <strong>/var/run/c8ylp</strong> folder. Before starting the Local Proxy with that parameter you must make sure that the user who executes it has write permissions for that folder. For example for the user "proxyuser" part of group "proxyuser" use the following commands before initially starting the Proxy:
-
-```sh
-# linux only
-sudo mkdir /var/run/c8ylp
-sudo chown -R proxyuser:proxyuser /var/run/c8ylp
-```
-
-Alternatively you can run the agent as "root" user so the folder and file will be created automatically.
-
 # Usage
 
 >The Local Proxy needs to be executed for each device tunnel you want to establish. 

@@ -8,9 +8,6 @@ from .core import ProxyContext
 
 @click.command()
 @options.common_options
-@options.KILL_EXISTING
-@options.PID_USE
-@options.PID_FILE
 @click.pass_context
 def server(
     ctx,
@@ -42,5 +39,4 @@ def server(
         c8ylp server --env-file .env --port 0 device01
     """
     proxy = ProxyContext(ctx, kwargs)
-    proxy.script_mode = False
     proxy.start()

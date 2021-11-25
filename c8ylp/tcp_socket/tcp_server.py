@@ -129,7 +129,7 @@ class TCPProxyServer:
         self._running = threading.Event()
         self.logger = logging.getLogger(__name__)
 
-        # Expose funcs to web socket client
+        # Expose func to web socket client
         self.web_socket_client.proxy = self
 
         self.server = CustomTCPServer(

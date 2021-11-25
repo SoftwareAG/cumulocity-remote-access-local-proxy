@@ -247,7 +247,7 @@ TCP_TIMEOUT = click.option(
     default=0,
     show_default=True,
     show_envvar=True,
-    help="Timeout in sec. for inactivity. Can be activited with values > 0",
+    help="Timeout in sec. for inactivity. Can be activated with values > 0",
 )
 
 LOGGING_VERBOSE = click.option(
@@ -332,7 +332,7 @@ ENV_FILE = click.option(
         exists=True,
     ),
     callback=load_envfile,
-    help="Environment file to load. Any settings loaded via this file will control other parameters",
+    help="Environment file to load. Any settings loaded via this file will control other options",
 )
 
 ENV_FILE_OPTIONAL_EXISTS = click.option(
@@ -347,7 +347,7 @@ ENV_FILE_OPTIONAL_EXISTS = click.option(
         exists=False,
     ),
     callback=load_envfile,
-    help="Environment file to load. Any settings loaded via this file will control other parameters",
+    help="Environment file to load. Any settings loaded via this file will control other options",
 )
 
 

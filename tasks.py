@@ -143,6 +143,10 @@ def generate_docs(c):
             "plugin",
             "command",
         ),
+        (
+            "c8ylp",
+            "version",
+        ),
     ]
 
     doc_dir = Path("docs") / "cli"

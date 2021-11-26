@@ -119,6 +119,7 @@ The command usage and all options can be viewed online on the following pages:
 * [c8ylp connect ssh](docs/cli/C8YLP_CONNECT_SSH.md)
 * [c8ylp plugin](docs/cli/C8YLP_PLUGIN.md)
 * [c8ylp plugin command](docs/cli/C8YLP_PLUGIN_COMMAND.md)
+* [c8ylp version](docs/cli/C8YLP_VERSION.md)
 
 ### Configuration
 

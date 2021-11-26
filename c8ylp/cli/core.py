@@ -563,10 +563,10 @@ def pre_start_checks(
 
         error_context = ""
         extra_details = []
-        if opts.host not in str(ex):
+        if opts.host and opts.host not in str(ex):
             extra_details.append(f"host={opts.host or ''}")
 
-        if opts.user not in str(ex):
+        if opts.user and opts.user not in str(ex):
             extra_details.append(f"user={opts.user or ''}")
 
         if extra_details:

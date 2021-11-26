@@ -16,6 +16,7 @@
 
 * Added repo hosted cli [documentation](docs/cli/C8YLP.md)
 
+* A PID file is no longer created when using server mode `c8ylp server`. This feature has been removed from c8ylp. It is now recommended that users use the `c8ylp connect ssh` or `c8ylp plugin command` which will automatically shutdown the local proxy after the user is finished with it.
 
 ### Features
 

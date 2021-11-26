@@ -70,7 +70,7 @@ def prepare_c8y_proxy(host, device, extype, config_name, tenant, user, password,
     is_authorized = client.validate_remote_access_role()
     if not is_authorized:
         logging.error(f'User {user} is not authorized to use Cloud Remote Access. Contact your Cumulocity Admin!')
-        sys.exit(1)
+        return None
     websocket_client = WebsocketClient(
         host, tenant, user, password, config_id, device_id, session, token, ignore_ssl_validate, reconnects)
     wst = websocket_client.connect()

@@ -65,7 +65,7 @@ class TCPServer:
                     if self.connection:
                         data = self.connection.recv(self.tcp_buffer_size)
                         self.logger.debug(f'TCP Data Received: {data}')
-                        self._tcp_timeout_counter  = 0
+                        self._tcp_timeout_counter = 0
                         if data:
                             if self.web_socket_client.is_ws_available():
                                 self.logger.debug(f'Sent Data to WebSocket...')
@@ -138,7 +138,10 @@ class TCPServer:
         self.logger.info(f'Shutting down TCP Server...')
         self.stop_connection()
         if self.sock:
-            # self.sock.shutdown(socket.SHUT_RDWR)
+            try:
+                self.sock.shutdown(socket.SHUT_RDWR)
+            except OSError as e:
+                logging.error(e)
             self.sock.close()
+            self.sock = None
         self.logger.info(f'TCP Server shutdown successful!')
-        # sys.exit()

@@ -34,7 +34,7 @@ class CumulocityClient:
         self.password = password
         self.tfacode = tfacode
         self.session = requests.Session()
-        self.token = os.environ.get('C8Y_TOKEN')
+        self.token = None
         if hostname.startswith('http'):
             self.url = hostname
         else:
@@ -254,8 +254,6 @@ class CumulocityClient:
             self.logger.error(f'Error on retrieving device. Status Code {response.status_code}')
 
         return ext_id
-
-
 
 
 if __name__ == '__main__':

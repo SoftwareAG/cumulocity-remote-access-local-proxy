@@ -42,7 +42,10 @@ class FixtureCumulocityAPI:
             f"{self.base_url}/tenant/loginOptions",
             json={
                 "loginOptions": [
-                    {"initRequest": f"example?tenantId={tenant or self.tenant}"}
+                    {
+                        "initRequest": f"example?tenantId={tenant or self.tenant}",
+                        "type": "OAUTH2_INTERNAL",
+                    }
                 ]
             },
             status=200,

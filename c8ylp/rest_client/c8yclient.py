@@ -26,6 +26,10 @@ from requests.auth import HTTPBasicAuth
 from c8ylp.rest_client.sessions import BaseUrlSession
 
 
+class CumulocityMissingTFAToken(Exception):
+    """Cumulocity missing TFA token"""
+
+
 class CumulocityPermissionDeviceError(Exception):
     """Cumulocity device permission error"""
 
@@ -84,6 +88,7 @@ class CumulocityClient:
         self.password = password
         self.tfacode = tfacode
         self.token = token
+        self._supports_oauth = False
 
         if token:
             self.set_bearer_auth(token)
@@ -105,6 +110,11 @@ class CumulocityClient:
             login_options_body = json.loads(response.content.decode("utf-8"))
             login_options = login_options_body.get("loginOptions", dict())
             for option in login_options:
+
+                # Check if oAuth is supported
+                if option.get("type") == "OAUTH2_INTERNAL":
+                    self._supports_oauth = True
+
                 if "initRequest" in option:
                     _, _, tenant_id = option.get("initRequest", "").partition("=")
                     if self.tenant != tenant_id:
@@ -181,15 +191,34 @@ class CumulocityClient:
         if response.status_code == 200:
             return True
 
+        message = f"Error validating Token {response.status_code}. Please provide Tenant, User and Password"
+
+        if response.headers.get("content-type") == "application/json":
+            response_json = response.json()
+            if "message" in response_json:
+                message = response_json()
+
         # clear token/password (as they maybe invalid)
         self.token = ""
         self.password = ""
 
-        message = PermissionError(
-            f"Error validating Token {response.status_code}. Please provide Tenant, User and Password"
-        )
-        self.logger.error(message)
-        raise message
+        error = PermissionError(message)
+        self.logger.error(error)
+        raise error
+
+    def login(self):
+        """Login or validate Cumulocity Credentials.
+        For OAuth type logins, a token will be generated (The perferred method).
+
+        If the tenant only has Basic Auth enabled, then the given credentials will
+        be validated.
+        """
+        if self._supports_oauth:
+            self.login_oauth()
+        else:
+            # Basic AUTH does not required login, but validate
+            # the credentials
+            self.validate_credentials()
 
     def login_oauth(self):
         """Login via OAuth2 and set the give token if the login is successful
@@ -226,10 +255,17 @@ class CumulocityClient:
                 "XSRF-TOKEN"
             ]
         elif response.status_code == 401:
-            error = PermissionError(
-                f"User {self.user} is not authorized to access Tenant {self.tenant} or TFA-Code is invalid.",
-            )
-            self.logger.error(error)
+            # Check if TFA is required
+            if "TFA" in response.text and not self.tfacode:
+                error = CumulocityMissingTFAToken()
+            else:
+                error = PermissionError(
+                    response.json().get(
+                        "message", "User is not authorized to access Tenant"
+                    ),
+                    # f"User {self.user} is not authorized to access Tenant {self.tenant} or TFA-Code is invalid.",
+                )
+                self.logger.error(error)
             raise error
         else:
             error = Exception(
@@ -242,7 +278,7 @@ class CumulocityClient:
     def get_external_id(
         self, serial_number: str, identity_type: str = "c8y_Serial"
     ) -> Dict[str, Any]:
-        """Get the external id provded the serial number and external id type
+        """Get the external id provided the serial number and external id type
 
         Args:
             serial_number (str): Device external identity

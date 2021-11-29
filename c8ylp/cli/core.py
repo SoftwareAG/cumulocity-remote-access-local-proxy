@@ -17,7 +17,7 @@ import click
 from ..timer import CommandTimer
 from ..banner import BANNER1
 from ..env import save_env
-from ..rest_client.c8yclient import CumulocityClient
+from ..rest_client.c8yclient import CumulocityClient, CumulocityMissingTFAToken
 from ..tcp_socket import TCPProxyServer
 from ..websocket_client import WebsocketClient
 
@@ -338,20 +338,26 @@ def create_client(ctx: click.Context, opts: ProxyContext) -> CumulocityClient:
     logging.info("Checking tenant id")
     client.validate_tenant_id()
 
-    retries = 2
+    # Retry logging so the user can be prompted for
+    # their credentials/TFA code etc. without having to run c8ylp again
+    retries = 3
     success = False
     while retries:
         try:
             if client.token:
                 client.validate_credentials()
             else:
-                client.login_oauth()
+                client.login()
 
             if opts.env_file and opts.store_token:
                 store_credentials(opts, client)
 
             success = True
             break
+        except CumulocityMissingTFAToken as ex:
+            client.tfacode = click.prompt(
+                text="Enter your Cumulocity TFA-Token", hide_input=False
+            )
         except Exception as ex:
             logging.info("unknown exception: %s", ex)
 
@@ -367,10 +373,6 @@ def create_client(ctx: click.Context, opts: ProxyContext) -> CumulocityClient:
                         hide_input=True,
                     )
 
-                if not client.tfacode:
-                    client.tfacode = click.prompt(
-                        text="Enter your Cumulocity TFA-Token", hide_input=False
-                    )
         retries -= 1
 
     if not success:

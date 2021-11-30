@@ -12,6 +12,9 @@
 # Windows
 Thumbs.db
 
+## Version
+c8ylp/_version.py
+
 # Source for the following rules: https://raw.githubusercontent.com/github/gitignore/master/Python.gitignore
 # Byte-compiled / optimized / DLL files
 __pycache__/

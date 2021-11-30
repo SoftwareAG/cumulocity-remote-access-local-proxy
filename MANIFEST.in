@@ -1,3 +1,2 @@
-include versioneer.py
 include c8ylp/_version.py
 recursive-include c8ylp/ *.py

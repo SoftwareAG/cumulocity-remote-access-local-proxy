@@ -19,7 +19,6 @@
 from setuptools import setup, find_packages
 from pathlib import Path
 
-import versioneer
 
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
@@ -29,8 +28,6 @@ setup(
     name="c8ylp",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    version=versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(),
     description="Cumulocity Local Client Proxy",
     author="Stefan Witschel",
     author_email="Stefan.Witschel@softwareag.com",

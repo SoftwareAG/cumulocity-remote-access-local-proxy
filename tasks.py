@@ -207,5 +207,5 @@ def generate_docs(c):
 def add_license(c):
     """Add license header to source files"""
     c.run(
-        f"{sys.executable} -m licenseheaders --current-year --owner 'Software AG, Darmstadt, Germany' -E .py -t licence_header.tmpl -d . -x versioneer.py"
+        f"{sys.executable} -m licenseheaders --current-year --owner 'Software AG, Darmstadt, Germany' -E .py -t licence_header.tmpl -d ."
     )

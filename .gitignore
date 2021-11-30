@@ -154,9 +154,6 @@ sag-debian-repo/
 # Local mender tests
 mender/docker-device/mender_output
 
-#
-.devcontainer
-
 # dot env
 *.cfg
 *.env

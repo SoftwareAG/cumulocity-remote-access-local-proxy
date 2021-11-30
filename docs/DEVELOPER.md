@@ -29,6 +29,14 @@ Before submitting a Pull Request (PR), please run the following and fix any of t
 invoke format lint
 ```
 
+All source files should also have a license header file. This can be added in automatically using the following task:
+
+```sh
+invoke add-license
+```
+
+Once executed commit the changes.
+
 ## Build
 
 ### Building Debian package (Ubuntu/Debian)

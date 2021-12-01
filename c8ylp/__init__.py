@@ -17,9 +17,20 @@
 #
 """c8ylp version"""
 import os
-
-from . import _version
+import importlib
 
 __ROOT_DIR__ = os.path.dirname(os.path.abspath(__file__))  # This is your Project Root
 
-__version__ = _version.version
+
+def _get_version():
+    # pylint: disable=bare-except, import-outside-toplevel
+    try:
+        # Needs to be dynamically imported as the version file is not
+        # committed to the project as it is generated during the build.
+        version = importlib.import_module("c8ylp._version")
+        return version.version
+    except:
+        return "0.0.1"
+
+
+__version__ = _get_version()

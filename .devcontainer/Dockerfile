@@ -27,8 +27,15 @@ RUN echo "deb ${DEB_MIRROR} bullseye main" > /etc/apt/sources.list \
         python3-dev \
         python3-stdeb \
         python3-all \
+        #
+        # python debian builder
+        python-all \
+        dh-python \
         debhelper \
         dh-python \
+        fakeroot \
+        #
+        # Misc.
         git \
         bash-completion \
         locales \
@@ -50,10 +57,6 @@ RUN echo "deb ${DEB_MIRROR} bullseye main" > /etc/apt/sources.list \
 RUN locale-gen en_US.UTF-8 # Fix locale errors
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
-
-# Global pip config (workaround due to errors downloading pip packages when working in corporate environments)
-COPY .devcontainer/pip.conf /root/.config/pip/pip.conf
-COPY .devcontainer/pip.conf /home/$USERNAME/.config/pip/pip.conf
 
 # Install requirements (using pip)
 COPY requirements.txt requirements-dev.txt /tmp/

@@ -1,0 +1,18 @@
+# Task runner
+invoke==1.6.0
+
+# Linting/formating
+pylint==2.8.1
+black==21.10b0
+licenseheaders==0.8.8
+
+# Testing
+pytest==6.2.5
+pytest-timeout==2.0.1
+pytest-cov==3.0.0
+responses==0.16.0
+
+# publishing
+wheel>=0.34.2
+twine>=3.6.0
+setuptools_scm==6.3.2

@@ -1,0 +1,10 @@
+[run]
+omit =
+    # unit tests
+    */tests/*
+    c8ylp/_version.py
+    c8ylp/__main__.py
+
+[report]
+exclude_lines =
+    if __name__ == .__main__.:

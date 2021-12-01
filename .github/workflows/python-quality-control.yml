@@ -1,0 +1,41 @@
+# This workflow will upload a Python Package using Twine when a release is created
+# For more information see: https://help.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#publishing-to-package-registries
+
+name: QualityControl
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: '1'
+        PIP_NO_CACHE_DIR: '1'
+      run: |
+        pip install -r requirements.txt -r requirements-dev.txt
+
+    - name: Check format and lint
+      run: |
+        invoke format --check lint
+
+    - name: Unit tests
+      run: |
+        invoke test

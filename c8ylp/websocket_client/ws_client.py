@@ -93,6 +93,8 @@ class WebsocketClient(threading.Thread):
         self.max_retries = max_retries
         self.connection_attempts = 0
         self.shutdown_request = shutdown_request
+        self._connection_stable_timer = None
+        self._connection_stable_sec = 10
 
         self.proxy_send_message: Callable = None
         super().__init__()
@@ -267,10 +269,38 @@ class WebsocketClient(threading.Thread):
             reason,
         )
         self._ws_open_event.clear()
-
+        self._connection_timer_cancel()
         self.reconnect()
+
+    def _reset_connection_attempts(self):
+        """Reset the connection attempts by using a stability timer to ensure that the
+        connection is running for a minimum period before the connection attempts
+        counter is reset.
+
+        This avoids problems when the device side proxy establishing a connection briefly
+        and then closes it due to local device problems such as the ssh daemon not running
+        on the device.
+        """
+
+        def reset_connection_attempts():
+            self.connection_attempts = 0
+
+        if not self._connection_stable_timer:
+            self._connection_stable_timer = threading.Timer(
+                self._connection_stable_sec,
+                reset_connection_attempts,
+            )
+            self._connection_stable_timer.setName("ws-stable-connection-timer")
+            self._connection_stable_timer.daemon = True
+            self._connection_stable_timer.start()
+
+    def _connection_timer_cancel(self):
+        """Cancel the connection stability timer (if it is already set)"""
+        if self._connection_stable_timer is not None:
+            self._connection_stable_timer.cancel()
+            self._connection_stable_timer = None
 
     def _on_ws_open(self, _ws):
         self.logger.info("WebSocket Connection opened")
-        self.connection_attempts = 0
+        self._reset_connection_attempts()
         self._ws_open_event.set()

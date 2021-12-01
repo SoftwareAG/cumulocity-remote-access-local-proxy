@@ -73,6 +73,10 @@ RUN echo "Preparing shells" \
     # zsh
     && echo 'if ls /workspaces/*/.devcontainer/profile.sh >/dev/null 2>&1; then source /workspaces/*/.devcontainer/profile.sh; fi' >> ".zshrc" \
     #
+    # fish
+    && mkdir -p ".config/fish" \
+    && echo 'if count /workspaces/*/.devcontainer/profile.fish >/dev/null 2>&1; source /workspaces/*/.devcontainer/profile.fish; end' >> ".config/fish/config.fish" \
+    #
     # fix permissions
     && chown -R ${USERNAME}:${USERNAME} . \
     #

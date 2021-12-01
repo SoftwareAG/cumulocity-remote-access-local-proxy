@@ -1,65 +1,80 @@
-FROM debian:10-slim
+FROM debian:11-slim
 ARG DEB_MIRROR=http://ftp.de.debian.org/debian
+
+# non-root user settings
+ARG USERNAME=vscode
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+# Create non-root user
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    #
+    # [Optional] Add sudo support. Omit if you don't need to install software after connecting.
+    && apt-get update \
+    && apt-get install -y sudo \
+    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME
 
 # Install additional packages.
 ENV DEBIAN_FRONTEND=noninteractive
-RUN echo "deb ${DEB_MIRROR} buster main" > /etc/apt/sources.list \
-    && apt-get update \
+RUN echo "deb ${DEB_MIRROR} bullseye main" > /etc/apt/sources.list \
+    && apt-get update --allow-releaseinfo-change \
     && apt-get -y install --no-install-recommends \
-    python3 \
-    python3-setuptools \
-    python3-pip \
-    python3-dev \
-    python3-wheel \
-    python3-stdeb \
-	python3-websocket \
-	python3-all \
-    git \
-    build-essential \
-    debhelper \
-    dh-python \
-    python-docutils \
-    python-sphinx \
-    fakeroot \
-    bash-completion \
-    locales \
-    aptly
+        build-essential \
+        python3 \
+        python3-pip \
+        python3-dev \
+        python3-stdeb \
+        python3-all \
+        debhelper \
+        dh-python \
+        git \
+        bash-completion \
+        locales \
+        procps \
+        #
+        # Shells
+        zsh \
+        fish \
+        #
+        # cli tools
+        jq \
+        # Enable git ssh and gpg inside container
+        ssh \
+        gnupg2 \
+    #
+    # Cleanup apt cache
+    && rm -f /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*.deb /var/cache/apt/*.bin || true
 
 RUN locale-gen en_US.UTF-8 # Fix locale errors
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
 
-#
-# Install Docker CE CLI
-#
-RUN apt-get update \
-    && apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common lsb-release \
-    && curl -fsSL https://download.docker.com/linux/$(lsb_release -is | tr '[:upper:]' '[:lower:]')/gpg | apt-key add - 2>/dev/null \
-    && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/$(lsb_release -is | tr '[:upper:]' '[:lower:]') $(lsb_release -cs) stable" \
-    && apt-get update \
-    && apt-get install -y docker-ce-cli \
-    #
-    # Install Docker Compose
-    && curl -sSL "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose \
-    && chmod +x /usr/local/bin/docker-compose
+# Global pip config (workaround due to errors downloading pip packages when working in corporate environments)
+COPY .devcontainer/pip.conf /root/.config/pip/pip.conf
+COPY .devcontainer/pip.conf /home/$USERNAME/.config/pip/pip.conf
 
-# Add powershell and PSc8y
-RUN curl -O https://packages.microsoft.com/config/debian/10/packages-microsoft-prod.deb \
-    && dpkg -i packages-microsoft-prod.deb \
-    && apt-get update \
-    && apt-get install -y powershell \
-    && pwsh -c "Install-Module -Name PSc8y -Repository PSGallery -AllowPrerelease -Force"
+# Install requirements (using pip)
+COPY requirements.txt requirements-dev.txt /tmp/
+RUN pip3 install -r /tmp/requirements.txt -r /tmp/requirements-dev.txt
 
-# Add JFrog cli tool
-WORKDIR /root
-RUN curl -fL https://getcli.jfrog.io | sh \
-    && mv jfrog /usr/bin/
-
+# Load custom profiles
 # Configure bash settings
-RUN echo "source /etc/profile.d/bash_completion.sh" >> "/root/.bashrc"
+WORKDIR "/home/${USERNAME}"
+RUN echo "Preparing shells" \
+    #
+    # bash
+    && echo 'if ls /workspaces/*/.devcontainer/profile.sh >/dev/null 2>&1; then source /workspaces/*/.devcontainer/profile.sh; fi' >> ".bashrc" \
+    #
+    # zsh
+    && echo 'if ls /workspaces/*/.devcontainer/profile.sh >/dev/null 2>&1; then source /workspaces/*/.devcontainer/profile.sh; fi' >> ".zshrc" \
+    #
+    # fix permissions
+    && chown -R ${USERNAME}:${USERNAME} . \
+    #
+    # Change default shell
+    && usermod -s /usr/bin/zsh $USERNAME
 
-# Copy files to override apt-get settings
-COPY ./.devcontainer/custom-files/docker-clean /etc/apt/apt.conf.d/
-
-# # Install requirements (using pip)
-COPY README.md setup.py versioneer.py setup.cfg ./
-COPY ./c8ylp ./c8ylp
-RUN pip3 install .
+# Set default user
+USER $USERNAME

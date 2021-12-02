@@ -69,6 +69,8 @@ Firstly create a blank file in the following location (create the folder if it d
 Now open the created file in a text edit and paste the following:
 
 ```py
+import os
+import subprocess
 import click
 from c8ylp import options
 from c8ylp.cli.core import ProxyContext
@@ -104,7 +106,7 @@ def cli(ctx, **kwargs):
         f"{ssh_user}@localhost",
     ]
 
-    click.echo("Starting ssh session using: %s", " ".join(ssh_args))
+    click.echo("Starting ssh session using: " + " ".join(ssh_args))
 
     exit_code = subprocess.call(ssh_args, env=os.environ)
     if exit_code != 0:

@@ -98,6 +98,8 @@ def cli(ctx, **kwargs):
     ssh_args = [
         "ssh",
         "-o",
+        "ServerAliveInterval=120",
+        "-o",
         "StrictHostKeyChecking=no",
         "-o",
         "UserKnownHostsFile=/dev/null",

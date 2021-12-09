@@ -1,6 +1,10 @@
 
 # Releases
 
+## Unreleased
+
+* fix: `c8ylp login --help` no longer prompts the user for the host when trying to display the help
+
 ## 2.0.1
 
 ### Breaking changes

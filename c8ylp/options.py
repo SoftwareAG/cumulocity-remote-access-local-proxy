@@ -120,7 +120,7 @@ HOSTNAME = click.option(
 HOSTNAME_PROMPT = click.option(
     "--host",
     "host",
-    is_eager=True,
+    is_eager=False,
     prompt=True,
     envvar=("C8Y_HOST", "C8Y_BASEURL", "C8Y_URL"),
     help="Cumulocity Hostname  [required] [env var: C8Y_HOST]",

@@ -168,3 +168,26 @@ def test_disable_prompts(c8yserver: FixtureCumulocityAPI, env: Environment):
         assert result.exit_code == 2
 
     run()
+
+
+def test_help_without_host(env: Environment):
+    """Test display of help with providing any other options"""
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        [
+            "login",
+            "--help",
+        ],
+        env={
+            **env.create_empty_env(),
+        },
+        # Use dummy stdin, so that in case the command does expect input
+        # but it should not appear in the output
+        input="dummyinput",
+    )
+
+    assert result.exit_code == 0
+    assert "Host: " not in result.output, "User should not be prompted for hostname"
+    assert "dummyinput" not in result.output, "User should not be prompted for hostname"

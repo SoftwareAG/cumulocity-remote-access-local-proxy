@@ -1,6 +1,11 @@
 
 # Releases
 
+## Unreleased
+
+* fix: `c8ylp login --help` no longer prompts the user for the host when trying to display the help
+* ci: Trigger GitHub publish action when a GitHub Release has been set to publish or it is manually triggered
+
 ## 2.0.1
 
 ### Breaking changes

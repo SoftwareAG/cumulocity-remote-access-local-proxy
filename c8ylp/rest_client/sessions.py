@@ -49,7 +49,7 @@ class BaseUrlSession(requests.Session):
             str: Returns full url (prepends the prefixUrl if a partial url is detected)
         """
         if not url.startswith("http"):
-            url = self.prefix_url + "/" + url.lstrip("/")
+            url = self.prefix_url.rstrip("/") + "/" + url.lstrip("/")
         return url
 
     def request(self, method: str, url: str, *args, **kwargs) -> requests.Response:

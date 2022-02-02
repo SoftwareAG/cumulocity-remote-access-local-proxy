@@ -37,6 +37,16 @@ from tests.fixtures import FixtureCumulocityAPI
             "env": {},
         },
         {
+            # Include trailing slash
+            "stdin": [
+                "https://example.c8y.io/\n",
+                "example-user\n",
+                "dummy-password\n",
+                "12345\n",
+            ],
+            "env": {},
+        },
+        {
             "stdin": [
                 "https://example.c8y.io\n",
                 "dummy-password\n",

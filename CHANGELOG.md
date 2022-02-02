@@ -1,7 +1,7 @@
 
 # Releases
 
-## HEAD
+## 2.0.3
 
 * fix: The Cumulocity host is now normalized by trimming whitespace and trailing forward slashes
 

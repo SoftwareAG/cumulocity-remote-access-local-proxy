@@ -108,11 +108,30 @@ def validate_token(ctx: click.Context, _param, value) -> Any:
     return value
 
 
+def trim_trailing_slash(ctx: click.Context, _param, value) -> Any:
+    """Trim any trailing slashes
+
+    Args:
+        ctx (Any): Click context
+        _param (Any): Click param
+        value (Any): Parameter value
+
+    Returns:
+        Any: Parameter value
+    """
+    if not value or ctx.resilient_parsing:
+        return None
+
+    # Trim both space then trailing slashes
+    return str(value).strip().rstrip("/")
+
+
 HOSTNAME = click.option(
     "--host",
     "host",
     is_eager=True,
     prompt=False,
+    callback=trim_trailing_slash,
     envvar=("C8Y_HOST", "C8Y_BASEURL", "C8Y_URL"),
     help="Cumulocity Hostname  [required] [env var: C8Y_HOST]",
 )
@@ -122,6 +141,7 @@ HOSTNAME_PROMPT = click.option(
     "host",
     is_eager=False,
     prompt=True,
+    callback=trim_trailing_slash,
     envvar=("C8Y_HOST", "C8Y_BASEURL", "C8Y_URL"),
     help="Cumulocity Hostname  [required] [env var: C8Y_HOST]",
 )

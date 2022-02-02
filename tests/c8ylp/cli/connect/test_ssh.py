@@ -201,11 +201,30 @@ def test_prompt_for_ssh_user(
             "stdin": [
                 "12345\n",
             ],
-            "env": {},
+            "env": {
+                "C8Y_HOST": "https://example.c8y.io",
+            },
         },
         {
             "stdin": [],
             "env": {
+                "C8Y_HOST": "https://example.c8y.io",
+                "C8Y_TFA_CODE": "000000",
+            },
+        },
+        {
+            "stdin": [],
+            "env": {
+                # Url has a trialing slash
+                "C8Y_HOST": "https://example.c8y.io/",
+                "C8Y_TFA_CODE": "000000",
+            },
+        },
+        {
+            "stdin": [],
+            "env": {
+                # Url has whitespace and trialing slashes
+                "C8Y_HOST": "  https://example.c8y.io////  ",
                 "C8Y_TFA_CODE": "000000",
             },
         },
@@ -241,7 +260,6 @@ def test_prompt_for_tfa(inputs, c8yserver: FixtureCumulocityAPI, tmpdir):
                     "admin",
                 ],
                 env={
-                    "C8Y_HOST": "https://example.c8y.io",
                     "C8Y_TENANT": "t12345",
                     "C8Y_USER": "example-user",
                     "C8Y_PASSWORD": "d4mmy-p4s$wurd",

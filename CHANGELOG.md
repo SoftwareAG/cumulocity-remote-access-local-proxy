@@ -1,6 +1,10 @@
 
 # Releases
 
+## HEAD
+
+* fix: The Cumulocity host is now normalized by trimming whitespace and trailing forward slashes
+
 ## 2.0.2
 
 * fix: `c8ylp login --help` no longer prompts the user for the host when trying to display the help

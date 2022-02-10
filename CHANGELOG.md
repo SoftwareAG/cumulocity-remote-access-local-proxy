@@ -1,6 +1,10 @@
 
 # Releases
 
+## Current
+
+* fix: Tenant id detection works as expected even when SSO is enabled on a tenant is appears before the INTERNAL_OAUTH2 option in /tenant/loginOptions.
+
 ## 2.0.3
 
 * fix: The Cumulocity host is now normalized by trimming whitespace and trailing forward slashes

@@ -35,6 +35,7 @@
 
 import json
 import logging
+import urllib.parse
 from typing import Any, Dict
 
 import requests
@@ -129,11 +130,21 @@ class CumulocityClient:
             for option in login_options:
 
                 # Check if oAuth is supported
-                if option.get("type") == "OAUTH2_INTERNAL":
+                if option.get("type") in ("OAUTH2_INTERNAL", "OAUTH2"):
                     self._supports_oauth = True
 
                 if "initRequest" in option:
-                    _, _, tenant_id = option.get("initRequest", "").partition("=")
+                    _, _, query_str = option.get("initRequest", "").partition("?")
+                    query_params = urllib.parse.parse_qs(query_str)
+
+                    tenant_id = (
+                        query_params["tenant_id"][0]
+                        if "tenant_id" in query_params
+                        else ""
+                    )
+                    if not tenant_id:
+                        continue
+
                     if self.tenant != tenant_id:
                         if self.tenant:
                             # Skip warning if the tenant id is not set

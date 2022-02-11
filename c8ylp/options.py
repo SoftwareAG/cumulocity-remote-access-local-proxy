@@ -321,7 +321,7 @@ SERVER_RECONNECT_LIMIT = click.option(
     default=5,
     show_default=True,
     show_envvar=True,
-    help="number of reconnects to the Cloud Remote Service. 0 for infinite reconnects",
+    help="number of reconnects to the Cloud Remote Service. 0 for infinite reconnects, -1 for no reconnects",
 )
 
 SSH_USER = click.option(

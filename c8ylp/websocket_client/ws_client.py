@@ -174,7 +174,9 @@ class WebsocketClient(threading.Thread):
         if self.web_socket:
             self.web_socket.close()
 
-        if self.max_retries > -1 and self.connection_attempts >= self.max_retries:
+        if self.max_retries == -1 or (
+            self.max_retries != 0 and self.connection_attempts >= self.max_retries
+        ):
             if callable(self.shutdown_request):
                 self.logger.debug("Websocket is requesting the server to stop")
                 self.shutdown_request()

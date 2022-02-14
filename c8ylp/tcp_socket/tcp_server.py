@@ -156,7 +156,7 @@ class TCPProxyServer:
         """Shutdown tcp server"""
         if self._running.is_set():
             logging.info("Shutting down TCP server")
-            
+
             if callable(self.server.web_socket_client.shutdown_request):
                 self.server.web_socket_client.shutdown_request()
             self.server.shutdown()

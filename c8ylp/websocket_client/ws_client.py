@@ -272,7 +272,8 @@ class WebsocketClient(threading.Thread):
         )
         self._ws_open_event.clear()
         self._connection_timer_cancel()
-        self.reconnect()
+        # TODO Do we really need this any longer?
+        #self.reconnect()
 
     def _reset_connection_attempts(self):
         """Reset the connection attempts by using a stability timer to ensure that the

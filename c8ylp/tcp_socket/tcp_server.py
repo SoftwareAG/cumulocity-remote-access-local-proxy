@@ -81,6 +81,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
                 if not data:
                     logging.debug("No data. Request will be closed")
                     self.server.web_socket_client.proxy_send_message = None
+                    self.server.web_socket_client.stop()
                     break
 
                 logging.debug("Writing data to ws: %s", data)

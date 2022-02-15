@@ -36,7 +36,7 @@ def clean(c, docs=False, bytecode=False, extra=""):
     if extra:
         patterns.append(extra)
     for pattern in patterns:
-        for match in Path('.').glob(pattern):
+        for match in Path(".").glob(pattern):
             if match.is_file():
                 match.unlink(missing_ok=True)
             else:

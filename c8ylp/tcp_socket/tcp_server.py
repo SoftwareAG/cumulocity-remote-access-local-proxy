@@ -46,7 +46,9 @@ class TCPHandler(socketserver.BaseRequestHandler):
 
         def handle_shutdown():
             # Force shutdown of any socket reads or writes
-            request.shutdown(socket.SHUT_RDWR)
+            # Note: fileno is set to -1 if the socket has been closed
+            if request.fileno() != -1:
+                request.shutdown(socket.SHUT_RDWR)
 
         self.server.web_socket_client.shutdown_request = handle_shutdown
 

@@ -370,7 +370,7 @@ def create_client(ctx: click.Context, opts: ProxyContext) -> CumulocityClient:
 
             success = True
             break
-        except CumulocityMissingTFAToken as ex:
+        except CumulocityMissingTFAToken:
             client.tfacode = click.prompt(
                 text="Enter your Cumulocity TFA-Token", hide_input=False
             )

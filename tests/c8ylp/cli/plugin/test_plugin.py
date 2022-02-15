@@ -44,7 +44,7 @@ def create_plugin(path: Path, code: str) -> str:
     Returns:
         str: Unix friendly code
     """
-    with path.open("w", newline="\n") as file:
+    with path.open("w", newline="\n", encoding="utf8") as file:
         file.write(code.replace("\r", "", -1))
 
 
@@ -176,7 +176,7 @@ def test_invalid_bash_plugin(
     @responses.activate
     def run():
         serial = "ext-device-01"
-        port = "2223"
+        port = "2224"
         c8yserver.simulate_pre_authenticated(serial)
 
         bash_plugin_1 = Path(plugin / "launch.sh")

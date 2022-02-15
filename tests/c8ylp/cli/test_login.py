@@ -104,11 +104,7 @@ def test_prompt_for_details(
 
         assert result.exit_code == 0
 
-        settings = {}
-        for line in env_file.readlines():
-            key, _, value = line.partition("=")
-            settings[key] = value.rstrip("\n")
-
+        settings = env.read_file(env_file)
         assert settings == {
             "C8Y_HOST": "https://example.c8y.io",
             "C8Y_USER": "example-user",

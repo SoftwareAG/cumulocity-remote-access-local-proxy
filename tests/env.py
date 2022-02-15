@@ -55,5 +55,21 @@ class Environment:
             "C8Y_PASSWORD": "som4-p4$swurd",
         }
 
+    @classmethod
+    def read_file(cls, env_file: str) -> Dict[str, str]:
+        """Read a dotenv file
+
+        Args:
+            env_file (str): dot env file
+
+        Returns:
+            Dict[str, str]: Dictionary with the settings from file
+        """
+        settings = {}
+        for line in env_file.readlines():
+            key, _, value = line.partition("=")
+            settings[key] = value.rstrip("\n")
+        return settings
+
 
 ENV = Environment()

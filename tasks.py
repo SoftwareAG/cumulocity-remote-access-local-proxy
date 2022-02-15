@@ -18,6 +18,7 @@
 """Tasks"""
 import os
 import re
+import shutil
 import subprocess
 import sys
 from invoke import task
@@ -26,7 +27,7 @@ from pathlib import Path
 
 @task
 def clean(c, docs=False, bytecode=False, extra=""):
-    """Clean project (linux only)"""
+    """Clean project"""
     patterns = ["build", "dist", "test_output", "deb_dist", "c8ylp*tar.gz"]
     if docs:
         patterns.append("docs/cli")
@@ -35,7 +36,11 @@ def clean(c, docs=False, bytecode=False, extra=""):
     if extra:
         patterns.append(extra)
     for pattern in patterns:
-        c.run("rm -rf {}".format(pattern))
+        for match in Path('.').glob(pattern):
+            if match.is_file():
+                match.unlink(missing_ok=True)
+            else:
+                shutil.rmtree(match)
 
 
 @task

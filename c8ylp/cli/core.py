@@ -82,7 +82,6 @@ class ProxyContext:
     tcp_timeout = 0
     verbose = False
     ignore_ssl_validate = False
-    reconnects = 0
     ssh_user = ""
     additional_args = None
     disable_prompts = False
@@ -628,7 +627,6 @@ def start_proxy(
         "token": opts.token,
         "ignore_ssl_validate": opts.ignore_ssl_validate,
         "ping_interval": opts.ping_interval,
-        "max_retries": opts.reconnects,
     }
 
     tcp_server = None

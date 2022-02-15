@@ -314,16 +314,6 @@ SSL_IGNORE_VERIFY = click.option(
 )
 
 
-SERVER_RECONNECT_LIMIT = click.option(
-    "--reconnects",
-    envvar="C8YLP_RECONNECTS",
-    type=click.IntRange(-1, 10),
-    default=5,
-    show_default=True,
-    show_envvar=True,
-    help="number of reconnects to the Cloud Remote Service. 0 for infinite reconnects, -1 for no reconnects",
-)
-
 SSH_USER = click.option(
     "--ssh-user",
     envvar="C8YLP_SSH_USER",
@@ -392,7 +382,6 @@ def common_options(f):
         SSL_IGNORE_VERIFY,
         STORE_TOKEN,
         DISABLE_PROMPT,
-        SERVER_RECONNECT_LIMIT,
     ]
 
     # Need to reverse the order to control the list order

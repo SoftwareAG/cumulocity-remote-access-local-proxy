@@ -112,6 +112,14 @@ Execute the integration tests by following the procedure below:
     invoke test-integration
     ```
 
+### Installing c8ylp from a specific branch
+
+To install c8ylp from a development use the following command (replace `<branch>` with the name of your branch you want to install from.)
+
+```sh
+pip install git+https://github.com/SoftwareAG/cumulocity-remote-access-local-proxy.git@<branch>
+```
+
 ## CLI Documentation
 
 The CLI commands are also documented in the project in the form of markdown files (for online viewing). After changing any of the commands (or adding new ones), the documentation should be updated using the following:

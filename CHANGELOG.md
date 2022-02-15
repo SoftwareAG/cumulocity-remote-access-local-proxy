@@ -1,6 +1,11 @@
 
 # Releases
 
+## Current
+
+* fix: Shutdown websocket when the tcp client terminates. #38
+* fix: Removed `--reconnects` option as the websocket connection should not be reattempted after it is established as it causes problems with different clients. #40
+
 ## 2.0.4
 
 * fix: Tenant id detection works as expected even when SSO is enabled on a tenant is appears before the INTERNAL_OAUTH2 option in /tenant/loginOptions.

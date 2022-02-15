@@ -64,8 +64,9 @@ Options:
                               C8YLP_STORE_TOKEN]
   -d, --disable-prompts       [env var: C8YLP_DISABLE_PROMPTS]
   --reconnects INTEGER RANGE  number of reconnects to the Cloud Remote
-                              Service. 0 for infinite reconnects  [env var:
-                              C8YLP_RECONNECTS; default: 5; -1<=x<=10]
+                              Service. 0 for infinite reconnects, -1 for no
+                              reconnects  [env var: C8YLP_RECONNECTS; default:
+                              5; -1<=x<=10]
   --ssh-user TEXT             SSH username which is configured on the device
                               [required]
   -h, --help                  Show this message and exit.

@@ -1,6 +1,10 @@
 
 # Releases
 
+## 2.1.1
+
+* fix: Added deprecation mark on `reconnects` option which was removed during an erroneous merge
+
 ## 2.1.0
 
 * fix: Shutdown websocket when the tcp client terminates. #38

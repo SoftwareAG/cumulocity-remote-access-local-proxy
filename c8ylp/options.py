@@ -126,6 +126,29 @@ def trim_trailing_slash(ctx: click.Context, _param, value) -> Any:
     return str(value).strip().rstrip("/")
 
 
+def deprecated(ctx: click.Context, _param, value) -> Any:
+    """Deprecated option warning
+
+    Args:
+        ctx (Any): Click context
+        _param (Any): Click param
+        value (Any): Parameter value
+
+    Returns:
+        Any: Parameter value
+    """
+    name = getattr(_param, "name", "")
+    if name:
+        click.secho(
+            f"Warning: '{name}' option is deprecated. It will be removed in the next major release",
+            fg="yellow",
+        )
+    if not value or ctx.resilient_parsing:
+        return None
+
+    return value
+
+
 HOSTNAME = click.option(
     "--host",
     "host",
@@ -313,6 +336,18 @@ SSL_IGNORE_VERIFY = click.option(
     help="Ignore Validation for SSL Certificates while connecting to Websocket",
 )
 
+
+SERVER_RECONNECT_LIMIT = click.option(
+    "--reconnects",
+    envvar="C8YLP_RECONNECTS",
+    type=click.IntRange(-1, 10),
+    default=5,
+    show_default=True,
+    show_envvar=True,
+    hidden=True,
+    callback=deprecated,
+    help="[Deprecated] No longer used but kept in for compatibility until next major release",
+)
 
 SSH_USER = click.option(
     "--ssh-user",

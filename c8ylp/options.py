@@ -126,6 +126,29 @@ def trim_trailing_slash(ctx: click.Context, _param, value) -> Any:
     return str(value).strip().rstrip("/")
 
 
+def deprecated(ctx: click.Context, _param, value) -> Any:
+    """Deprecated option warning
+
+    Args:
+        ctx (Any): Click context
+        _param (Any): Click param
+        value (Any): Parameter value
+
+    Returns:
+        Any: Parameter value
+    """
+    name = getattr(_param, "name", "")
+    if name:
+        click.secho(
+            f"Warning: '{name}' option is deprecated. It will be removed in the next major release",
+            fg="yellow",
+        )
+    if not value or ctx.resilient_parsing:
+        return None
+
+    return value
+
+
 HOSTNAME = click.option(
     "--host",
     "host",
@@ -321,7 +344,9 @@ SERVER_RECONNECT_LIMIT = click.option(
     default=5,
     show_default=True,
     show_envvar=True,
-    help="number of reconnects to the Cloud Remote Service. 0 for infinite reconnects",
+    hidden=True,
+    callback=deprecated,
+    help="[Deprecated] No longer used but kept in for compatibility until next major release",
 )
 
 SSH_USER = click.option(

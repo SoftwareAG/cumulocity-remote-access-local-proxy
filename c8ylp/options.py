@@ -137,9 +137,12 @@ def deprecated(ctx: click.Context, _param, value) -> Any:
     Returns:
         Any: Parameter value
     """
-    name = getattr(_param, 'name', '')
+    name = getattr(_param, "name", "")
     if name:
-        click.secho(f'Warning: "{name}" option is deprecated. It will be removed in the next major release', fg='yellow')
+        click.secho(
+            f"Warning: '{name}' option is deprecated. It will be removed in the next major release",
+            fg="yellow",
+        )
     if not value or ctx.resilient_parsing:
         return None
 

@@ -230,7 +230,9 @@ def test_prompt_for_ssh_user(
         },
     ),
 )
-def test_prompt_for_tfa(inputs, c8yserver: FixtureCumulocityAPI, tmpdir):
+def test_prompt_for_tfa(
+    inputs, c8yserver: FixtureCumulocityAPI, env: Environment, tmpdir
+):
     """User is prompted for TFA code if the token is not provided"""
 
     @responses.activate
@@ -271,10 +273,7 @@ def test_prompt_for_tfa(inputs, c8yserver: FixtureCumulocityAPI, tmpdir):
 
         assert result.exit_code == 0
 
-        settings = {}
-        for line in env_file.readlines():
-            key, _, value = line.partition("=")
-            settings[key] = value.rstrip("\n")
+        settings = env.read_file(env_file)
 
         # Password should not be stored, only the token
         assert settings == {

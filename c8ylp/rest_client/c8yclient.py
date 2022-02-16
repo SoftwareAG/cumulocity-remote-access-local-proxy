@@ -126,7 +126,7 @@ class CumulocityClient:
         response = self.session.get("/tenant/loginOptions")
         if response.status_code == 200:
             login_options_body = json.loads(response.content.decode("utf-8"))
-            login_options = login_options_body.get("loginOptions", dict())
+            login_options = login_options_body.get("loginOptions", {})
             for option in login_options:
 
                 # Check if oAuth is supported
@@ -356,7 +356,7 @@ class CumulocityClient:
             Dict[str, Any]: Device managed object
         """
         ext_id = self.get_external_id(serial_number, identity_type)
-        mor_id = ext_id.get("managedObject", dict()).get("id")
+        mor_id = ext_id.get("managedObject", {}).get("id")
 
         if not mor_id:
             raise Exception("Managed object id is empty")

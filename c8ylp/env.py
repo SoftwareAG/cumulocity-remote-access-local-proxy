@@ -48,7 +48,7 @@ def loadenv(path: str) -> None:
     Args:
         path (str): Dotenv file path
     """
-    with open(path, "r") as file:
+    with open(path, "r", encoding="utf8") as file:
         for line in file:
             line = line.strip()
             if not line or line.startswith("#") or line.startswith(";"):
@@ -85,7 +85,11 @@ def save_env(path: str, values: Dict[str, Any]) -> bool:
     """
     env_file = pathlib.Path(path)
     has_changed = False
-    output = [] if not env_file.exists() else env_file.read_text().splitlines()
+    output = (
+        []
+        if not env_file.exists()
+        else env_file.read_text(encoding="utf8").splitlines()
+    )
 
     key_indexes = defaultdict(lambda: [])
 
@@ -112,6 +116,6 @@ def save_env(path: str, values: Dict[str, Any]) -> bool:
             has_changed = True
 
     if has_changed:
-        env_file.write_text("\n".join(output).rstrip("\n") + "\n")
+        env_file.write_text("\n".join(output).rstrip("\n") + "\n", encoding="utf8")
 
     return has_changed

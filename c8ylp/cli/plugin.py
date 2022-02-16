@@ -62,7 +62,7 @@ def load_python_plugin(path: str) -> Dict[Any, Any]:
         Dict[Any, Any]: Namespace of the evaluated python file
     """
     namespace = {}
-    with open(path) as file:
+    with open(path, encoding="utf8") as file:
         code = compile(file.read(), str(path), "exec")
         # Eval is required to make a dynamic plugin
         # pylint: disable=eval-used

@@ -5,6 +5,7 @@
 
 * fix: Shutdown websocket when the tcp client terminates. #38
 * fix: Mark `--reconnects` option as deprecated, it will be removed in the next major release. The reconnect logic websocket has been removed as attempting a reconnect after the client has been connected once causes problems with different servers. #40
+* build: update dev dependencies
 
 ## 2.0.4
 

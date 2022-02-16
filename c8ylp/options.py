@@ -417,7 +417,6 @@ def common_options(f):
         SSL_IGNORE_VERIFY,
         STORE_TOKEN,
         DISABLE_PROMPT,
-        SERVER_RECONNECT_LIMIT,
     ]
 
     # Need to reverse the order to control the list order

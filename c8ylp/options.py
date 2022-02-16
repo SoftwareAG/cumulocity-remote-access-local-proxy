@@ -138,7 +138,7 @@ def deprecated(ctx: click.Context, _param, value) -> Any:
         Any: Parameter value
     """
     name = getattr(_param, "name", "")
-    if name:
+    if name and value is not None:
         click.secho(
             f"Warning: '{name}' option is deprecated. It will be removed in the next major release",
             fg="yellow",
@@ -340,8 +340,8 @@ SSL_IGNORE_VERIFY = click.option(
 SERVER_RECONNECT_LIMIT = click.option(
     "--reconnects",
     envvar="C8YLP_RECONNECTS",
-    type=click.IntRange(-1, 10),
-    default=5,
+    type=str,
+    default=None,
     show_default=True,
     show_envvar=True,
     hidden=True,

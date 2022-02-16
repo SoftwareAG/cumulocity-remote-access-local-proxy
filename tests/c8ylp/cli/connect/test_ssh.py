@@ -398,3 +398,64 @@ def test_device_managed_object_permission_denied(
         assert result.exit_code == case["exit_code"], case["description"]
 
     run()
+
+
+@patch("subprocess.call", return_value=0)
+def test_deprecated_reconnects_option(
+    mock_start_ssh: Mock, c8yserver: FixtureCumulocityAPI, env: Environment
+):
+    """Check deprecated warning when using reconnects option"""
+
+    @responses.activate
+    def run():
+        serial = "ext-device-01"
+        c8yserver.simulate_pre_authenticated(serial)
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "connect",
+                "ssh",
+                serial,
+                "--ssh-user",
+                "example",
+                "ls -la",
+                "--reconnects",
+                "2",
+            ],
+            env=env.create_authenticated(),
+        )
+
+        mock_start_ssh.assert_called_once()
+        assert result.exit_code == 0
+        assert result.stdout
+        assert "Warning: 'reconnects' option is deprecated" in result.stdout
+
+    run()
+
+
+@patch("subprocess.call", return_value=0)
+def test_deprecated_reconnects_option_when_not_used(
+    mock_start_ssh: Mock, c8yserver: FixtureCumulocityAPI, env: Environment
+):
+    """Check deprecated warning when using reconnects option when it is not used"""
+
+    @responses.activate
+    def run():
+        serial = "ext-device-01"
+        c8yserver.simulate_pre_authenticated(serial)
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["connect", "ssh", serial, "--ssh-user", "example", "ls -la ."],
+            env=env.create_authenticated(),
+        )
+
+        mock_start_ssh.assert_called_once()
+        assert result.exit_code == 0
+        assert result.stdout
+        assert "Warning: 'reconnects' option is deprecated" not in result.stdout
+
+    run()

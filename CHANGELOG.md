@@ -1,6 +1,10 @@
 
 # Releases
 
+## 2.1.2
+
+* fix: Only display deprecation warning for `reconnects` option when it is used.
+
 ## 2.1.1
 
 * fix: Added deprecation mark on `reconnects` option which was removed during an erroneous merge

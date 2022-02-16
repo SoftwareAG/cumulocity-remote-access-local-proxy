@@ -194,6 +194,8 @@ def generate_docs(c):
         # Replace python3 module usage, to the more common c8ylp
         usage = re.sub("python3? -m ", "", usage)
 
+        usage = re.sub(r"Validating c8y token: EXPIRED/INVALID.*\n", "", usage)
+
         # Strip plugin folder information out of usage
         usage = re.sub(r"Checking plugin folder.+\n", "", usage)
 

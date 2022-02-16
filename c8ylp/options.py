@@ -126,6 +126,26 @@ def trim_trailing_slash(ctx: click.Context, _param, value) -> Any:
     return str(value).strip().rstrip("/")
 
 
+def deprecated(ctx: click.Context, _param, value) -> Any:
+    """Deprecated option warning
+
+    Args:
+        ctx (Any): Click context
+        _param (Any): Click param
+        value (Any): Parameter value
+
+    Returns:
+        Any: Parameter value
+    """
+    name = getattr(_param, 'name', '')
+    if name:
+        click.secho(f'Warning: "{name}" option is deprecated. It will be removed in the next major release', fg='yellow')
+    if not value or ctx.resilient_parsing:
+        return None
+
+    return value
+
+
 HOSTNAME = click.option(
     "--host",
     "host",
@@ -314,6 +334,18 @@ SSL_IGNORE_VERIFY = click.option(
 )
 
 
+SERVER_RECONNECT_LIMIT = click.option(
+    "--reconnects",
+    envvar="C8YLP_RECONNECTS",
+    type=click.IntRange(-1, 10),
+    default=5,
+    show_default=True,
+    show_envvar=True,
+    hidden=True,
+    callback=deprecated,
+    help="[Deprecated] No longer used but kept in for compatibility until next major release",
+)
+
 SSH_USER = click.option(
     "--ssh-user",
     envvar="C8YLP_SSH_USER",
@@ -382,6 +414,7 @@ def common_options(f):
         SSL_IGNORE_VERIFY,
         STORE_TOKEN,
         DISABLE_PROMPT,
+        SERVER_RECONNECT_LIMIT,
     ]
 
     # Need to reverse the order to control the list order

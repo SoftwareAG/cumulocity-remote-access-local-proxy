@@ -1,6 +1,12 @@
 
 # Releases
 
+## Current
+
+* Remove duplicated `-t` shorthand option for the `--token` option. Fixes #45
+* Add new option to disable storage of token in an dotenv file using `--no-store-token` (opposite of the existing `--store-token` option)
+
+
 ## 2.1.2
 
 * fix: Only display deprecation warning for `reconnects` option when it is used.

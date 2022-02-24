@@ -219,7 +219,6 @@ C8Y_USER = click.option(
 
 C8Y_TOKEN = click.option(
     "--token",
-    "-t",
     callback=validate_token,
     envvar="C8Y_TOKEN",
     is_eager=True,
@@ -304,7 +303,7 @@ LOGGING_VERBOSE = click.option(
 )
 
 STORE_TOKEN = click.option(
-    "--store-token",
+    "--store-token/--no-store-token",
     "store_token",
     envvar="C8YLP_STORE_TOKEN",
     is_flag=True,

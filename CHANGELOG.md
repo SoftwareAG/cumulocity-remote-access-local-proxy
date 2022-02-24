@@ -1,7 +1,7 @@
 
 # Releases
 
-## Current
+## 2.1.3
 
 * Remove duplicated `-t` shorthand option for the `--token` option. Fixes #45
 * Add new option to disable storage of token in an dotenv file using `--no-store-token` (opposite of the existing `--store-token` option)

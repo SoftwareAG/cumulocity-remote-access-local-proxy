@@ -348,16 +348,6 @@ SERVER_RECONNECT_LIMIT = click.option(
     help="[Deprecated] No longer used but kept in for compatibility until next major release",
 )
 
-SSH_USER = click.option(
-    "--ssh-user",
-    envvar="C8YLP_SSH_USER",
-    type=str,
-    required=True,
-    prompt=True,
-    show_envvar=True,
-    help="Start an interactive ssh session with the given user",
-)
-
 ARG_SSH_COMMAND = click.argument("command", nargs=1, required=True)
 
 ARG_SCRIPT = click.argument(

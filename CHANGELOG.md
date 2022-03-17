@@ -1,7 +1,7 @@
 
 # Releases
 
-## Current
+## 2.1.4
 
 * `c8y connect ssh` supports reading the `--ssh-user` from the `C8YLP_SSH_USER` environment variable 
 

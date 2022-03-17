@@ -1,6 +1,10 @@
 
 # Releases
 
+## Current
+
+* `c8y connect ssh` supports reading the `--ssh-user` from the `C8YLP_SSH_USER` environment variable 
+
 ## 2.1.3
 
 * Remove duplicated `-t` shorthand option for the `--token` option. Fixes #45

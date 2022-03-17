@@ -35,6 +35,8 @@ from c8ylp.cli.core import ExitCodes, ProxyContext
 @click.option(
     "--ssh-user",
     required=True,
+    envvar="C8YLP_SSH_USER",
+    show_envvar=True,
     prompt=True,
     help="SSH username which is configured on the device",
 )

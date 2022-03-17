@@ -17,6 +17,7 @@
 #
 """Test plugin command"""
 
+import os
 import subprocess
 import sys
 
@@ -25,7 +26,7 @@ import pytest
 from .fixtures import Device
 
 
-def proxy_cli(*args) -> subprocess.CompletedProcess:
+def proxy_cli(*args, **kwargs) -> subprocess.CompletedProcess:
     """Execute the proxy cli command with given arguments"""
     return subprocess.run(
         [
@@ -36,6 +37,7 @@ def proxy_cli(*args) -> subprocess.CompletedProcess:
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        **kwargs,
     )
 
 
@@ -61,6 +63,31 @@ def test_ssh_command_then_exit(case, c8ydevice: Device):
         user,
         "--",
         command,
+    )
+
+    assert result.returncode == case.get("exit_code", 0)
+
+
+@pytest.mark.parametrize(
+    "case",
+    (dict(command="sleep 1s", exit_code=0),),
+    ids=lambda x: str(x),
+)
+def test_support_ssh_user_via_env(case, c8ydevice: Device):
+    """Test ssh command should support setting the ssh user via env variable"""
+    user = case.get("user", c8ydevice.ssh_user)
+    command = case.get("command", "sleep 10s")
+
+    result = proxy_cli(
+        "connect",
+        "ssh",
+        c8ydevice.device,
+        "--",
+        command,
+        env={
+            **os.environ,
+            "C8YLP_SSH_USER": user,
+        },
     )
 
     assert result.returncode == case.get("exit_code", 0)

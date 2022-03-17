@@ -68,7 +68,7 @@ Options:
                                   [env var: C8YLP_STORE_TOKEN]
   -d, --disable-prompts           [env var: C8YLP_DISABLE_PROMPTS]
   --ssh-user TEXT                 SSH username which is configured on the
-                                  device  [required]
+                                  device  [env var: C8YLP_SSH_USER; required]
   -h, --help                      Show this message and exit.
 
 ```

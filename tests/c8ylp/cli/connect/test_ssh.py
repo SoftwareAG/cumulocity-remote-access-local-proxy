@@ -459,3 +459,31 @@ def test_deprecated_reconnects_option_when_not_used(
         assert "Warning: 'reconnects' option is deprecated" not in result.stdout
 
     run()
+
+
+@patch("subprocess.call", return_value=0)
+def test_reading_ssh_user_from_env(
+    mock_start_ssh: Mock, c8yserver: FixtureCumulocityAPI, env: Environment
+):
+    """Read ssh user from an environment variable"""
+
+    @responses.activate
+    def run():
+        serial = "ext-device-01"
+        c8yserver.simulate_pre_authenticated(serial)
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["connect", "ssh", serial, "ls -la ."],
+            env={
+                **env.create_authenticated(),
+                "C8YLP_SSH_USER": "example",
+            },
+        )
+
+        mock_start_ssh.assert_called_once()
+        assert result.exit_code == 0
+        assert result.stdout
+
+    run()

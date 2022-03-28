@@ -2,7 +2,7 @@
 invoke==1.6.0
 
 # Linting/formating
-pylint==2.12.2
+pylint==2.13.2
 black==22.1.0
 licenseheaders==0.8.8
 

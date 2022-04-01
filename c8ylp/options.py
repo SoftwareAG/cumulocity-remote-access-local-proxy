@@ -243,6 +243,15 @@ C8Y_TFA_CODE = click.option(
     help="TFA Code. Required when the 'TFA enabled' is enabled for a user",
 )
 
+SOCKET_PATH = click.option(
+    "--socket-path",
+    type=str,
+    envvar="C8YLP_SOCKET_PATH",
+    show_envvar=True,
+    show_default=True,
+    help="Unix Socket Path which should be opened. Default None",
+)
+
 PORT = click.option(
     "--port",
     type=click.IntRange(0, 65535),
@@ -399,6 +408,7 @@ def common_options(f):
         EXTERNAL_IDENTITY_TYPE,
         REMOTE_ACCESS_TYPE,
         PORT_DEFAULT_RANDOM,
+        SOCKET_PATH,
         PING_INTERVAL,
         TCP_SIZE,
         TCP_TIMEOUT,

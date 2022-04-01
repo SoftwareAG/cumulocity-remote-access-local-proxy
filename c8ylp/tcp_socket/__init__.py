@@ -17,4 +17,4 @@
 #
 """TCP socket"""
 
-from c8ylp.tcp_socket.tcp_server import TCPProxyServer
+from c8ylp.tcp_socket.tcp_server import TCPProxyServer, UnixStreamProxyServer

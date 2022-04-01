@@ -35,7 +35,7 @@ from ..timer import CommandTimer
 from ..banner import BANNER1
 from ..env import save_env
 from ..rest_client.c8yclient import CumulocityClient, CumulocityMissingTFAToken
-from ..tcp_socket import TCPProxyServer
+from ..tcp_socket import TCPProxyServer, UnixStreamProxyServer
 from ..websocket_client import WebsocketClient
 
 
@@ -88,6 +88,7 @@ class ProxyContext:
     env_file = None
     store_token = False
     wait_port_timeout = 60.0
+    socket_path = ""
 
     def __init__(self, ctx: click.Context, src_dict: Dict[str, Any] = None) -> None:
         self._ctx = ctx
@@ -633,12 +634,20 @@ def start_proxy(
     background = None
 
     try:
-        tcp_server = TCPProxyServer(
-            opts.port,
-            WebsocketClient(**client_opts),
-            opts.tcp_size,
-            opts.tcp_timeout,
-        )
+        if opts.socket_path is not None:
+            tcp_server = UnixStreamProxyServer(
+                opts.socket_path,
+                WebsocketClient(**client_opts),
+                opts.tcp_size,
+                opts.tcp_timeout,
+            )
+        else:
+            tcp_server = TCPProxyServer(
+                opts.port,
+                WebsocketClient(**client_opts),
+                opts.tcp_size,
+                opts.tcp_timeout,
+            )
 
         exit_code = ExitCodes.OK
 

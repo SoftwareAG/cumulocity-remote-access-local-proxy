@@ -118,6 +118,27 @@ class CustomTCPServer(socketserver.TCPServer):
             server_address, RequestHandlerClass, bind_and_activate=bind_and_activate
         )
 
+class CustomUnixStreamServer(socketserver.UnixStreamServer):
+    """Custom TCP Server used to listen for local connections and proxy them to
+    a websocket
+    """
+
+    def __init__(
+        self,
+        web_socket_client,
+        server_address,
+        RequestHandlerClass,
+        bind_and_activate=True,
+        buffer_size: int = 1024,
+        tcp_timeout: float = 30,
+    ) -> None:
+        self.allow_reuse_address = True
+        self.timeout = tcp_timeout
+        self.buffer_size = buffer_size
+        self.web_socket_client = web_socket_client
+        super().__init__(
+            server_address, RequestHandlerClass, bind_and_activate=bind_and_activate
+        )
 
 class TCPProxyServer:
     """TCP Server"""
@@ -174,3 +195,27 @@ class TCPProxyServer:
             bool: True if the server is running
         """
         return self._running.wait(timeout)
+
+
+class UnixStreamProxyServer(TCPProxyServer):
+    def __init__(
+        self,
+        path,
+        web_socket_client,
+        tcp_buffer_size,
+        tcp_timeout,
+    ):
+        self.web_socket_client = web_socket_client
+        self._running = threading.Event()
+        self.logger = logging.getLogger(__name__)
+
+        # Expose func to web socket client
+        self.web_socket_client.proxy = self
+
+        self.server = CustomUnixStreamServer(
+            self.web_socket_client,
+            path,
+            TCPHandler,
+            buffer_size=tcp_buffer_size,
+            tcp_timeout=tcp_timeout,
+        )

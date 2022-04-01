@@ -17,6 +17,7 @@
 #
 """TCP server"""
 
+import os
 import errno
 import logging
 import socket
@@ -208,6 +209,7 @@ class UnixStreamProxyServer(TCPProxyServer):
         self.web_socket_client = web_socket_client
         self._running = threading.Event()
         self.logger = logging.getLogger(__name__)
+        self.path = path
 
         # Expose func to web socket client
         self.web_socket_client.proxy = self
@@ -219,3 +221,7 @@ class UnixStreamProxyServer(TCPProxyServer):
             buffer_size=tcp_buffer_size,
             tcp_timeout=tcp_timeout,
         )
+    def shutdown(self):
+        """Shutdown tcp server"""
+        super().shutdown()
+        os.remove(self.path)

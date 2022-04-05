@@ -672,11 +672,13 @@ def start_proxy(
                 f"\nc8ylp is listening for device (ext_id) {opts.device} ({opts.host}) on localhost:{opts.used_port}",
             )
             ssh_username = opts.ssh_user or "<device_username>"
-            opts.show_message(
-                f"\nFor example, if you are running a ssh proxy, you connect to {opts.device} by executing the "
-                "following in a new tab/console:\n\n"
-                f"\tssh -p {opts.used_port} {ssh_username}@localhost",
-            )
+            msg = f"\nFor example, if you are running a ssh proxy, you connect to {opts.device} by executing the " \
+                   "following in a new tab/console:\n\n"
+            if opts.socket_path:
+                msg += f"\tssh -o 'ProxyCommand=socat - UNIX-CLIENT:{opts.socket_path}' {ssh_username}@localhost"
+            else:
+                msg += f"\tssh -p {opts.used_port} {ssh_username}@localhost"
+            opts.show_message(msg)
 
             opts.show_info("\nPress ctrl-c to shutdown the server")
 

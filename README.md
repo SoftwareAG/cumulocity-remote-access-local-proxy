@@ -110,6 +110,8 @@ c8ylp connect ssh <device> --ssh-user <device_username> --env-file .env
 
 ### Usage with a socket path
 
+**This is a unix only option**
+
 ```sh
 c8ylp server <device> --env-file .env --socket-path /tmp/device.socket
 ```

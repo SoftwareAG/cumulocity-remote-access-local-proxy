@@ -630,19 +630,19 @@ def start_proxy(
         "ping_interval": opts.ping_interval,
     }
 
-    server = None
+    socket_server = None
     background = None
 
     try:
         if opts.socket_path is not None:
-            server = UnixStreamProxyServer(
+            socket_server = UnixStreamProxyServer(
                 opts.socket_path,
                 WebsocketClient(**client_opts),
                 opts.tcp_size,
                 opts.tcp_timeout,
             )
         else:
-            server = TCPProxyServer(
+            socket_server = TCPProxyServer(
                 opts.port,
                 WebsocketClient(**client_opts),
                 opts.tcp_size,
@@ -652,18 +652,18 @@ def start_proxy(
         exit_code = ExitCodes.OK
 
         click.secho(BANNER1)
-        logging.info("Starting tcp server")
+        logging.info("Starting socket server")
 
-        background = threading.Thread(target=server.serve_forever, daemon=True)
+        background = threading.Thread(target=socket_server.serve_forever, daemon=True)
         background.start()
 
         # Block until the local proxy is ready to accept connections
-        if not server.wait_for_running(opts.wait_port_timeout):
+        if not socket_server.wait_for_running(opts.wait_port_timeout):
             opts.exit_server_not_ready()
 
         # store the used port for reference to later
-        if server.server.socket:
-            opts.used_port = server.server.socket.getsockname()[1]
+        if socket_server.server.socket:
+            opts.used_port = socket_server.server.socket.getsockname()[1]
 
         # Plugins start in a background thread so don't display it
         # as the plugins should do their own thing
@@ -704,13 +704,13 @@ def start_proxy(
 
         if str(ex):
             opts.show_error(
-                "The local proxy TCP Server experienced an unexpected error. "
+                "The local proxy socket Server experienced an unexpected error. "
                 f"port={opts.port}, error={ex}"
             )
             exit_code = ExitCodes.UNKNOWN
     finally:
-        if server:
-            server.shutdown()
+        if socket_server:
+            socket_server.shutdown()
 
         if background:
             background.join()

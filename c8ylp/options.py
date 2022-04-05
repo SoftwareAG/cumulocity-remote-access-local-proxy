@@ -19,6 +19,7 @@
 
 import logging
 import os
+import socket
 from typing import Any
 import functools
 
@@ -408,7 +409,6 @@ def common_options(f):
         EXTERNAL_IDENTITY_TYPE,
         REMOTE_ACCESS_TYPE,
         PORT_DEFAULT_RANDOM,
-        SOCKET_PATH,
         PING_INTERVAL,
         TCP_SIZE,
         TCP_TIMEOUT,
@@ -419,6 +419,8 @@ def common_options(f):
         SERVER_RECONNECT_LIMIT,
     ]
 
+    if hasattr(socket, "AF_UNIX"):
+        options.append(SOCKET_PATH)
     # Need to reverse the order to control the list order
     options = reversed(options)
     return functools.reduce(lambda x, opt: opt(x), options, f)

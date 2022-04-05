@@ -108,6 +108,18 @@ If you just want to connect via ssh using a once-off proxy instance using a rand
 c8ylp connect ssh <device> --ssh-user <device_username> --env-file .env
 ```
 
+### Usage with a socket path
+
+```sh
+c8ylp server <device> --env-file .env --socket-path /tmp/device.socket
+```
+
+then connect with ssh like:
+
+```sh
+ssh -o 'ProxyCommand=socat - UNIX-CLIENT:/tmp/device.socket' <device_username>@localhost
+```
+
 ### Command documentation
 
 The command usage and all options can be viewed online on the following pages:

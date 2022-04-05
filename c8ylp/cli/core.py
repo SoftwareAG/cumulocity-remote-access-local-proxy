@@ -630,19 +630,19 @@ def start_proxy(
         "ping_interval": opts.ping_interval,
     }
 
-    tcp_server = None
+    server = None
     background = None
 
     try:
         if opts.socket_path is not None:
-            tcp_server = UnixStreamProxyServer(
+            server = UnixStreamProxyServer(
                 opts.socket_path,
                 WebsocketClient(**client_opts),
                 opts.tcp_size,
                 opts.tcp_timeout,
             )
         else:
-            tcp_server = TCPProxyServer(
+            server = TCPProxyServer(
                 opts.port,
                 WebsocketClient(**client_opts),
                 opts.tcp_size,
@@ -654,16 +654,16 @@ def start_proxy(
         click.secho(BANNER1)
         logging.info("Starting tcp server")
 
-        background = threading.Thread(target=tcp_server.serve_forever, daemon=True)
+        background = threading.Thread(target=server.serve_forever, daemon=True)
         background.start()
 
         # Block until the local proxy is ready to accept connections
-        if not tcp_server.wait_for_running(opts.wait_port_timeout):
+        if not server.wait_for_running(opts.wait_port_timeout):
             opts.exit_server_not_ready()
 
         # store the used port for reference to later
-        if tcp_server.server.socket:
-            opts.used_port = tcp_server.server.socket.getsockname()[1]
+        if server.server.socket:
+            opts.used_port = server.server.socket.getsockname()[1]
 
         # Plugins start in a background thread so don't display it
         # as the plugins should do their own thing
@@ -672,8 +672,10 @@ def start_proxy(
                 f"\nc8ylp is listening for device (ext_id) {opts.device} ({opts.host}) on localhost:{opts.used_port}",
             )
             ssh_username = opts.ssh_user or "<device_username>"
-            msg = f"\nFor example, if you are running a ssh proxy, you connect to {opts.device} by executing the " \
-                   "following in a new tab/console:\n\n"
+            msg = (
+                f"\nFor example, if you are running a ssh proxy, you connect to {opts.device} by executing the "
+                "following in a new tab/console:\n\n"
+            )
             if opts.socket_path:
                 msg += f"\tssh -o 'ProxyCommand=socat - UNIX-CLIENT:{opts.socket_path}' {ssh_username}@localhost"
             else:
@@ -707,8 +709,8 @@ def start_proxy(
             )
             exit_code = ExitCodes.UNKNOWN
     finally:
-        if tcp_server:
-            tcp_server.shutdown()
+        if server:
+            server.shutdown()
 
         if background:
             background.join()

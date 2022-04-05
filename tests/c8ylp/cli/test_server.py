@@ -34,3 +34,16 @@ def test_server_mode(mock_context):
         ["server", "ext-device-01"],
     )
     assert result.exit_code == 0
+
+
+@patch("c8ylp.cli.server.ProxyContext", autospec=True)
+def test_server_mode_socket_path(mock_context):
+    """Start a mocked server"""
+    mock_context.start.return_value = 0
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        ["server", "ext-device-01", "--socket-path", "/tmp/ext-device-01"],
+    )
+    assert result.exit_code == 0

@@ -119,6 +119,7 @@ class CustomTCPServer(socketserver.TCPServer):
             server_address, RequestHandlerClass, bind_and_activate=bind_and_activate
         )
 
+
 class CustomUnixStreamServer(socketserver.UnixStreamServer):
     """Custom TCP Server used to listen for local connections and proxy them to
     a websocket
@@ -140,6 +141,7 @@ class CustomUnixStreamServer(socketserver.UnixStreamServer):
         super().__init__(
             server_address, RequestHandlerClass, bind_and_activate=bind_and_activate
         )
+
 
 class TCPProxyServer:
     """TCP Server"""
@@ -199,6 +201,11 @@ class TCPProxyServer:
 
 
 class UnixStreamProxyServer(TCPProxyServer):
+    """
+    Unix domain socket server
+    """
+
+    # pylint: disable=super-init-not-called
     def __init__(
         self,
         path,
@@ -221,6 +228,7 @@ class UnixStreamProxyServer(TCPProxyServer):
             buffer_size=tcp_buffer_size,
             tcp_timeout=tcp_timeout,
         )
+
     def shutdown(self):
         """Shutdown tcp server"""
         super().shutdown()

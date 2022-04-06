@@ -25,6 +25,7 @@ import signal
 import threading
 import time
 import sys
+import socket
 from enum import IntEnum
 from logging.handlers import RotatingFileHandler
 from typing import Any, Dict, NoReturn, Optional
@@ -35,8 +36,11 @@ from ..timer import CommandTimer
 from ..banner import BANNER1
 from ..env import save_env
 from ..rest_client.c8yclient import CumulocityClient, CumulocityMissingTFAToken
-from ..tcp_socket import TCPProxyServer, UnixStreamProxyServer
+from ..tcp_socket import TCPProxyServer
 from ..websocket_client import WebsocketClient
+
+if hasattr(socket, "AF_UNIX"):
+    from ..tcp_socket import UnixStreamProxyServer
 
 
 class ExitCodes(IntEnum):

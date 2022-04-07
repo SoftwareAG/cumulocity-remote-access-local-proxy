@@ -38,7 +38,8 @@ class C8YQueries:
     GET_FIRMWARE_BY_DEVICE_TYPE = 'inventory/managedObjects?query=$filter=(c8y_Filter.type+eq+{})+and+(type+eq+c8y_Firmware)&pageSize=100&withTotalPages=true'
     GET_FIRMWARE_BINARY = "inventory/managedObjects?query=$filter=bygroupid({})&withTotalPages=true&pageSize=2000"
     GET_OPERATION = 'devicecontrol/operations/{}'
-    GET_UPDATE_OPERATION_BY_DEVICE_ID = 'devicecontrol/operations?pageSize=2000&deviceId={}'
+    #devicecontrol/operations?dateFrom=1970-01-01&dateTo=2022-04-08T09:08:36%2B02:00&deviceId=35188037&pageSize=100&revert=true
+    GET_UPDATE_OPERATION_BY_DEVICE_ID = 'devicecontrol/operations?dateFrom={}&dateTo={}&deviceId={}&pageSize=10&revert=true'
     POST_OPERATION = 'devicecontrol/operations'
     GET_DEVICE_ID_BY_ESN = 'identity/externalIds/{}/{}'
     GET_DEVICE_INFO_BY_DEV_ID = 'inventory/managedObjects/{}'

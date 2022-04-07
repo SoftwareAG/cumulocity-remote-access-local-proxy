@@ -1,5 +1,8 @@
+import datetime
 import json
 import logging
+import random
+import string
 import sys
 import time
 import requests
@@ -14,6 +17,7 @@ class C8yRestClient(object):
     """
     def __init__(self, c8y_serial_number, user, password, url=None, tenant=None, session_verify=False, tfacode=None):
 
+        self._operation_marker = ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
         if url is None:
             self.url = 'https://main.dm-zz-q.ioee10-cloud.com/'
         else:
@@ -246,7 +250,7 @@ class C8yRestClient(object):
         :return: None
         """
 
-        operation_description = f"{UPDATE_FIRMWARE_OPERATION_HEADER} to: {firmware.name} ({firmware.version})"
+        operation_description = f"{self._operation_marker}:{UPDATE_FIRMWARE_OPERATION_HEADER} to: {firmware.name} ({firmware.version})"
         firmware_info = {
             "c8y_Firmware": {
                 "name": firmware.name,
@@ -286,16 +290,23 @@ class C8yRestClient(object):
         :return: CubeOperation
 
         """
-        identity_url = self.url + C8YQueries.GET_UPDATE_OPERATION_BY_DEVICE_ID.format(self.device_id)
+        current_time = datetime.datetime.today()
+        to_date_str = (current_time + datetime.timedelta(+1)).strftime('%Y-%m-%d')
+        from_date_str = (current_time + datetime.timedelta(-5)).strftime('%Y-%m-%d')
+        identity_url = self.url + C8YQueries.GET_UPDATE_OPERATION_BY_DEVICE_ID.format(from_date_str, to_date_str, self.device_id)
         response = self.session.get(identity_url, headers=self.headers)
         if response.status_code != 200:
             raise C8yException(f'Error on  {identity_url}. '
                                f'Status Code {response.status_code}', None)
         operations = json.loads(response.text)
         update_operations = [
-            the_operation for the_operation in operations['operations'] if f'{UPDATE_FIRMWARE_OPERATION_HEADER}'
-                                                     in the_operation.get('description', '')
+            the_operation for the_operation in operations['operations']
+            if f'{self._operation_marker}' in the_operation.get('description', '')
         ]
+
+        if len(update_operations) == 0:
+            logging.error('operation not found')
+            return None
         my_operation = CubeOperation(update_operations)
         return my_operation
 
@@ -312,7 +323,7 @@ if __name__ == '__main__':
                            password=rest_user_password)
     fw = client.get_available_firmwares(client.cy8_device.type)
     my_firmware_list = CubeImage(fw)
-    my_firmware = my_firmware_list.get_middle()
+    my_firmware = my_firmware_list.get_last()
     # my_firmware = my_firmware_list.get_by_date('4.0.0_2021-08-25-1352')
     client.update_cube_firmware(my_firmware)
     operation = client.get_device_operation()

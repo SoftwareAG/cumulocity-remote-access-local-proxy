@@ -150,6 +150,23 @@ def deprecated(ctx: click.Context, _param, value) -> Any:
     return value
 
 
+def supports_unix_socket(ctx, param, value) -> Any:
+    """OS supports unix sockets
+
+    Args:
+        ctx (Any): Click context
+        param (Any): Click param
+        value (Any): Parameter value
+
+    Returns:
+        Any: Parameter value
+    """
+    if value and not hasattr(socket, "AF_UNIX"):
+        print(param.name)
+        raise click.BadParameter("This option is only supported on Unix-like operating systems")
+    return value
+
+
 HOSTNAME = click.option(
     "--host",
     "host",
@@ -250,7 +267,8 @@ SOCKET_PATH = click.option(
     envvar="C8YLP_SOCKET_PATH",
     show_envvar=True,
     show_default=True,
-    help="Unix Socket Path which should be opened. Default None",
+    callback=supports_unix_socket,
+    help="Unix Only: Unix Socket Path which should be opened",
 )
 
 PORT = click.option(
@@ -417,10 +435,9 @@ def common_options(f):
         STORE_TOKEN,
         DISABLE_PROMPT,
         SERVER_RECONNECT_LIMIT,
+        SOCKET_PATH,
     ]
 
-    if hasattr(socket, "AF_UNIX"):
-        options.append(SOCKET_PATH)
     # Need to reverse the order to control the list order
     options = reversed(options)
     return functools.reduce(lambda x, opt: opt(x), options, f)

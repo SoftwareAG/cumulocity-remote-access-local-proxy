@@ -161,9 +161,14 @@ def supports_unix_socket(ctx, param, value) -> Any:
     Returns:
         Any: Parameter value
     """
+    if not value or ctx.resilient_parsing:
+        return None
+
     if value and not hasattr(socket, "AF_UNIX"):
         print(param.name)
-        raise click.BadParameter("This option is only supported on Unix-like operating systems")
+        raise click.BadParameter(
+            "This option is only supported on Unix-like operating systems"
+        )
     return value
 
 

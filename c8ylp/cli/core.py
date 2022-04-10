@@ -638,7 +638,7 @@ def start_proxy(
     background = None
 
     try:
-        if opts.socket_path is not None:
+        if opts.socket_path:
             socket_server = UnixStreamProxyServer(
                 opts.socket_path,
                 WebsocketClient(**client_opts),

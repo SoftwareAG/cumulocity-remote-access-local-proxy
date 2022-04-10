@@ -17,6 +17,7 @@
 #
 """Server tests"""
 
+import socket
 from unittest.mock import patch
 
 from click.testing import CliRunner
@@ -38,7 +39,7 @@ def test_server_mode(mock_context):
 
 @patch("c8ylp.cli.server.ProxyContext", autospec=True)
 def test_server_mode_socket_path(mock_context):
-    """Start a mocked server"""
+    """Start a mocked server using a unix socket. On windows an error will be returned"""
     mock_context.start.return_value = 0
 
     runner = CliRunner()
@@ -46,4 +47,5 @@ def test_server_mode_socket_path(mock_context):
         cli,
         ["server", "ext-device-01", "--socket-path", "/tmp/ext-device-01"],
     )
-    assert result.exit_code == 0
+    expect_exit_code = 0 if hasattr(socket, "AF_UNIX") else 2
+    assert result.exit_code == expect_exit_code

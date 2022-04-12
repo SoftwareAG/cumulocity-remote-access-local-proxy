@@ -636,6 +636,7 @@ def start_proxy(
 
     socket_server = None
     background = None
+    exit_code = ExitCodes.OK
 
     try:
         if opts.socket_path:
@@ -652,8 +653,6 @@ def start_proxy(
                 opts.tcp_size,
                 opts.tcp_timeout,
             )
-
-        exit_code = ExitCodes.OK
 
         click.secho(BANNER1)
         logging.info("Starting socket server")

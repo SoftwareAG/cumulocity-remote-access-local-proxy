@@ -25,6 +25,7 @@ import signal
 import threading
 import time
 import sys
+import socket
 from enum import IntEnum
 from logging.handlers import RotatingFileHandler
 from typing import Any, Dict, NoReturn, Optional
@@ -37,6 +38,9 @@ from ..env import save_env
 from ..rest_client.c8yclient import CumulocityClient, CumulocityMissingTFAToken
 from ..tcp_socket import TCPProxyServer
 from ..websocket_client import WebsocketClient
+
+if hasattr(socket, "AF_UNIX"):
+    from ..tcp_socket import UnixStreamProxyServer
 
 
 class ExitCodes(IntEnum):
@@ -88,6 +92,7 @@ class ProxyContext:
     env_file = None
     store_token = False
     wait_port_timeout = 60.0
+    socket_path = ""
 
     def __init__(self, ctx: click.Context, src_dict: Dict[str, Any] = None) -> None:
         self._ctx = ctx
@@ -629,32 +634,40 @@ def start_proxy(
         "ping_interval": opts.ping_interval,
     }
 
-    tcp_server = None
+    socket_server = None
     background = None
 
     try:
-        tcp_server = TCPProxyServer(
-            opts.port,
-            WebsocketClient(**client_opts),
-            opts.tcp_size,
-            opts.tcp_timeout,
-        )
+        if opts.socket_path:
+            socket_server = UnixStreamProxyServer(
+                opts.socket_path,
+                WebsocketClient(**client_opts),
+                opts.tcp_size,
+                opts.tcp_timeout,
+            )
+        else:
+            socket_server = TCPProxyServer(
+                opts.port,
+                WebsocketClient(**client_opts),
+                opts.tcp_size,
+                opts.tcp_timeout,
+            )
 
         exit_code = ExitCodes.OK
 
         click.secho(BANNER1)
-        logging.info("Starting tcp server")
+        logging.info("Starting socket server")
 
-        background = threading.Thread(target=tcp_server.serve_forever, daemon=True)
+        background = threading.Thread(target=socket_server.serve_forever, daemon=True)
         background.start()
 
         # Block until the local proxy is ready to accept connections
-        if not tcp_server.wait_for_running(opts.wait_port_timeout):
+        if not socket_server.wait_for_running(opts.wait_port_timeout):
             opts.exit_server_not_ready()
 
         # store the used port for reference to later
-        if tcp_server.server.socket:
-            opts.used_port = tcp_server.server.socket.getsockname()[1]
+        if socket_server.server.socket:
+            opts.used_port = socket_server.server.socket.getsockname()[1]
 
         # Plugins start in a background thread so don't display it
         # as the plugins should do their own thing
@@ -663,11 +676,15 @@ def start_proxy(
                 f"\nc8ylp is listening for device (ext_id) {opts.device} ({opts.host}) on localhost:{opts.used_port}",
             )
             ssh_username = opts.ssh_user or "<device_username>"
-            opts.show_message(
+            msg = (
                 f"\nFor example, if you are running a ssh proxy, you connect to {opts.device} by executing the "
                 "following in a new tab/console:\n\n"
-                f"\tssh -p {opts.used_port} {ssh_username}@localhost",
             )
+            if opts.socket_path:
+                msg += f"\tssh -o 'ProxyCommand=socat - UNIX-CLIENT:{opts.socket_path}' {ssh_username}@localhost"
+            else:
+                msg += f"\tssh -p {opts.used_port} {ssh_username}@localhost"
+            opts.show_message(msg)
 
             opts.show_info("\nPress ctrl-c to shutdown the server")
 
@@ -691,13 +708,13 @@ def start_proxy(
 
         if str(ex):
             opts.show_error(
-                "The local proxy TCP Server experienced an unexpected error. "
+                "The local proxy socket Server experienced an unexpected error. "
                 f"port={opts.port}, error={ex}"
             )
             exit_code = ExitCodes.UNKNOWN
     finally:
-        if tcp_server:
-            tcp_server.shutdown()
+        if socket_server:
+            socket_server.shutdown()
 
         if background:
             background.join()

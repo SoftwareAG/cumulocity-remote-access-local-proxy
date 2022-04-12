@@ -19,6 +19,7 @@
 
 import logging
 import os
+import socket
 from typing import Any
 import functools
 
@@ -149,6 +150,28 @@ def deprecated(ctx: click.Context, _param, value) -> Any:
     return value
 
 
+def supports_unix_socket(ctx, param, value) -> Any:
+    """OS supports unix sockets
+
+    Args:
+        ctx (Any): Click context
+        param (Any): Click param
+        value (Any): Parameter value
+
+    Returns:
+        Any: Parameter value
+    """
+    if not value or ctx.resilient_parsing:
+        return None
+
+    if value and not hasattr(socket, "AF_UNIX"):
+        print(param.name)
+        raise click.BadParameter(
+            "This option is only supported on Unix-like operating systems"
+        )
+    return value
+
+
 HOSTNAME = click.option(
     "--host",
     "host",
@@ -241,6 +264,16 @@ C8Y_TFA_CODE = click.option(
     envvar="C8Y_TFA_CODE",
     show_envvar=True,
     help="TFA Code. Required when the 'TFA enabled' is enabled for a user",
+)
+
+SOCKET_PATH = click.option(
+    "--socket-path",
+    type=str,
+    envvar="C8YLP_SOCKET_PATH",
+    show_envvar=True,
+    show_default=True,
+    callback=supports_unix_socket,
+    help="Unix Only: Unix Socket Path which should be opened",
 )
 
 PORT = click.option(
@@ -407,6 +440,7 @@ def common_options(f):
         STORE_TOKEN,
         DISABLE_PROMPT,
         SERVER_RECONNECT_LIMIT,
+        SOCKET_PATH,
     ]
 
     # Need to reverse the order to control the list order

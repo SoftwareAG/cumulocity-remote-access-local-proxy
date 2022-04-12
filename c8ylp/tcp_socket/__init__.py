@@ -16,5 +16,9 @@
 # limitations under the License.
 #
 """TCP socket"""
+import socket
 
 from c8ylp.tcp_socket.tcp_server import TCPProxyServer
+
+if hasattr(socket, "AF_UNIX"):
+    from c8ylp.tcp_socket.unix_stream_server import UnixStreamProxyServer

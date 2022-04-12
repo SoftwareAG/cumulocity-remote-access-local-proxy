@@ -67,6 +67,8 @@ Options:
                                   to the env-file if a file is being used
                                   [env var: C8YLP_STORE_TOKEN]
   -d, --disable-prompts           [env var: C8YLP_DISABLE_PROMPTS]
+  --socket-path TEXT              Unix Only: Unix Socket Path which should be
+                                  opened  [env var: C8YLP_SOCKET_PATH]
   --ssh-user TEXT                 SSH username which is configured on the
                                   device  [env var: C8YLP_SSH_USER; required]
   -h, --help                      Show this message and exit.

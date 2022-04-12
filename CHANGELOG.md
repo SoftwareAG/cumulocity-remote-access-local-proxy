@@ -1,6 +1,22 @@
 
 # Releases
 
+## 2.2.0
+
+* feat: Unix only - Support starting a proxy using a Unix socket server (instead of a local tcp server).
+
+    **Example**
+
+    ```sh
+    # Start c8ylp proxy server which uses a unix socket instead of a tcp server
+    c8ylp server <device> --env-file .env --socket-path /tmp/device.socket
+
+    # Use ssh with proxy command (requires socat)
+    ssh -o 'ProxyCommand=socat - UNIX-CLIENT:/tmp/device.socket' <device_username>@localhost
+    ```
+
+* chore: update project dependencies
+
 ## 2.1.4
 
 * `c8y connect ssh` supports reading the `--ssh-user` from the `C8YLP_SSH_USER` environment variable 

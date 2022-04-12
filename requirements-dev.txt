@@ -1,16 +1,16 @@
 # Task runner
-invoke==1.6.0
+invoke==1.7.0
 
 # Linting/formating
-pylint==2.12.2
-black==22.1.0
+pylint==2.13.5
+black==22.3.0
 licenseheaders==0.8.8
 
 # Testing
-pytest==6.2.5
+pytest==7.1.1
 pytest-timeout==2.1.0
 pytest-cov==3.0.0
-responses==0.18.0
+responses==0.20.0
 
 # publishing
 wheel>=0.34.2

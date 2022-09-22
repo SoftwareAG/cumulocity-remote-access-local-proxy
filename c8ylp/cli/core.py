@@ -36,7 +36,7 @@ from ..timer import CommandTimer
 from ..banner import BANNER1
 from ..env import save_env
 from ..rest_client.c8yclient import CumulocityClient, CumulocityMissingTFAToken
-from ..tcp_socket import TCPProxyServer
+from ..tcp_socket import TCPProxyServer, StdioProxyServer
 from ..websocket_client import WebsocketClient
 
 if hasattr(socket, "AF_UNIX"):
@@ -93,6 +93,7 @@ class ProxyContext:
     store_token = False
     wait_port_timeout = 60.0
     socket_path = ""
+    stdio = False
 
     def __init__(self, ctx: click.Context, src_dict: Dict[str, Any] = None) -> None:
         self._ctx = ctx
@@ -198,7 +199,7 @@ class ProxyContext:
             msg (str): User message to print on the console
         """
         if not self.verbose:
-            click.secho(msg, fg="red")
+            click.secho(msg, fg="red", err=True)
 
         logging.warning(msg, *args, **kwargs)
 
@@ -220,7 +221,7 @@ class ProxyContext:
             msg (str): User message to print on the console
         """
         if not self.verbose:
-            click.secho(msg, fg="yellow")
+            click.secho(msg, fg="yellow", err=True)
 
         logging.warning(msg, *args, **kwargs)
 
@@ -359,9 +360,9 @@ def create_client(ctx: click.Context, opts: ProxyContext) -> CumulocityClient:
     logging.info("Checking tenant id")
     client.validate_tenant_id()
 
-    # Retry logging so the user can be prompted for
-    # their credentials/TFA code etc. without having to run c8ylp again
-    retries = 3
+    # Retry logging (except for stdio) so the user can be prompted for
+    # their credentials/TFA code etc. without having to run c8ylp again.
+    retries = 1 if opts.stdio else 3
     success = False
     while retries:
         try:
@@ -376,23 +377,23 @@ def create_client(ctx: click.Context, opts: ProxyContext) -> CumulocityClient:
             success = True
             break
         except CumulocityMissingTFAToken:
-            client.tfacode = click.prompt(
-                text="Enter your Cumulocity TFA-Token", hide_input=False
-            )
+            if not opts.disable_prompts:
+                client.tfacode = click.prompt(
+                    text="Enter your Cumulocity TFA-Token", hide_input=False
+                )
         except Exception as ex:
             logging.info("unknown exception: %s", ex)
 
-            if not opts.disable_prompts:
-                if not client.user:
-                    client.user = click.prompt(
-                        text="Enter your Cumulocity Username",
-                    )
+            if not opts.disable_prompts and not client.user:
+                client.user = click.prompt(
+                    text="Enter your Cumulocity Username",
+                )
 
-                if not client.password:
-                    client.password = click.prompt(
-                        text="Enter your Cumulocity Password [input hidden]",
-                        hide_input=True,
-                    )
+            if not opts.disable_prompts and not client.password:
+                client.password = click.prompt(
+                    text="Enter your Cumulocity Password [input hidden]",
+                    hide_input=True,
+                )
 
         retries -= 1
 
@@ -564,6 +565,9 @@ def pre_start_checks(
         Optional[RemoteAccessConnectionData]: Remote access connection data
     """
 
+    if opts.stdio and not sys.stdin.isatty():
+        opts.disable_prompts = True
+
     try:
         client = create_client(ctx, opts)
         mor = client.get_managed_object(opts.device, opts.external_type)
@@ -645,6 +649,11 @@ def start_proxy(
                 WebsocketClient(**client_opts),
                 opts.tcp_size,
                 opts.tcp_timeout,
+            )
+        elif opts.stdio:
+            socket_server = StdioProxyServer(
+                WebsocketClient(**client_opts),
+                opts.tcp_size,
             )
         else:
             socket_server = TCPProxyServer(

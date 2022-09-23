@@ -64,6 +64,8 @@ Options:
   -d, --disable-prompts           [env var: C8YLP_DISABLE_PROMPTS]
   --socket-path TEXT              Unix Only: Unix Socket Path which should be
                                   opened  [env var: C8YLP_SOCKET_PATH]
+  --stdio                         Forward stdin/stdout to and from Cumulocity
+                                  [env var: C8YLP_STDIO; default: False]
   -h, --help                      Show this message and exit.
 
 ```

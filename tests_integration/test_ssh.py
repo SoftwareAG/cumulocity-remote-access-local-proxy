@@ -45,13 +45,15 @@ def proxy_cli(*args, **kwargs) -> subprocess.CompletedProcess:
 def stdio_cli(*args, **kwargs) -> subprocess.CompletedProcess:
     """Execute the proxy cli command using stdin/out forwarding"""
     if not shutil.which("ssh"):
-        pytest.fail("ssh client not found. Please make sure the 'ssh' client is included in your PATH variable")
+        pytest.fail(
+            "ssh client not found. Please make sure the 'ssh' client is included in your PATH variable"
+        )
 
     return subprocess.run(
         [
-            'ssh',
-            '-o',
-            f'ProxyCommand={sys.executable} -m c8ylp server %n --stdio --env-file .env',
+            "ssh",
+            "-o",
+            f"ProxyCommand={sys.executable} -m c8ylp server %n --stdio --env-file .env",
             *args,
         ],
         stdout=subprocess.PIPE,
@@ -75,7 +77,7 @@ def test_stdio_ssh_command_then_exit(case, c8ydevice: Device):
     command = case.get("command", "sleep 10s")
 
     result = stdio_cli(
-        f'{user}@{c8ydevice.device}',
+        f"{user}@{c8ydevice.device}",
         command,
     )
 

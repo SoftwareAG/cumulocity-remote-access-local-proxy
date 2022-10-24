@@ -266,6 +266,17 @@ C8Y_TFA_CODE = click.option(
     help="TFA Code. Required when the 'TFA enabled' is enabled for a user",
 )
 
+STDIO = click.option(
+    "--stdio",
+    type=bool,
+    is_flag=True,
+    default=False,
+    envvar="C8YLP_STDIO",
+    show_envvar=True,
+    show_default=True,
+    help="Forward stdin/stdout to and from Cumulocity",
+)
+
 SOCKET_PATH = click.option(
     "--socket-path",
     type=str,
@@ -441,6 +452,7 @@ def common_options(f):
         DISABLE_PROMPT,
         SERVER_RECONNECT_LIMIT,
         SOCKET_PATH,
+        STDIO,
     ]
 
     # Need to reverse the order to control the list order

@@ -18,6 +18,7 @@
 """Test plugin command"""
 
 import os
+import shutil
 import subprocess
 import sys
 
@@ -39,6 +40,50 @@ def proxy_cli(*args, **kwargs) -> subprocess.CompletedProcess:
         stderr=subprocess.PIPE,
         **kwargs,
     )
+
+
+def stdio_cli(*args, **kwargs) -> subprocess.CompletedProcess:
+    """Execute the proxy cli command using stdin/out forwarding"""
+    if not shutil.which("ssh"):
+        pytest.fail(
+            "ssh client not found. Please make sure the 'ssh' client is included in your PATH variable"
+        )
+
+    return subprocess.run(
+        [
+            "ssh",
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            f"ProxyCommand={sys.executable} -m c8ylp server %n --stdio --env-file .env",
+            *args,
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        **kwargs,
+    )
+
+
+@pytest.mark.parametrize(
+    "case",
+    (
+        dict(command="sleep 1s", exit_code=0),
+        dict(command="sleep 1s; exit 111", exit_code=111),
+        dict(command="sleep 1s; exit 111", user="unknown_user", exit_code=255),
+    ),
+    ids=lambda x: str(x),
+)
+def test_stdio_ssh_command_then_exit(case, c8ydevice: Device):
+    """Test running a once off ssh command"""
+    user = case.get("user", c8ydevice.ssh_user)
+    command = case.get("command", "sleep 10s")
+
+    result = stdio_cli(
+        f"{user}@{c8ydevice.device}",
+        command,
+    )
+
+    assert result.returncode == case.get("exit_code", 0)
 
 
 @pytest.mark.parametrize(

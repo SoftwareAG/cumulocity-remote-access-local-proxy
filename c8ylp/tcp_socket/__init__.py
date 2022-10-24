@@ -19,6 +19,7 @@
 import socket
 
 from c8ylp.tcp_socket.tcp_server import TCPProxyServer
+from c8ylp.tcp_socket.stdio_server import StdioProxyServer
 
 if hasattr(socket, "AF_UNIX"):
     from c8ylp.tcp_socket.unix_stream_server import UnixStreamProxyServer

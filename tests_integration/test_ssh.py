@@ -67,16 +67,16 @@ def stdio_cli(*args, **kwargs) -> subprocess.CompletedProcess:
 @pytest.mark.parametrize(
     "case",
     (
-        dict(command="sleep 1s", exit_code=0),
-        dict(command="sleep 1s; exit 111", exit_code=111),
-        dict(command="sleep 1s; exit 111", user="unknown_user", exit_code=255),
+        dict(command="sleep 1", exit_code=0),
+        dict(command="sleep 1; exit 111", exit_code=111),
+        dict(command="sleep 1; exit 111", user="unknown_user", exit_code=255),
     ),
     ids=lambda x: str(x),
 )
 def test_stdio_ssh_command_then_exit(case, c8ydevice: Device):
     """Test running a once off ssh command"""
     user = case.get("user", c8ydevice.ssh_user)
-    command = case.get("command", "sleep 10s")
+    command = case.get("command", "sleep 10")
 
     result = stdio_cli(
         f"{user}@{c8ydevice.device}",
@@ -89,16 +89,16 @@ def test_stdio_ssh_command_then_exit(case, c8ydevice: Device):
 @pytest.mark.parametrize(
     "case",
     (
-        dict(command="sleep 1s", exit_code=0),
-        dict(command="sleep 1s; exit 111", exit_code=111),
-        dict(command="sleep 1s; exit 111", user="unknown_user", exit_code=255),
+        dict(command="sleep 1", exit_code=0),
+        dict(command="sleep 1; exit 111", exit_code=111),
+        dict(command="sleep 1; exit 111", user="unknown_user", exit_code=255),
     ),
     ids=lambda x: str(x),
 )
 def test_ssh_command_then_exit(case, c8ydevice: Device):
     """Test running a once off ssh command"""
     user = case.get("user", c8ydevice.ssh_user)
-    command = case.get("command", "sleep 10s")
+    command = case.get("command", "sleep 10")
 
     result = proxy_cli(
         "connect",
@@ -115,13 +115,13 @@ def test_ssh_command_then_exit(case, c8ydevice: Device):
 
 @pytest.mark.parametrize(
     "case",
-    (dict(command="sleep 1s", exit_code=0),),
+    (dict(command="sleep 1", exit_code=0),),
     ids=lambda x: str(x),
 )
 def test_support_ssh_user_via_env(case, c8ydevice: Device):
     """Test ssh command should support setting the ssh user via env variable"""
     user = case.get("user", c8ydevice.ssh_user)
-    command = case.get("command", "sleep 10s")
+    command = case.get("command", "sleep 10")
 
     result = proxy_cli(
         "connect",

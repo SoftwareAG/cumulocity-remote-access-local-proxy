@@ -46,9 +46,9 @@ def proxy_cli(*args) -> subprocess.CompletedProcess:
 @pytest.mark.parametrize(
     "case",
     (
-        dict(clients=1, delay=10, command="sleep 10s"),
-        dict(clients=2, delay=10, command="sleep 10s"),
-        dict(clients=5, delay=7, command="sleep 10s"),
+        dict(clients=1, delay=10, command="sleep 10"),
+        dict(clients=2, delay=10, command="sleep 10"),
+        dict(clients=5, delay=7, command="sleep 10"),
     ),
     ids=lambda x: str(x),
 )
@@ -56,7 +56,7 @@ def test_concurrent_commands(case, c8ydevice: Device):
     """Test running concurrent commands"""
     clients = case.get("clients")
     delay = case.get("delay", 0.1)
-    command = case.get("command", "sleep 10s")
+    command = case.get("command", "sleep 10")
 
     threads: List[threading.Thread] = []
     results: List[subprocess.CompletedProcess] = [None] * clients

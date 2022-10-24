@@ -53,6 +53,8 @@ def stdio_cli(*args, **kwargs) -> subprocess.CompletedProcess:
         [
             "ssh",
             "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
             f"ProxyCommand={sys.executable} -m c8ylp server %n --stdio --env-file .env",
             *args,
         ],

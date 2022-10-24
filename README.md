@@ -124,8 +124,9 @@ ssh -o 'ProxyCommand=socat - UNIX-CLIENT:/tmp/device.socket' <device_username>@l
 
 ### Usage with stdin-/out forwarding
 
-Using stdin-/out forwarding to Cumulocity allows to use `c8ylp` as a proxy command without the need of a local TCP server.
+Using stdin/out forwarding to Cumulocity enables the use of `c8ylp` as a proxy command without the need of a local TCP server.
 As proxy commands cannot interact with the user you have to ensure there is an active Cumulocity session.
+
 The session can be ensured by using the `c8ylp login --env-file .env` command that will update the environment file.
 As long as the session is active the Cumulocity server can be used as proxy command with `ssh` as following:
 
@@ -142,6 +143,19 @@ Host <device>
     User <device_username>
     PreferredAuthentications publickey
     IdentityFile <identify_file>
+    ServerAliveInterval 120
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    ProxyCommand c8ylp server %n --stdio --env-file .env
+
+# Or you can create a generic ssh config for all devices with a similar prefix:
+# Usage;
+#   => ssh linux-device01
+#   => ssh linux-device02
+Host linux-*
+    User admin
+    PreferredAuthentications publickey
+    IdentityFile ~/.ssh/myprivatekey
     ServerAliveInterval 120
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null

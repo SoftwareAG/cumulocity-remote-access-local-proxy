@@ -1,6 +1,49 @@
 
 # Releases
 
+## 2.3.0
+
+* feat #81: Support stdin/out forwarding to the Cumulocity server it can be used directly as a ssh ProxyCommand without the need of starting a local TCP server and using socat. This method works for both, windows and unix.
+
+    **Example**
+
+    ```sh
+    ssh -o 'ProxyCommand=c8ylp server <device> --stdio --env-file .env' <device_username>@<device>
+    ```
+
+    By adding the proxy command to the `.ssh/config` file, the usage of the Cumulocity server can be simplified even more.
+
+    The file allows to define user and environment file so the connection can be done by simply typing `ssh <device>`.
+
+    For this use the following example configuration (`%n` will be replaced by `ssh` with the given device name):
+
+    ```sh
+    Host <device>
+        User <device_username>
+        PreferredAuthentications publickey
+        IdentityFile <identify_file>
+        ServerAliveInterval 120
+        StrictHostKeyChecking no
+        UserKnownHostsFile /dev/null
+        ProxyCommand c8ylp server %n --stdio --env-file .env
+    
+    # Or you can create a generic ssh config for all devices with a similar prefix:
+    # Usage;
+    #   => ssh linux-device01
+    #   => ssh linux-device02
+    Host linux-*
+        User admin
+        PreferredAuthentications publickey
+        IdentityFile ~/.ssh/myprivatekey
+        ServerAliveInterval 120
+        StrictHostKeyChecking no
+        UserKnownHostsFile /dev/null
+        ProxyCommand c8ylp server %n --stdio --env-file .env
+    ```
+
+* chore: improve integration test compatibility to make it possible to run on MacOS. #85
+* chore: upgrade dependencies. #78, #82, #84, #87
+
 ## 2.2.0
 
 * feat: Unix only - Support starting a proxy using a Unix socket server (instead of a local tcp server).

@@ -15,4 +15,4 @@ responses==0.22.0
 # publishing
 wheel>=0.34.2
 twine>=3.6.0
-setuptools_scm==6.4.2
+setuptools_scm==7.0.5

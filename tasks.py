@@ -21,6 +21,15 @@ import re
 import shutil
 import subprocess
 import sys
+
+# WORKAROUND
+# Workaround until python 3.11 is supported by py-invoke
+# https://github.com/pyinvoke/invoke/issues/833#issuecomment-1293148106
+import inspect
+
+if not hasattr(inspect, "getargspec"):
+    inspect.getargspec = inspect.getfullargspec
+
 from invoke import task
 from pathlib import Path
 

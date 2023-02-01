@@ -329,14 +329,23 @@ def test_missing_role(c8yserver: FixtureCumulocityAPI, env: Environment):
             "exit_code": ExitCodes.DEVICE_NO_PASSTHROUGH_CONFIG,
         },
         {
-            "description": "Missing matching PASSTHROUGH name",
+            "description": "Not an exact PASSTHROUGH name match",
             "fragments": {
                 REMOTE_ACCESS_FRAGMENT: [
                     {"id": 1, "name": "example-ssh", "protocol": "ssh"},
                     {"id": 2, "name": "custom-passthrough", "protocol": PASSTHROUGH},
                 ]
             },
-            "exit_code": ExitCodes.DEVICE_NO_MATCHING_PASSTHROUGH_CONFIG,
+            "exit_code": ExitCodes.MISSING_ROLE_REMOTE_ACCESS_ADMIN,
+        },
+        {
+            "description": "Missing matching PASSTHROUGH name",
+            "fragments": {
+                REMOTE_ACCESS_FRAGMENT: [
+                    {"id": 1, "name": "example-ssh", "protocol": "ssh"},
+                ]
+            },
+            "exit_code": ExitCodes.DEVICE_NO_PASSTHROUGH_CONFIG,
         },
         {
             "description": "Custom PASSTHROUGH name matching but still missing role",

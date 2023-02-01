@@ -487,7 +487,8 @@ def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
 
     if matches:
         return extract_config_id(matches[0])
-    elif valid_configs:
+
+    if valid_configs:
         # Fallback to using the first valid config (if not matches names were found)
         logging.warning(
             "No matching %s configs found (name=%s), so falling back to first config (name=%s)",

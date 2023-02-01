@@ -438,7 +438,9 @@ def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
 
     Args:
         mor (Dict[str, Any]): Device managed object
-        config (str): Expected configuration type
+        config (str): Expected configuration name. If no matching name
+            is found, but there are other PASSTHROUGH configuration available it will
+            use the first config (and log a warning)
 
     Returns:
         str: Remote access configuration id
@@ -483,16 +485,25 @@ def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
         if item.get("name", "").casefold() == config.casefold()
     ]
 
-    if not matches:
-        logging.error(
-            'Provided config name "%s" for "%s" was not found or none with protocal set to "%s"',
-            config,
-            device_name,
+    if matches:
+        return extract_config_id(matches[0])
+    elif valid_configs:
+        # Fallback to using the first valid config (if not matches names were found)
+        logging.warning(
+            "No matching %s configs found (name=%s), so falling back to first config (name=%s)",
             PASSTHROUGH,
+            config,
+            valid_configs[0].get("name", ""),
         )
-        ctx.exit(ExitCodes.DEVICE_NO_MATCHING_PASSTHROUGH_CONFIG)
+        return extract_config_id(valid_configs[0])
 
-    return extract_config_id(matches[0])
+    logging.error(
+        'Provided config name "%s" for "%s" was not found or none with protocol set to "%s"',
+        config,
+        device_name,
+        PASSTHROUGH,
+    )
+    ctx.exit(ExitCodes.DEVICE_NO_MATCHING_PASSTHROUGH_CONFIG)
 
 
 def run_proxy_in_background(

@@ -24,7 +24,6 @@ from c8ylp.cli.core import CliLogger
 
 
 def mock_cli():
-
     with patch("c8ylp.cli.core.start_ssh") as mock:
         yield cli
 

@@ -52,7 +52,6 @@ class StdioHandler:
         ) as self._reader, io.open(
             sys.stdout.fileno(), mode="wb", closefd=False, buffering=0
         ) as self._writer:
-
             self.web_socket_client.shutdown_request = self.shutdown
 
             # connect websocket

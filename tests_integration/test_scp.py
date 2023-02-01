@@ -126,7 +126,6 @@ def test_concurrent_scp_commands(case, c8ydevice: Device, file_factory: FileFact
     durations: List[float] = [None] * clients
 
     for i in range(0, clients):
-
         remote_file = f"{name_prefix}_client{i}.inttest"
         cmd_args = (
             "plugin",

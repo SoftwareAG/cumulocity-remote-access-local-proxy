@@ -498,6 +498,8 @@ def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
         )
         return extract_config_id(valid_configs[0])
 
+    # Technically it should never reach here, however leave in place in
+    # case the above logic is changed
     logging.error(
         'Provided config name "%s" for "%s" was not found or none with protocol set to "%s"',
         config,

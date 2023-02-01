@@ -32,6 +32,10 @@ from .. import options
 from .core import ExitCodes, ProxyContext
 
 
+class CommandNotFound(Exception):
+    """Command not found"""
+
+
 def plugin_folders() -> List[Path]:
     """Plugin folders
 
@@ -113,7 +117,7 @@ def build_cmd_args(cmd_args: List[str]) -> List[str]:
             return out_args
 
         if not shutil.which(custom_shell):
-            raise Exception(f"Could not find {custom_shell}")
+            raise CommandNotFound(f"Could not find {custom_shell}")
 
         return [shutil.which(custom_shell)] + out_args
 
@@ -288,9 +292,9 @@ def cli_plugin():
     cls=PluginCLI,
     hidden=False,
     options_metavar="",
-    context_settings=dict(
-        ignore_unknown_options=True,
-    ),
+    context_settings={
+        "ignore_unknown_options": True,
+    },
 )
 def run():
     """

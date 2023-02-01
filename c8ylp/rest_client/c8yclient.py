@@ -132,7 +132,6 @@ class CumulocityClient:
             login_options_body = json.loads(response.content.decode("utf-8"))
             login_options = login_options_body.get("loginOptions", {})
             for option in login_options:
-
                 # Check if oAuth is supported
                 if option.get("type") in ("OAUTH2_INTERNAL", "OAUTH2"):
                     self._supports_oauth = True

@@ -63,7 +63,6 @@ def test_concurrent_commands(case, c8ydevice: Device):
     durations: List[float] = [None] * clients
 
     for i in range(0, clients):
-
         cmd_args = (
             "plugin",
             "command",

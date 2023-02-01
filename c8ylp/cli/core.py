@@ -534,11 +534,11 @@ def run_proxy_in_background(
     background = threading.Thread(
         target=start_proxy,
         args=(ctx, opts),
-        kwargs=dict(
-            connection_data=connection_data,
-            stop_signal=stop_signal,
-            ready_signal=_local_ready_signal,
-        ),
+        kwargs={
+            "connection_data": connection_data,
+            "stop_signal": stop_signal,
+            "ready_signal": _local_ready_signal,
+        },
         daemon=True,
     )
     background.start()

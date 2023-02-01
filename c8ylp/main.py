@@ -25,7 +25,7 @@ from .cli.server import server
 from .cli.version import version
 from .cli.connect import commands as connect
 
-CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
+CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
 
 @click.group()

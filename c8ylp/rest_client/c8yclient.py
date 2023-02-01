@@ -44,6 +44,10 @@ from requests.auth import HTTPBasicAuth
 from c8ylp.rest_client.sessions import BaseUrlSession
 
 
+class CumulocityError(Exception):
+    """Cumulocity error"""
+
+
 class CumulocityMissingTFAToken(Exception):
     """Cumulocity missing TFA token"""
 
@@ -359,7 +363,7 @@ class CumulocityClient:
         mor_id = ext_id.get("managedObject", {}).get("id")
 
         if not mor_id:
-            raise Exception("Managed object id is empty")
+            raise CumulocityError("Managed object id is empty")
 
         response = self.session.get(f"/inventory/managedObjects/{mor_id}")
         if response.status_code == 200:

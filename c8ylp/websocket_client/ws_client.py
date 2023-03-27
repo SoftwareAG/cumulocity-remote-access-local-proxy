@@ -239,6 +239,8 @@ class WebsocketClient(threading.Thread):
             lookup_close_status_code(close_status),
             reason,
         )
+        if callable(self.shutdown_request):
+            self.shutdown_request()
         self._ws_open_event.clear()
 
     def _on_ws_open(self, _ws):

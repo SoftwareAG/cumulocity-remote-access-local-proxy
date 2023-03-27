@@ -49,6 +49,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
             # Note: fileno is set to -1 if the socket has been closed
             if request.fileno() != -1:
                 request.shutdown(socket.SHUT_RDWR)
+                request.close()
 
         self.server.web_socket_client.shutdown_request = handle_shutdown
 

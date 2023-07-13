@@ -1,5 +1,5 @@
 # Task runner
-invoke==2.1.3
+invoke==2.2.0
 
 # Linting/formating
 pylint==2.17.4

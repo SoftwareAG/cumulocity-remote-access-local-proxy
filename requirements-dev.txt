@@ -3,7 +3,7 @@ invoke==2.2.0
 
 # Linting/formating
 pylint==2.17.5
-black==23.9.1
+black==23.10.0
 licenseheaders==0.8.8
 
 # Testing

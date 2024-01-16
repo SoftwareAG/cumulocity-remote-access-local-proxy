@@ -59,6 +59,7 @@ pip install .
 >
 >By default a random port is used, however a fixed port can be used but make sure the port is not already being used by other proxy instances or Services.
 
+> **Please note**: To use the local proxy you need a remote access PASSTHROUGH endpoint configured on your device. See here for further details: https://tech.forums.softwareag.com/t/how-to-get-started-with-cloud-remote-access-for-cumulocity-iot/258446#step-by-step-guide-to-setup-a-passthrough-connection-16
 
 `c8ylp` supports different commands depending on your use case. The commands are organized in a multi-level command structure. The list of available commands and subcommands can be shown by using the `--help/-h` option.
 

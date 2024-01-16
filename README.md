@@ -54,12 +54,15 @@ pip install .
 
 # Usage
 
->The Local Proxy needs to be executed for each device tunnel you want to establish. 
->Multiple device tunnels per single Local Proxy Instance is currently not supported due to the limitation of the SSH Protocol.
->
->By default a random port is used, however a fixed port can be used but make sure the port is not already being used by other proxy instances or Services.
+## Prerequisites & Limitations
 
-> **Please note**: To use the local proxy you need a remote access PASSTHROUGH endpoint configured on your device. See here for further details: https://tech.forums.softwareag.com/t/how-to-get-started-with-cloud-remote-access-for-cumulocity-iot/258446#step-by-step-guide-to-setup-a-passthrough-connection-16
+ * **PASSTHROUGH endpoint:** To use the local proxy you need a remote access PASSTHROUGH endpoint configured on each of your devices you want to connect to. See this guide for further details: https://tech.forums.softwareag.com/t/how-to-get-started-with-cloud-remote-access-for-cumulocity-iot/258446#step-by-step-guide-to-setup-a-passthrough-connection-16
+
+*  **Tenant Authentication Method:** The desired tenant must be configured to use the `OAI Secure` Authentication. Read more: https://cumulocity.com/guides/users-guide/administration/#authentication
+
+* **Single Device Tunnel only**: The Local Proxy needs to be executed for each device tunnel you want to establish. Multiple device tunnels per single Local Proxy Instance is currently not supported due to the limitation of the SSH Protocol.
+
+## Run c8ylp
 
 `c8ylp` supports different commands depending on your use case. The commands are organized in a multi-level command structure. The list of available commands and subcommands can be shown by using the `--help/-h` option.
 
@@ -89,11 +92,11 @@ Commands:
   version  Show the c8ylp version number
 ```
 
-## Common usages
+### Common usages
 
 The following scenarios show the common use cases of `c8ylp`.
 
-### Launching as local proxy server
+#### Launching as local proxy server
 
 ```sh
 c8ylp server <device> --env-file .env
@@ -101,7 +104,7 @@ c8ylp server <device> --env-file .env
 
 The port information will be shown in the terminal so that you can connect to it via a client corresponding to the protocol currently being used on the device (i.e. ssh, vnc etc.)
 
-### Launching as local proxy server then launching an interactive ssh session
+#### Launching as local proxy server then launching an interactive ssh session
 
 If you just want to connect via ssh using a once-off proxy instance using a random port number (to prevent conflicts with other applications), then use:
 
@@ -109,7 +112,7 @@ If you just want to connect via ssh using a once-off proxy instance using a rand
 c8ylp connect ssh <device> --ssh-user <device_username> --env-file .env
 ```
 
-### Usage with a socket path
+#### Usage with a socket path
 
 **This is a unix only option**
 
@@ -123,7 +126,7 @@ then connect with ssh like:
 ssh -o 'ProxyCommand=socat - UNIX-CLIENT:/tmp/device.socket' <device_username>@localhost
 ```
 
-### Usage with stdin-/out forwarding
+#### Usage with stdin-/out forwarding
 
 Using stdin/out forwarding to Cumulocity enables the use of `c8ylp` as a proxy command without the need of a local TCP server.
 As proxy commands cannot interact with the user you have to ensure there is an active Cumulocity session.
@@ -163,7 +166,7 @@ Host linux-*
     ProxyCommand c8ylp server %n --stdio --env-file .env
 ```
 
-### Command documentation
+#### Command documentation
 
 The command usage and all options can be viewed online on the following pages:
 
@@ -176,11 +179,11 @@ The command usage and all options can be viewed online on the following pages:
 * [c8ylp plugin command](docs/cli/C8YLP_PLUGIN_COMMAND.md)
 * [c8ylp version](docs/cli/C8YLP_VERSION.md)
 
-### Configuration
+## Configuration
 
 `c8ylp` can be configured via command line options or environment variables. The environment variables can either be set via the shell, or by using a dotenv file (i.e. `.env`). When using a dotenv (environment) file then it needs to be provide to the `--env-file <file>` option.
 
-#### Example Usage: dotenv file
+### Example Usage: dotenv file
 
 Create a file called `.env` and add the following contents:
 
@@ -226,7 +229,7 @@ If no TCP Client is connected but Web Socket Connection is open it might get be 
 
 If a TCP Client has been connected and the Web Socket Connection gets terminated, the TCP Client Connection will be terminated which results in that the Local Proxy terminates and needs to be restarted manually.
 
-## Tab completion
+### Tab completion
 
 `c8ylp` (version >= 2.0.0) supports tab completion for bash, zsh and fish shells.
 

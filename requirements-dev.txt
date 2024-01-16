@@ -7,7 +7,7 @@ black==23.9.1
 licenseheaders==0.8.8
 
 # Testing
-pytest==7.4.2
+pytest==7.4.3
 pytest-timeout==2.2.0
 pytest-cov==4.1.0
 responses==0.23.3

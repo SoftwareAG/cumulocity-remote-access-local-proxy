@@ -658,6 +658,7 @@ def start_proxy(
 
     try:
         if opts.socket_path:
+            # pylint: disable=used-before-assignment
             socket_server = UnixStreamProxyServer(
                 opts.socket_path,
                 WebsocketClient(**client_opts),

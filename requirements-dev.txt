@@ -8,11 +8,11 @@ licenseheaders==0.8.8
 
 # Testing
 pytest==7.4.3
-pytest-timeout==2.1.0
+pytest-timeout==2.2.0
 pytest-cov==4.1.0
 responses==0.23.3
 
 # publishing
 wheel>=0.34.2
 twine>=3.6.0
-setuptools_scm==8.0.3
+setuptools_scm==8.0.4

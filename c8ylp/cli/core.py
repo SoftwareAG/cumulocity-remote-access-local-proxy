@@ -432,6 +432,36 @@ def store_credentials(opts: ProxyContext, client: CumulocityClient):
         opts.show_info(f"Env file is already up to date: {opts.env_file}")
 
 
+def _extract_config_id(matching_config) -> str:
+    logging.info(
+        'Using Configuration with Name "%s" and Remote Port %s',
+        matching_config.get("name"),
+        matching_config.get("port"),
+    )
+    return matching_config.get("id")
+
+
+def _guess_config(configs) -> str:
+    # If user has not provide the config, then we can try guessing
+    if len(configs) == 1:
+        return _extract_config_id(configs[0])
+
+    # Use first match which uses port 22
+    configs_using_ssh_port = [c for c in configs if c.get("port", 0) == 22]
+    if configs_using_ssh_port:
+        return _extract_config_id(configs_using_ssh_port[0])
+
+    # Use first match with ssh in its name
+    configs_with_ssh_name = [
+        c for c in configs if "ssh" in str(c.get("name", "")).lower()
+    ]
+    if configs_with_ssh_name:
+        return _extract_config_id(configs_with_ssh_name[0])
+
+    # fallback to first config
+    return _extract_config_id(configs[0])
+
+
 def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
     """Get the remote access configuration id matching a specific type
     from a device managed object
@@ -466,33 +496,9 @@ def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
         )
         ctx.exit(ExitCodes.DEVICE_NO_PASSTHROUGH_CONFIG)
 
-    def extract_config_id(matching_config):
-        logging.info(
-            'Using Configuration with Name "%s" and Remote Port %s',
-            matching_config.get("name"),
-            matching_config.get("port"),
-        )
-        return matching_config.get("id")
-
     if not config:
         # If user has not provide the config, then we can try guessing
-        if len(config) == 1:
-            return extract_config_id(valid_configs[0])
-
-        # Use first match which uses port 22
-        configs_using_ssh_port = [c for c in valid_configs if c.get("port", 0) == 22]
-        if configs_using_ssh_port:
-            return extract_config_id(configs_using_ssh_port[0])
-
-        # Use first match with ssh in its name
-        configs_with_ssh_name = [
-            c for c in valid_configs if "ssh" in str(c.get("name", "")).lower()
-        ]
-        if configs_with_ssh_name:
-            return extract_config_id(configs_with_ssh_name[0])
-
-        # fallback to first config
-        return extract_config_id(valid_configs[0])
+        return _guess_config(valid_configs)
 
     # find config matching name
     matches = [
@@ -502,7 +508,7 @@ def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
     ]
 
     if matches:
-        return extract_config_id(matches[0])
+        return _extract_config_id(matches[0])
 
     if valid_configs:
         # Fallback to using the first valid config (if not matches names were found)
@@ -512,7 +518,7 @@ def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
             config,
             valid_configs[0].get("name", ""),
         )
-        return extract_config_id(valid_configs[0])
+        return _guess_config(valid_configs)
 
     # Technically it should never reach here, however leave in place in
     # case the above logic is changed

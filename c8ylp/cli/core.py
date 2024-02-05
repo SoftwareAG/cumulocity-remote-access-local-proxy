@@ -475,7 +475,23 @@ def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
         return matching_config.get("id")
 
     if not config:
-        # use first config
+        # If user has not provide the config, then we can try guessing
+        if len(config) == 1:
+            return extract_config_id(valid_configs[0])
+
+        # Use first match which uses port 22
+        configs_using_ssh_port = [c for c in valid_configs if c.get("port", 0) == 22]
+        if configs_using_ssh_port:
+            return extract_config_id(configs_using_ssh_port[0])
+
+        # Use first match with ssh in its name
+        configs_with_ssh_name = [
+            c for c in valid_configs if "ssh" in str(c.get("name", "")).lower()
+        ]
+        if configs_with_ssh_name:
+            return extract_config_id(configs_with_ssh_name[0])
+
+        # fallback to first config
         return extract_config_id(valid_configs[0])
 
     # find config matching name

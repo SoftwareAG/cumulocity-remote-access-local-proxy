@@ -511,7 +511,7 @@ def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
         return _extract_config_id(matches[0])
 
     if valid_configs:
-        # Fallback to using the first valid config (if not matches names were found)
+        # Fallback to guessing if not matches names were found
         logging.warning(
             "No matching %s configs found (name=%s), so falling back to first config (name=%s)",
             PASSTHROUGH,
@@ -529,6 +529,7 @@ def get_config_id(ctx: click.Context, mor: Dict[str, Any], config: str) -> str:
         PASSTHROUGH,
     )
     ctx.exit(ExitCodes.DEVICE_NO_MATCHING_PASSTHROUGH_CONFIG)
+    return None
 
 
 def run_proxy_in_background(
